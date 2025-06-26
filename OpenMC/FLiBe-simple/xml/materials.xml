@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<materials>
+  <material id="3" name="FLiBe">
+    <density units="g/cm3" value="1.9"/>
+    <nuclide ao="0.22576563661046428" name="Li6"/>
+    <nuclide ao="0.22576563661046428" name="Li6"/>
+    <nuclide ao="0.22576563661046428" name="Li6"/>
+    <nuclide ao="0.22576563661046428" name="Li6"/>
+  </material>
+</materials>
