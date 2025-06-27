@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <materials>
-  <cross_sections>/mnt/c/OpenMC/data/endfb-viii.0-hdf5/cross_sections.xml</cross_sections>
-  <material depletable="true" id="3" name="FLiBe(0.9928120408244312)-U(0.007187959175568883)">
+  <cross_sections>/opt/openmc_data/endfb-viii.0-hdf5/cross_sections.xml</cross_sections>
+  <material depletable="true" id="12" name="FLiBe(0.9928120408244312)-U(0.007187959175568883)">
     <density units="g/cm3" value="2.0199250396854387"/>
     <nuclide ao="0.06321976490227713" name="Li6"/>
     <nuclide ao="0.21680414404820345" name="Li7"/>
