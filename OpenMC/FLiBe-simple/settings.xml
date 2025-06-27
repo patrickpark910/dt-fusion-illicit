@@ -7,7 +7,7 @@
   <generations_per_batch>10</generations_per_batch>
   <source particle="neutron" strength="1.0" type="independent">
     <space type="box">
-      <parameters>-0.5 -0.5 -0.5 0.5 0.5 0.5</parameters>
+      <parameters>-50 -50 -50 50 50 50</parameters>
     </space>
     <angle type="isotropic"/>
     <energy type="discrete">
