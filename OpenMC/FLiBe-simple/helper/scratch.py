@@ -1,85 +1,102 @@
-"""
-Testing out helper functions
-  Patrick 2025-06-25
-"""
-
+import openmc
 import numpy as np
 
-# Nuclear constants
-#   from atom.kaeri.re.kr/nuchart/
-AVO = 6.022141076e+23
-AMU_LI6, AMU_LI7 = 6.0150, 7.0160 # 6.01512288742, 7.01600343426 # amu = g/mol
+# User specifications
+DENSITY_FLIBE = 1.8 # usu 1.8-2.0 g/cc
+ENRICH_LI = 20
+MOL_LIF, MOL_BEF2 = 0.66, 0.34
+TEMP = 900 # K
+VOL = 342 * 1e6 # cm3
+
 AMU_F19 = 18.9984 # 18.99840316207
-AMU_BE9 =  9.0120 # 9.012183062
+AMU_U = 238.02891 # for natural enrichment
+AMU_UF4 = AMU_U + 4* AMU_F19
 
-def li_atfracs(w6):
+def calc_uf4_flibe_mass_fracs(mtu, volume=342e6, density_flibe=1.80):
     """
-    Convert a lithium-6 enrichment by weight fraction into atomic fractions of Li-6 and Li-7.
+    Calculate the mass fractions of FLiBe and UF4.
 
-    Args: 
-        e_li6 (float): Weight fraction of Li-6 in Li (ex. 0.20 for 20 wt% Li-6)
+    Args:
+        mtu : float : metric tons uranium
+        volume : float : cubic meters of system (342 m3 in Ball 25)
+        density_flibe : float : g/cm3 of FLiBe (1.8 g/cm3)
+
+    Returns:
+        (mass_frac_flibe, mass_frac_uf4) : 2-ple of floats : mass fractions
+    """
+    # convert inputs to SI units
+    mass_U_kg = mtu * 1e3
+    density_flibe_kg_m3 = density_flibe * 1e3
+    volume_m3 = float(volume) / 1e6
+
+    # compute UF4 mass from U mass
+    mass_uf4_kg = mass_U_kg * (AMU_UF4 / AMU_U)
+
+    # compute FLiBe mass from density and volume
+    mass_flibe_kg = density_flibe_kg_m3 * volume_m3
+
+    # total mass and fractions
+    mass_total = mass_flibe_kg + mass_uf4_kg
+    frac_flibe = mass_flibe_kg / mass_total
+    frac_uf4   = mass_uf4_kg   / mass_total
+
+    return frac_flibe, frac_uf4
+
+
+
+
+if __name__ == "__main__":
+
+    """
+    Calculate 
+
+    Args:
+        mass_U_list : list of metric tons uranium (MTU) we want to test
         
-    Returns: 
-        x6, x7 (floats): Atomic fractions of Li-6, Li-7
-
-    Examples:
-        >>> li_atfracs(0.2)
-        (0.22576563661046428, 0.7742343633895358)
     """
-    if not 0.0 <= w6 <= 1.0: 
-        raise ValueError("li6_enrich must be between 0 and 1")
+    MASS_U_LIST = [0, 0.1, 1, 2.5, 5, 10, 20 ,30 ,40, 50]
 
-    w7 = 1.0 - w6 # wt frac Li-7
-    M6, M7 = w6 / AMU_LI6, w7 / AMU_LI7 # moles
-    a6, a7 = M6 / (M6 + M7), M7 / (M6 + M7) # at fracs
-
-    return a6, a7
-
-
-def flibe_ndens(mol_lif, mol_bef2, dens_flibe, enrich_li):
     """
-    Given mols of LiF to BeF2, FLiBe bulk mass density, and Li enrichment (by wt Li-6),
-    compute number densities (at/cc) of Li-6, Li-7, Be-9, F-19.
-
-    Args: 
-        mol_lif, mol_bef2 (floats): moles of LiF, BeF2 in mixture
-        dens_flibe (float): bulk density of FLiBe mixture [g/cc]
-        enrich_li (float): wt frac of Li-6 in Li 
-        
-    Returns: 
-        ndens_flibe (dict): number densities {'Li6','Li7','Be9','F19'} in mixture
+    MATERIALS
+      OpenMC automatically normalizes the fraction of each element in material (like MCNP)
+      but the fractions in 'mix_materials' MUST add up to 1
     """
-    
-    # Normalize moles [mol frac]
-    mol_tot = mol_lif + mol_bef2
-    x_lif, x_bef2 = mol_lif / mol_tot, mol_bef2 / mol_tot
+    flibe = openmc.Material(name="FLiBe", temperature=TEMP)
+    flibe.set_density('g/cm3', DENSITY_FLIBE) 
+    flibe.add_element('Li',MOL_LIF,'ao',ENRICH_LI,'Li6','wo')
+    flibe.add_element('Be',MOL_BEF2,'ao')
+    flibe.add_element('F',(MOL_LIF+2*MOL_BEF2),'ao')
 
-    # 
-    a6, a7 = li_atfracs(enrich_li)
+    uf4 = openmc.Material(name="U",temperature=TEMP)
+    uf4.add_elements_from_formula('UF4','wo',0.7204)\
 
-    # Mols [g/mol]
-    M_li = a6 * AMU_LI6 + a7 * AMU_LI7
-    M_lif = M_li + AMU_F19 
-    M_bef2 = AMU_BE9 + 2*AMU_F19 
-    M_flibe = x_lif * M_lif + x_bef2 * M_bef2
+    # Calculate mol ratios of UF4 and FLiBe, ensure they add up to 1
+    mass_frac_uf4_list, mass_frac_flibe_list = [], []
 
-    # Number densities [1/cm3]
-    N_flibe = dens_flibe / M_flibe
-    N_lif = N_flibe * x_lif * AVO
-    N_bef2 = N_flibe * x_bef2 * AVO
+    mix_list = []
+    for mtu in MASS_U_LIST:
+        mass_frac_uf4, mass_frac_flibe = calc_uf4_flibe_mass_fracs(mtu, volume=VOL, density_flibe=DENSITY_FLIBE)
+        print(mass_frac_uf4, mass_frac_flibe)
+        mix = openmc.Material.mix_materials([flibe, uf4], [mass_frac_flibe, mass_frac_uf4], 'wo')
+        mix.name = f"mat-{mtu:.1f}mtu"
+        mix.temperature = TEMP
+        mix_list.append(mix)
 
-    ndens_flibe = {'Li6' : 1e-24 * N_lif * a6,       # 1 Li per LiF, a6 Li-6 per Li
-                   'Li7' : 1e-24 * N_lif * a7,       # 1 Li per LiF, a7 Li-6 per Li
-                   'Be9' : 1e-24 * N_bef2,           # 1 Be per BeF2
-                   'F19' : 1e-24 * (N_lif + 2*N_bef2)  # F per LiF + 2 F per BeF2
-                    }
-
-    return ndens_flibe
+    materials = openmc.Materials(mix_list)
 
 
 
-if __name__ == '__main__':
-    print(li_atfracs(0.2))
-    print(flibe_ndens(mol_lif=0.66, mol_bef2=0.34,dens_flibe=1.80,enrich_li=0.20))
+    """
+    mix, ind = [], []
 
+    for i,val in enumerate(M_U_val):
+        ind.append(i)
+        mat_name = f"mat-{val:.1f}tU"
+        mix0 = openmc.Material.mix_materials([flibe, uranium], [MR_FLIBE[i], MR_U[i]], 'ao') # 
+        mix0.temperature = 900
+        mix0.name = mat_name
+        mix.append(mix0)
+        # print(mix[i].name, mix[i].get_nuclide_atom_densities()) # Returns one or all elements in the material and their atomic densities in units of atom/b-cm
 
+    materials = openmc.Materials(mix)
+    """
