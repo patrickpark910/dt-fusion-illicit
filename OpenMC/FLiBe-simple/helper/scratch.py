@@ -1,5 +1,6 @@
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 """
 Testing out helper functions
   Patrick 2025-06-25
@@ -21,10 +22,17 @@ import numpy as np
 
 
 >>>>>>> Stashed changes
+=======
+
+import numpy as np
+
+
+>>>>>>> Stashed changes
 AVO = 6.022141076e+23
 AMU_LI6, AMU_LI7 = 6.0150, 7.0160 # 6.01512288742, 7.01600343426 # amu = g/mol
 AMU_F19 = 18.9984 # 18.99840316207
 AMU_BE9 =  9.0120 # 9.012183062
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 
@@ -118,6 +126,16 @@ DENSITY_UF4 = 6.7 # g/cm3
 def calc_mix_vol_fracs(mtu, volume=342e6, density_flibe=1.94, displace=False):
     """
 >>>>>>> Stashed changes
+=======
+AMU_U = 238.02891 # for natural enrichment
+AMU_UF4 = AMU_U + 4 * AMU_F19
+AMU_FLIBE = 98.89 # g/mol
+DENSITY_UF4 = 6.7 # g/cm3
+
+
+def calc_mix_vol_fracs(mtu, volume=342e6, density_flibe=1.94, displace=False):
+    """
+>>>>>>> Stashed changes
     Calculate the volume fractions of FLiBe and UF4. 
     Assumes UF4 concentration small enough that its addition does NOT change FLiBe volume
       after conversaion with J.L. Ball --ppark 2025-07-03
@@ -166,6 +184,10 @@ if __name__ == '__main__':
     n     = rho/M_UF4 * N_A * f_U * f238   # atoms U238 per cm³
     n_bcm = n/1e24                          # atoms per barn-cm
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+    print(n_bcm)  # → ≃0.0033651432
+>>>>>>> Stashed changes
+=======
     print(n_bcm)  # → ≃0.0033651432
 >>>>>>> Stashed changes
 =======
