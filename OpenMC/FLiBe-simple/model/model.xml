@@ -3,6 +3,7 @@
   <materials>
     <cross_sections>/mnt/c/openmc/data/endfb-viii.0-hdf5/cross_sections.xml</cross_sections>
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     <material depletable="true" id="3" name="FLiBe(0.9928120408244312)-U(0.007187959175568883)" temperature="900">
       <density units="g/cm3" value="2.0199250396854387"/>
       <nuclide ao="0.06321976490227713" name="Li6"/>
@@ -20,6 +21,8 @@
     <surface boundary="reflective" coeffs="-50" id="7" type="x-plane"/>
     <surface boundary="reflective" coeffs="50" id="8" type="x-plane"/>
 =======
+=======
+>>>>>>> Stashed changes
     <material depletable="true" id="24" name="FLiBe + 0.0 MTU" temperature="900" volume="342000000.0">
       <density units="g/cm3" value="1.94"/>
       <nuclide ao="0.5714285714285714" name="F19"/>
@@ -222,11 +225,15 @@
     <surface boundary="reflective" coeffs="50" id="6" type="z-plane"/>
     <surface boundary="reflective" coeffs="70" id="7" type="x-plane"/>
     <surface boundary="reflective" coeffs="170" id="8" type="x-plane"/>
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     <surface boundary="reflective" coeffs="-50" id="9" type="y-plane"/>
     <surface boundary="reflective" coeffs="50" id="10" type="y-plane"/>
     <surface boundary="reflective" coeffs="-50" id="11" type="z-plane"/>
     <surface boundary="reflective" coeffs="50" id="12" type="z-plane"/>
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
   </geometry>
   <settings>
@@ -235,6 +242,97 @@
     <batches>100</batches>
     <inactive>10</inactive>
     <generations_per_batch>20</generations_per_batch>
+=======
+    <surface boundary="reflective" coeffs="190" id="13" type="x-plane"/>
+    <surface boundary="reflective" coeffs="290" id="14" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="15" type="y-plane"/>
+    <surface boundary="reflective" coeffs="50" id="16" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="17" type="z-plane"/>
+    <surface boundary="reflective" coeffs="50" id="18" type="z-plane"/>
+    <surface boundary="reflective" coeffs="310" id="19" type="x-plane"/>
+    <surface boundary="reflective" coeffs="410" id="20" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="21" type="y-plane"/>
+    <surface boundary="reflective" coeffs="50" id="22" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="23" type="z-plane"/>
+    <surface boundary="reflective" coeffs="50" id="24" type="z-plane"/>
+    <surface boundary="reflective" coeffs="430" id="25" type="x-plane"/>
+    <surface boundary="reflective" coeffs="530" id="26" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="27" type="y-plane"/>
+    <surface boundary="reflective" coeffs="50" id="28" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="29" type="z-plane"/>
+    <surface boundary="reflective" coeffs="50" id="30" type="z-plane"/>
+    <surface boundary="reflective" coeffs="550" id="31" type="x-plane"/>
+    <surface boundary="reflective" coeffs="650" id="32" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="33" type="y-plane"/>
+    <surface boundary="reflective" coeffs="50" id="34" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="35" type="z-plane"/>
+    <surface boundary="reflective" coeffs="50" id="36" type="z-plane"/>
+    <surface boundary="reflective" coeffs="670" id="37" type="x-plane"/>
+    <surface boundary="reflective" coeffs="770" id="38" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="39" type="y-plane"/>
+    <surface boundary="reflective" coeffs="50" id="40" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="41" type="z-plane"/>
+    <surface boundary="reflective" coeffs="50" id="42" type="z-plane"/>
+    <surface boundary="reflective" coeffs="790" id="43" type="x-plane"/>
+    <surface boundary="reflective" coeffs="890" id="44" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="45" type="y-plane"/>
+    <surface boundary="reflective" coeffs="50" id="46" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="47" type="z-plane"/>
+    <surface boundary="reflective" coeffs="50" id="48" type="z-plane"/>
+    <surface boundary="reflective" coeffs="910" id="49" type="x-plane"/>
+    <surface boundary="reflective" coeffs="1010" id="50" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="51" type="y-plane"/>
+    <surface boundary="reflective" coeffs="50" id="52" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="53" type="z-plane"/>
+    <surface boundary="reflective" coeffs="50" id="54" type="z-plane"/>
+    <surface boundary="reflective" coeffs="1030" id="55" type="x-plane"/>
+    <surface boundary="reflective" coeffs="1130" id="56" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="57" type="y-plane"/>
+    <surface boundary="reflective" coeffs="50" id="58" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="59" type="z-plane"/>
+    <surface boundary="reflective" coeffs="50" id="60" type="z-plane"/>
+    <surface boundary="reflective" coeffs="1150" id="61" type="x-plane"/>
+    <surface boundary="reflective" coeffs="1250" id="62" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="63" type="y-plane"/>
+    <surface boundary="reflective" coeffs="50" id="64" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="65" type="z-plane"/>
+    <surface boundary="reflective" coeffs="50" id="66" type="z-plane"/>
+    <surface boundary="reflective" coeffs="1270" id="67" type="x-plane"/>
+    <surface boundary="reflective" coeffs="1370" id="68" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="69" type="y-plane"/>
+    <surface boundary="reflective" coeffs="50" id="70" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="71" type="z-plane"/>
+    <surface boundary="reflective" coeffs="50" id="72" type="z-plane"/>
+    <surface boundary="reflective" coeffs="1390" id="73" type="x-plane"/>
+    <surface boundary="reflective" coeffs="1490" id="74" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="75" type="y-plane"/>
+    <surface boundary="reflective" coeffs="50" id="76" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="77" type="z-plane"/>
+    <surface boundary="reflective" coeffs="50" id="78" type="z-plane"/>
+    <surface boundary="reflective" coeffs="1510" id="79" type="x-plane"/>
+    <surface boundary="reflective" coeffs="1610" id="80" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="81" type="y-plane"/>
+    <surface boundary="reflective" coeffs="50" id="82" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="83" type="z-plane"/>
+    <surface boundary="reflective" coeffs="50" id="84" type="z-plane"/>
+    <surface boundary="reflective" coeffs="1630" id="85" type="x-plane"/>
+    <surface boundary="reflective" coeffs="1730" id="86" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="87" type="y-plane"/>
+    <surface boundary="reflective" coeffs="50" id="88" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="89" type="z-plane"/>
+    <surface boundary="reflective" coeffs="50" id="90" type="z-plane"/>
+    <surface boundary="reflective" coeffs="1750" id="91" type="x-plane"/>
+    <surface boundary="reflective" coeffs="1850" id="92" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="93" type="y-plane"/>
+    <surface boundary="reflective" coeffs="50" id="94" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-50" id="95" type="z-plane"/>
+    <surface boundary="reflective" coeffs="50" id="96" type="z-plane"/>
+  </geometry>
+  <settings>
+    <run_mode>fixed source</run_mode>
+    <particles>16000000</particles>
+    <batches>100</batches>
+>>>>>>> Stashed changes
 =======
     <surface boundary="reflective" coeffs="190" id="13" type="x-plane"/>
     <surface boundary="reflective" coeffs="290" id="14" type="x-plane"/>
@@ -527,6 +625,9 @@
     </tally>
     <tally id="5" name="beryllium rxn rates">
       <filters>2 1</filters>
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
       <nuclides>Be9</nuclides>
       <scores>(n,gamma) (n,2n) elastic</scores>
