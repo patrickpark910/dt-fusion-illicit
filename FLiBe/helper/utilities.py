@@ -1,6 +1,7 @@
 """
 Set of helper functions
 """
+import re
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
@@ -177,6 +178,28 @@ def mass_to_molar_fracs(mass_fracs, molar_masses):
         comp: moles_per_g[comp] / total
         for comp in moles_per_g
     }
+
+
+def extract_lie(path: str) -> float:
+    """
+    Extract the float value following 'Li' in the given path string.
+
+    Args:
+        path (str): A filename or identifier containing a substring like 'Li<value>'.
+
+    Returns:
+        float: The numeric value that immediately follows 'Li'.
+
+    Raises:
+        ValueError: If no valid 'Li<value>' pattern is found.
+    """
+    pattern = re.compile(r'Li([+-]?\d+(?:\.\d+)?)')
+    match = pattern.search(path)
+    if not match:
+        raise ValueError(f"No 'Li<value>' pattern found in: {path!r}")
+    return float(match.group(1))
+
+
 
 
 if __name__ == '__main__':
