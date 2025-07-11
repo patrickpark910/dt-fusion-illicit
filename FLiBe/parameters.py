@@ -15,5 +15,5 @@ ENRICH_LI = 7.5 # 7.5 # wt%
 ENRICH_U  = 0.7204 # wt% 
 TEMP_K = 900 # K
 VOL_CC = 342 * 1e6 # cm3
-MASS_U_LIST = [0, 0.1, 0.2, 0.5, 1, 2.5, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50] # metric tons uranium (MTU)
+MASS_U_LIST = [0, 0.1, 0.2, 0.5, 1, 2.5, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50] # [0, 0.1, 1, 5, 10, 20, 30, 40, 50] # metric tons uranium (MTU)
 ENRICH_LI_LIST = [7.5,10.0,12.5,15.0,17.5,20.0] # weight percent
