@@ -16,10 +16,9 @@ from flibe_plots_extra import *
 
 
 def main():
-    tbr_paths, pu_paths = [], []
     for e in ENRICH_LI_LIST:
         # Read and plot tallies for each Li enrich case
-        current_sp = PlotStatepoint(enrich_li=e, save=False, show=False, to_csv=True)
+        current_sp = PlotStatepoint(enrich_li=e, save=True, show=False, to_csv=True)
 
         current_sp.print_rxn_rates()
         current_sp.plot_tbr()
@@ -29,16 +28,6 @@ def main():
         current_sp.plot_pu_vs_energy()
         current_sp.plot_rel_pu_vs_energy()
         current_sp.plot_flux_vs_energy()
-        
-        # Appends path to TBR and Pu data CSVs to plot them all together
-        # --depreciated but stored in './helper/flibe_plots_extra.py' --ppark 2025-07-10
-        # tbr_paths.append(current_sp.tbr_path) # need to run current_sp.plot_tbr() first to get self.tbr_path assigned!
-        # pu_paths.append(current_sp.pu_path) # need to run current_sp.plot_pu() first to get self.pu_path assigned!
-
-    # --depreciated but stored in './helper/flibe_plots_extra.py' --ppark 2025-07-10
-    # plot_all_invert(tbr_paths, pu_paths, save=True, show=False, to_csv=True)
-    # plot_all_tbr(tbr_paths, save=True, show=False, to_csv=True)
-    # plot_all_pu(pu_paths, save=True, show=False, to_csv=True)
 
 
 class PlotStatepoint:
@@ -65,7 +54,7 @@ class PlotStatepoint:
             if sd == 'data': sd_path = f'./figures/{sd}/'
             else: sd_path = f'./figures/{sd}/{self.name}/'
             print(f"Ensuring directory exists: {sd_path}")
-            os.makedirs(f'./figures/{sd}/{self.name}/', exist_ok=True)
+            os.makedirs(sd_path, exist_ok=True)
 
         """ Convert tallies into usable forms """
         # Read tallies
