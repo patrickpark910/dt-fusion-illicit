@@ -122,7 +122,7 @@ def calc_mix_vol_fracs(mtu, volume=342e6, density_flibe=1.94, displace=False):
     """
     Calculate the volume fractions of FLiBe and UF4. 
     Assumes UF4 concentration small enough that its addition does NOT change FLiBe volume
-      after conversaion with J.L. Ball --ppark 2025-07-03
+    after conversaion with J. L. Ball --ppark 2025-07-03
 
     Args:
         mtu : float : metric tons uranium
