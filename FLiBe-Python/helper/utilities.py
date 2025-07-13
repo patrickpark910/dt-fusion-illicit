@@ -17,7 +17,15 @@ AMU_U = 238.02891 # for natural enrichment
 AMU_UF4 = AMU_U + 4 * AMU_F19
 AMU_FLIBE = 98.89 # g/mol
 DENSITY_UF4 = 6.7 # g/cm3
+AMU_PU239 = 239.0521634
+SEC_PER_YR = 3600 * 24 * 365
 
+"""
+Fusion parameters - from JL Ball 24
+"""
+N_PER_MJ = 3.546e17 # 17.6 MeV
+P_FUS_MW = 500
+NPS_FUS  = P_FUS_MW * N_PER_MJ # n/s
 
 
 """
