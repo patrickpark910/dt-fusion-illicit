@@ -20,14 +20,21 @@ def main():
         # Read and plot tallies for each Li enrich case
         current_sp = PlotStatepoint(enrich_li=e, save=True, show=False, to_csv=True)
 
+        current_sp.plot_pu_per_yr()
+
+
+        '''
+        
         current_sp.print_rxn_rates()
         current_sp.plot_tbr()
         current_sp.plot_pu()
         current_sp.plot_pu_per_mtu()
+        
         current_sp.plot_rxn_rates()
         current_sp.plot_pu_vs_energy()
         current_sp.plot_rel_pu_vs_energy()
         current_sp.plot_flux_vs_energy()
+        '''
 
 
 class PlotStatepoint:
@@ -67,9 +74,9 @@ class PlotStatepoint:
 
         # Convert Tally objects into pandas dataframes
         self.flux_df = flux.get_pandas_dataframe() # Convert Tally object! Not 'XXX_rr'! --ppark
-        U_df    = U.get_pandas_dataframe()
-        Li_df   = Li.get_pandas_dataframe()
-        # F_df    = F.get_pandas_dataframe() # unused
+        U_df  = U.get_pandas_dataframe()
+        Li_df = Li.get_pandas_dataframe()
+        # F_df = F.get_pandas_dataframe() # unused
 
         # Add new column for energy bin midpoint (for plotting)
         for df in [self.flux_df, U_df, Li_df]: # , F_df]:
@@ -104,6 +111,11 @@ class PlotStatepoint:
         self.U238_fis_err_list = U238_df[U238_df['score'] == 'fission'][['cell', 'mean', 'std. dev.']]['std. dev.'].tolist()
         self.U238_ng_list     = U238_df[U238_df['score'] == '(n,gamma)'][['cell', 'mean', 'std. dev.']]['mean'].tolist()
         self.U238_ng_err_list = U238_df[U238_df['score'] == '(n,gamma)'][['cell', 'mean', 'std. dev.']]['std. dev.'].tolist()
+
+        # Plutonium kg per year
+        self.Pu_per_yr_list = []
+        for Pu_per_srcn in self.U238_ng_list:
+            self.Pu_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3 )
 
         """Create list of cell IDs randomly assigned by OpenMC to match mtu loading to cell ID"""
         self.cell_ids = U_df['cell'].unique().tolist()
@@ -160,7 +172,7 @@ class PlotStatepoint:
         print(f"\nPlotting U-238 (n,gamma) reaction rate vs. uranium loading...")
 
         plt.figure()
-        plt.errorbar(MASS_U_LIST, self.U238_ng_list, yerr=self.U238_ng_err_list, fmt='o-', markersize=2, capsize=0, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
+        plt.plot(MASS_U_LIST, self.Pu_per_yr_list, yerr=self.U238_ng_err_list, fmt='o-', markersize=2, capsize=0, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
         plt.xlim(-1.5,51.5)
         plt.ylim(-0.005,0.105)
 
@@ -188,7 +200,7 @@ class PlotStatepoint:
 
         Pu_per_mtu_list = []
         for i, m in enumerate(MASS_U_LIST[1:]):
-            Pu_per_mtu_list.append(self.U238_ng_list[i]/m)
+            Pu_per_mtu_list.append(self.U238_ng_list[i+1]/m) # fixed to [i+1] -ezoccoli 2025-07-11
 
         plt.figure()
         plt.plot(MASS_U_LIST[1:], Pu_per_mtu_list, markersize=2, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
@@ -206,6 +218,45 @@ class PlotStatepoint:
             print(f"Exported U-238 (n,gamma) per MTU plots.")
         else:
             print(f"Did not export U-238 (n,gamma) per MTU plots due to user setting.")
+
+        if self.show: plt.show()
+        plt.close('all')
+
+
+    def plot_pu_per_yr(self):
+        """
+        Plot of U-238 (n,gamma) reaction rate per year
+        """
+        print(f"\nPlotting kg of Pu produced per year...")
+
+        try: i = MASS_U_LIST.index(0.0096)
+        except Exception as e:
+            print(f"\n{e}\n")
+            print(f"Fatal: This function requires you to have '0.0096' in your `MASS_U_LIST`.")
+
+        print(MASS_U_LIST)
+        Pu_rate_per_mtu = self.Pu_per_yr_list[i] / 0.0096  # = Pu kg/yr/mtu  # 0.3 / 0.0096 #
+        y = [m * Pu_rate_per_mtu for m in MASS_U_LIST]
+        print(f'\nPu-239 production per year per 12.1 kg U: {Pu_rate_per_mtu*0.01209475} | {NPS_FUS} nps')
+        print(y)
+
+        plt.figure()
+        plt.plot(MASS_U_LIST, self.Pu_per_yr_list, markersize=2, linewidth=0.75, color='#000000', label=f'OpenMC') # turn capsize > 0 to show error bars, but they're super smol
+        plt.plot(MASS_U_LIST, y, 'r--', linewidth=0.75, label=f'200 wppm U')
+
+        plt.xlim(-1.5,51.5)
+        # plt.ylim(-0.005,0.105)
+        plt.title(f'Pu-239 production per year (Li-6 {self.e}wt%, {P_FUS_MW} MW = {NPS_FUS:.2e} n/s)')
+        plt.xlabel('Uranium loaded [metric tons]')
+        plt.ylabel(r'Pu-239 produced [kg$/$yr]')
+        plt.tight_layout()
+
+        if self.save:
+            plt.savefig(f'./figures/pdf/{self.name}/fig_Pu_per_yr.pdf', bbox_inches='tight', format='pdf')
+            plt.savefig(f'./figures/png/{self.name}/fig_Pu_per_yr.png', bbox_inches='tight', format='png')
+            print(f"Exported kg of Pu produced per year plots.")
+        else:
+            print(f"Did not export kg of Pu produced per year plots due to user setting.")
 
         if self.show: plt.show()
         plt.close('all')
