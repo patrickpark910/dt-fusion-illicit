@@ -190,7 +190,7 @@ class PBLI:
         """ Run type """
         self.settings.run_mode = 'fixed source'
         self.settings.particles = int(1e6) * len(self.u_list)
-        self.settings.batches = 25
+        self.settings.batches = 100
 
 
     def run_openmc(self):
