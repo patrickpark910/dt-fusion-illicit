@@ -15,7 +15,7 @@ def main():
     for e in ENRICH_LI_LIST:
         for t in [300]:
             # Read and plot tallies for each Li enrich case
-            current_sp = PlotStatepoint(enrich_li=e, temp_k=t, save=True, show=False, to_csv=True)
+            current_sp = PlotStatepoint(enrich_li=7.5, temp_k=t, save=True, show=False, to_csv=True)
 
             current_sp.plot_tbr()
             current_sp.plot_pu_per_yr()
