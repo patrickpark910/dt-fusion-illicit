@@ -16,8 +16,9 @@ def main():
 
             current_run = FLIBE(enrich_li=e, temp_k=t)
 
-            if os.path.isdir(f"./OpenMC/{current_run.name}/"):
-                print(f"Warning. Directory {current_run.name} already exists, so running OpenMC will fail. Skipping...")
+            print(f"""Check if '{current_run.path}' exists: {os.path.isdir({current_run.path})}""")
+            if os.path.isdir(current_run.path):
+                print(f"Warning. Directory {current_run.path} already exists, so running OpenMC will fail. Skipping...")
                 continue
             else:
                 current_run.set_xs_path()
@@ -32,6 +33,7 @@ class FLIBE:
         self.temp = temp_k
         self.u_list = u_list
         self.name = f"FLiBe_Li{self.lie:04.1f}_{round(self.temp)}K"
+        self.path = f"./OpenMC/{self.name}/"
 
         flibe = openmc.Material()
         flibe.add_elements_from_formula('F4Li2Be', 'ao', enrichment_target='Li6', enrichment_type='wo', enrichment=self.lie)
