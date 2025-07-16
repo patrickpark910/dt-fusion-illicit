@@ -3,32 +3,35 @@ import os, sys
 import numpy as np
 
 # Import helper functions
-from parameters import *
-sys.path.insert(0, f"{os.getcwd()}/helper")
-from utilities import *
+from Python.parameters import *
+from Python.utilities import *
 
 
 def main():
     for e in ENRICH_LI_LIST:
-        print("\n\n")
-        print("="*42)
-        print(f"Running FLiBe OpenMC model for Li-6 enrichment: {e} wt%")
-        
-        current_run = FLIBE(enrich_li=e)
-        
-        if os.path.isdir(f"./openmc/FLiBe_Li{e:04.1f}/"):
-            print(f"Warning. Directory {f'./openmc/FLiBe_Li{e:04.1f}/'} already exists, so running OpenMC will fail. Skipping...")
-            continue
-        else:
-            current_run.set_xs_path()
-            current_run.run_openmc()
+        for t in TEMP_LIST:
+            print("\n\n")
+            print("="*42)
+            print(f"Running FLiBe OpenMC model for Li-6 enrichment: {e} wt%")
+
+            current_run = FLIBE(enrich_li=e, temp_k=t)
+
+            if os.path.isdir(f"./OpenMC/{current_run.name}/"):
+                print(f"Warning. Directory {current_run.name} already exists, so running OpenMC will fail. Skipping...")
+                continue
+            else:
+                current_run.set_xs_path()
+                current_run.run_openmc()
 
 
 class FLIBE:
 
-    def __init__(self, enrich_li=7.5):
+    def __init__(self, u_list=MASS_U_LIST_FLIBE, enrich_li=7.5, temp_k=900):
 
         self.lie = enrich_li
+        self.temp = temp_k
+        self.u_list = u_list
+        self.name = f"FLiBe_Li{self.lie:04.1f}_{round(self.temp)}K"
 
         flibe = openmc.Material()
         flibe.add_elements_from_formula('F4Li2Be', 'ao', enrichment_target='Li6', enrichment_type='wo', enrichment=self.lie)
@@ -41,10 +44,10 @@ class FLIBE:
 
         # Calculate volume ratios of UF4 and FLiBe, ensure they add up to 1
         mix_list = []
-        for mtu in MASS_U_LIST:
+        for mtu in self.u_list:
             vf_flibe, vf_uf4 = calc_mix_vol_fracs(mtu, volume=VOL_CC, density_flibe=DENSITY_FLIBE, displace=True) # './helper/utilities.py'
             mix = openmc.Material.mix_materials([flibe, uf4], [vf_flibe, vf_uf4], 'vo') # fractions in 'mix_materials' MUST add up to 1
-            mix.name, mix.volume, mix.temperature = f"FLiBe + {mtu:.1f} MTU", VOL_CC, TEMP_K
+            mix.name, mix.volume, mix.temperature = f"FLiBe {mtu:.1f} MTU at {self.temp} K", VOL_CC, self.temp
             mix_list.append(mix)
 
         self.materials = openmc.Materials(mix_list)
@@ -52,7 +55,7 @@ class FLIBE:
 
         """ GEOMETRY """
         cells, pitch, half_box = [], 120, 50 # +/- 50 cm bounds
-        box_centers = [pitch * i for i in range(len(MASS_U_LIST))] # used in Sources
+        box_centers = [pitch * i for i in range(len(self.u_list))] # used in Sources
 
         for i, material in enumerate(mix_list):
             x_min = openmc.XPlane(x0= -half_box + box_centers[i], boundary_type='reflective')
@@ -66,7 +69,7 @@ class FLIBE:
             cells.append(cell)
 
         root_univ = openmc.Universe(cells=cells) # Create root universe with all material cells
-        root_univ.plot(width=(pitch * len(MASS_U_LIST), 110), origin=(pitch * (len(MASS_U_LIST) - 1) / 2, 0.0, 0.0)) # Visualize
+        root_univ.plot(width=(pitch * len(self.u_list), 110), origin=(pitch * (len(self.u_list) - 1) / 2, 0.0, 0.0)) # Visualize
         self.geometry = openmc.Geometry(root_univ) # Set geometry
 
 
@@ -133,14 +136,14 @@ class FLIBE:
 
         """ Run type """
         self.settings.run_mode = 'fixed source'
-        self.settings.particles = len(MASS_U_LIST) * int(1e6)  #  
+        self.settings.particles = len(self.u_list) * int(1e6)  #
         self.settings.batches = 100
 
 
     def run_openmc(self):
         self.model = openmc.model.Model(self.geometry, self.materials, self.settings, self.tallies)
-        self.model.export_to_model_xml(f"./openmc/FLiBe_Li{self.lie:04.1f}/")  # _Li6-20wt
-        self.model.run(cwd=f"./openmc/FLiBe_Li{self.lie:04.1f}/")  # _Li6-20wt
+        self.model.export_to_model_xml(f"./OpenMC/{self.name}/")  # _Li6-20wt
+        self.model.run(cwd=f"./OpenMC/{self.name}/")  # _Li6-20wt
 
 
     def set_xs_path(self):
