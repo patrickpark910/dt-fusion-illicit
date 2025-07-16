@@ -13,10 +13,11 @@ from Python.flibe_plots_extra import *
 
 def main():
     for e in ENRICH_LI_LIST:
-        for t in TEMP_LIST:
+        for t in [300]:
             # Read and plot tallies for each Li enrich case
             current_sp = PlotStatepoint(enrich_li=e, temp_k=t, save=True, show=False, to_csv=True)
 
+            current_sp.plot_tbr()
             current_sp.plot_pu_per_yr()
 
 
@@ -43,7 +44,7 @@ class PlotStatepoint:
         self.save, self.show, self.to_csv = save, show, to_csv
 
         """ Load tallies """
-        sp_path = f'./openmc/{self.name}/statepoint.100.h5'
+        sp_path = f'./OpenMC/{self.name}/statepoint.100.h5'
         print("\n\n")
         print("="*42)
         print(f"Loading statepoint: {sp_path}")
@@ -54,10 +55,10 @@ class PlotStatepoint:
             print(f"\n{e}\n")
             sys.exit(f"oopsie woopsie fucky wucky can't read the sp")
 
-        # Make directories for figures 
+        # Make directories for Figures 
         for sd in ['pdf','png','gif','data']:
-            if sd == 'data': sd_path = f'./figures/{sd}/'
-            else: sd_path = f'./figures/{sd}/{self.name}/'
+            if sd == 'data': sd_path = f'./Figures/{sd}/'
+            else: sd_path = f'./Figures/{sd}/{self.name}/'
             print(f"Ensuring directory exists: {sd_path}")
             os.makedirs(sd_path, exist_ok=True)
 
@@ -133,7 +134,7 @@ class PlotStatepoint:
         print(f"{df.to_string(index=False)}\n") # ensures the whole df gets printed
 
         if self.to_csv:
-            path = f"./figures/data/{self.name}_tot_rxn_rates.csv"
+            path = f"./Figures/data/{self.name}_tot_rxn_rates.csv"
             df.to_csv(path, index=False) # keep as 'self.pu_path'!
             print(f"Exported total reaction rates CSV to: {path}")
 
@@ -148,14 +149,14 @@ class PlotStatepoint:
         plt.xlim(-1.5,51.5)
         plt.ylim(1.196,1.264)
 
-        plt.title(f'Tritium breeding ratio (Li-6 {self.e}wt%)')
+        plt.title(f'Tritium breeding ratio (Li-6 {self.e}wt%, {self.temp} K)')
         plt.xlabel('Uranium loaded [metric tons]')
         plt.ylabel('Tritium breeding ratio')
         plt.tight_layout()
 
         if self.save:
-            plt.savefig(f'./figures/pdf/{self.name}/fig_tbr.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./figures/png/{self.name}/fig_tbr.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_tbr.pdf', bbox_inches='tight', format='pdf')
+            plt.savefig(f'./Figures/png/{self.name}/fig_tbr.png', bbox_inches='tight', format='png')
             print(f"Exported tritium breeding ratio plots.")
         else:
             print(f"Did not export tritium breeding ratio plots.")
@@ -174,14 +175,14 @@ class PlotStatepoint:
         plt.xlim(-1.5,51.5)
         plt.ylim(-0.005,0.105)
 
-        plt.title(f'Pu-239 production rate (Li-6 {self.e}wt%)')
+        plt.title(f'Pu-239 production rate (Li-6 {self.e}wt%, {self.temp} K)')
         plt.xlabel('Uranium loaded [metric tons]')
         plt.ylabel(r'Pu-239 produced [atoms$/$source neutron]')
         plt.tight_layout()
 
         if self.save:
-            plt.savefig(f'./figures/pdf/{self.name}/fig_Pu.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./figures/png/{self.name}/fig_Pu.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_Pu.pdf', bbox_inches='tight', format='pdf')
+            plt.savefig(f'./Figures/png/{self.name}/fig_Pu.png', bbox_inches='tight', format='png')
             print(f"Exported U-238 (n,gamma) plots.")
         else:
             print(f"Did not export U-238 (n,gamma) reaction rate vs. uranium loading plots due to user setting.")
@@ -205,14 +206,14 @@ class PlotStatepoint:
 
         plt.xlim(-1.5,51.5)
         # plt.ylim(-0.005,0.105)
-        plt.title(f'Pu-239 production per MTU (Li-6 {self.e}wt%)')
+        plt.title(f'Pu-239 production per MTU (Li-6 {self.e}wt%, {self.temp} K)')
         plt.xlabel('Uranium loaded [metric tons]')
         plt.ylabel(r'Pu-239 produced per MTU [atoms$/$source neutron$/$MTU]')
         plt.tight_layout()
 
         if self.save:
-            plt.savefig(f'./figures/pdf/{self.name}/fig_Pu_per_MTU.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./figures/png/{self.name}/fig_Pu_per_MTU.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_Pu_per_MTU.pdf', bbox_inches='tight', format='pdf')
+            plt.savefig(f'./Figures/png/{self.name}/fig_Pu_per_MTU.png', bbox_inches='tight', format='png')
             print(f"Exported U-238 (n,gamma) per MTU plots.")
         else:
             print(f"Did not export U-238 (n,gamma) per MTU plots due to user setting.")
@@ -244,14 +245,14 @@ class PlotStatepoint:
 
         plt.xlim(-1.5,51.5)
         # plt.ylim(-0.005,0.105)
-        plt.title(f'Pu-239 production per year (Li-6 {self.e}wt%, {P_FUS_MW} MW = {NPS_FUS:.2e} n/s)')
+        plt.title(f'Pu-239 production per year (Li-6 {self.e}wt%, {self.temp} K, {P_FUS_MW} MW = {NPS_FUS:.2e} n/s)')
         plt.xlabel('Uranium loaded [metric tons]')
         plt.ylabel(r'Pu-239 produced [kg$/$yr]')
         plt.tight_layout()
 
         if self.save:
-            plt.savefig(f'./figures/pdf/{self.name}/fig_Pu_per_yr.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./figures/png/{self.name}/fig_Pu_per_yr.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_Pu_per_yr.pdf', bbox_inches='tight', format='pdf')
+            plt.savefig(f'./Figures/png/{self.name}/fig_Pu_per_yr.png', bbox_inches='tight', format='png')
             print(f"Exported kg of Pu produced per year plots.")
         else:
             print(f"Did not export kg of Pu produced per year plots due to user setting.")
@@ -287,7 +288,7 @@ class PlotStatepoint:
             plt.ylabel('Counts $/$ source neutron')
 
             """ Export figure in log-log scale """
-            plt.title(f'Reaction rates, {MASS_U_LIST[i]} MTU (Li-6 {self.e}wt%, log-log)')
+            plt.title(f'Reaction rates, {MASS_U_LIST[i]} MTU (Li-6 {self.e}wt%, {self.temp} K, log-log)')
             plt.xscale('log'), plt.yscale('log')
             plt.xlim(1e0,2e7), plt.ylim(1e-14,1e2)
 
@@ -297,8 +298,8 @@ class PlotStatepoint:
 
             # Export figure
             if self.save:
-                plt.savefig(f'./figures/pdf/{self.name}/fig_rxnrates_log_{MASS_U_LIST[i]}mtu.pdf', bbox_inches='tight', format='pdf')
-                plt.savefig(f'./figures/png/{self.name}/fig_rxnrates_log_{MASS_U_LIST[i]}mtu.png', bbox_inches='tight', format='png') # you want 'log' before 'mtu' so you can flip thru them in File Explorer
+                plt.savefig(f'./Figures/pdf/{self.name}/fig_rxnrates_log_{MASS_U_LIST[i]}mtu.pdf', bbox_inches='tight', format='pdf')
+                plt.savefig(f'./Figures/png/{self.name}/fig_rxnrates_log_{MASS_U_LIST[i]}mtu.png', bbox_inches='tight', format='png') # you want 'log' before 'mtu' so you can flip thru them in File Explorer
                 print(f"   Exported LOG-LOG reaction rates plots.")
             if self.show: plt.show()
 
@@ -307,7 +308,7 @@ class PlotStatepoint:
 
             flux_line.remove() # remove flux plot in lin scale bc it doesn't fit
 
-            plt.title(f'Reaction rates, {MASS_U_LIST[i]} MTU (Li-6 {self.e}wt%, lin-log)')
+            plt.title(f'Reaction rates, {MASS_U_LIST[i]} MTU (Li-6 {self.e}wt%, {self.temp} K, lin-log)')
             plt.xscale('log'), plt.yscale('linear')
             plt.xlim(1e0,2e7), plt.ylim(0,0.03)
 
@@ -321,8 +322,8 @@ class PlotStatepoint:
             leg.get_frame().set_linewidth(1)
 
             if self.save:
-                plt.savefig(f'./figures/pdf/{self.name}/fig_rxnrates_lin_{MASS_U_LIST[i]}mtu.pdf', bbox_inches='tight', format='pdf')
-                plt.savefig(f'./figures/png/{self.name}/fig_rxnrates_lin_{MASS_U_LIST[i]}mtu.png', bbox_inches='tight', format='png')
+                plt.savefig(f'./Figures/pdf/{self.name}/fig_rxnrates_lin_{MASS_U_LIST[i]}mtu.pdf', bbox_inches='tight', format='pdf')
+                plt.savefig(f'./Figures/png/{self.name}/fig_rxnrates_lin_{MASS_U_LIST[i]}mtu.png', bbox_inches='tight', format='png')
                 print(f"   Exported LIN-LOG reaction rates plots.")
             if self.show: plt.show()
 
@@ -332,14 +333,14 @@ class PlotStatepoint:
         if self.save:
             filepaths_lin, filepaths_log = [], []
             for i in MASS_U_LIST:
-                filepaths_log.append(f"./figures/png/{self.name}/fig_rxnrates_log_{i}mtu.png")
-                filepaths_lin.append(f"./figures/png/{self.name}/fig_rxnrates_lin_{i}mtu.png")
+                filepaths_log.append(f"./Figures/png/{self.name}/fig_rxnrates_log_{i}mtu.png")
+                filepaths_lin.append(f"./Figures/png/{self.name}/fig_rxnrates_lin_{i}mtu.png")
 
             frames_log = [iio.imread(path) for path in filepaths_log]
             frames_lin = [iio.imread(path) for path in filepaths_lin]
 
-            iio.mimsave(f"./figures/gif/{self.name}/fig_rxnrates_log.gif", frames_log, fps=1, loop=0) # loop=0 : infinite loop
-            iio.mimsave(f"./figures/gif/{self.name}/fig_rxnrates_lin.gif", frames_lin, fps=1, loop=0) # loop=0 : infinite loop
+            iio.mimsave(f"./Figures/gif/{self.name}/fig_rxnrates_log.gif", frames_log, fps=1, loop=0) # loop=0 : infinite loop
+            iio.mimsave(f"./Figures/gif/{self.name}/fig_rxnrates_lin.gif", frames_lin, fps=1, loop=0) # loop=0 : infinite loop
             print(f"Exported GIFs of reaction rates for varying MTU.")
 
         plt.close('all')
@@ -362,7 +363,7 @@ class PlotStatepoint:
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Reactions $/$ source neutron')
-        plt.title(f'U-238 (n,gamma) rxn rate (Li-6 {self.e}wt%)')
+        plt.title(f'U-238 (n,gamma) rxn rate (Li-6 {self.e}wt%, {self.temp} K)')
         plt.xscale('log'), plt.yscale('log')
         # plt.xlim(1e0,2e7), plt.ylim(0,0.007)
         plt.xlim(1e1,1e3), plt.ylim(1e-7,1e-2)
@@ -377,12 +378,12 @@ class PlotStatepoint:
 
         # Export figure
         if self.save:
-            plt.savefig(f'./figures/pdf/{self.name}/fig_U238ng.pdf', bbox_inches='tight', format='pdf') 
-            plt.savefig(f'./figures/png/{self.name}/fig_U238ng.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238ng.pdf', bbox_inches='tight', format='pdf') 
+            plt.savefig(f'./Figures/png/{self.name}/fig_U238ng.png', bbox_inches='tight', format='png')
             
             plt.xlim(1e0,2e7), plt.ylim(1e-7,1e-2)
-            plt.savefig(f'./figures/pdf/{self.name}/fig_U238ng_full.pdf', bbox_inches='tight', format='pdf') 
-            plt.savefig(f'./figures/png/{self.name}/fig_U238ng_full.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238ng_full.pdf', bbox_inches='tight', format='pdf') 
+            plt.savefig(f'./Figures/png/{self.name}/fig_U238ng_full.png', bbox_inches='tight', format='png')
 
             print(f"   Exported Pu production vs. energy with MTU contours plot.")
             
@@ -408,7 +409,7 @@ class PlotStatepoint:
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Factor change relative to rxn rate in 1 MTU')
-        plt.title(f'Relative U-238 (n,gamma) rxn rate w.r.t. 1 MTU (Li-6 {self.e}wt%)')
+        plt.title(f'Relative U-238 (n,gamma) rxn rate w.r.t. 1 MTU (Li-6 {self.e}wt%, {self.temp} K)')
         plt.xscale('log'), plt.yscale('linear')
         plt.xlim(1e1,1e3), plt.ylim(0,60)
 
@@ -418,13 +419,13 @@ class PlotStatepoint:
 
         # Export figure
         if self.save:
-            plt.savefig(f'./figures/pdf/{self.name}/fig_U238ng_rel.pdf', bbox_inches='tight', format='pdf') 
-            plt.savefig(f'./figures/png/{self.name}/fig_U238ng_rel.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238ng_rel.pdf', bbox_inches='tight', format='pdf') 
+            plt.savefig(f'./Figures/png/{self.name}/fig_U238ng_rel.png', bbox_inches='tight', format='png')
             
             plt.xlim(1e0,2e7)
 
-            plt.savefig(f'./figures/pdf/{self.name}/fig_U238ng_rel_full.pdf', bbox_inches='tight', format='pdf') 
-            plt.savefig(f'./figures/png/{self.name}/fig_U238ng_rel_full.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238ng_rel_full.pdf', bbox_inches='tight', format='pdf') 
+            plt.savefig(f'./Figures/png/{self.name}/fig_U238ng_rel_full.png', bbox_inches='tight', format='png')
 
             print(f"   Exported factor change in Pu rel 1 MTU vs. energy with MTU contours plot.")
             
@@ -448,7 +449,7 @@ class PlotStatepoint:
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Neutrons $/$ source neutron')
-        plt.title(f'Neutron flux (Li-6 {self.e}wt%)')
+        plt.title(f'Neutron flux (Li-6 {self.e}wt%, {self.temp} K)')
         plt.xscale('log'), plt.yscale('log')
         plt.xlim(1e1,1e3), plt.ylim(1e-3,1e0)
 
@@ -458,13 +459,13 @@ class PlotStatepoint:
 
         # Export figure
         if self.save:
-            plt.savefig(f'./figures/pdf/{self.name}/fig_flux.pdf', bbox_inches='tight', format='pdf') 
-            plt.savefig(f'./figures/png/{self.name}/fig_flux.png', bbox_inches='tight', format='png') # you want 'log' before 'mtu' so you can flip thru them in File Explorer
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_flux.pdf', bbox_inches='tight', format='pdf') 
+            plt.savefig(f'./Figures/png/{self.name}/fig_flux.png', bbox_inches='tight', format='png') # you want 'log' before 'mtu' so you can flip thru them in File Explorer
             
             plt.xlim(1e0,2e7), plt.ylim(1e-3,1e2)
 
-            plt.savefig(f'./figures/pdf/{self.name}/fig_flux_full.pdf', bbox_inches='tight', format='pdf') 
-            plt.savefig(f'./figures/png/{self.name}/fig_flux_full.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_flux_full.pdf', bbox_inches='tight', format='pdf') 
+            plt.savefig(f'./Figures/png/{self.name}/fig_flux_full.png', bbox_inches='tight', format='png')
 
             print(f"   Exported flux vs. energy with MTU contours plot.")
             
