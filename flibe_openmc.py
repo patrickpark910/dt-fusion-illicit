@@ -16,7 +16,8 @@ def main():
 
             current_run = FLIBE(enrich_li=e, temp_k=t)
 
-            print(f"""Check if '{current_run.path}' exists: {os.path.isdir({current_run.path})}""")
+            print(f"Check if '{current_run.path}' exists: {os.path.isdir(current_run.path)}")
+
             if os.path.isdir(current_run.path):
                 print(f"Warning. Directory {current_run.path} already exists, so running OpenMC will fail. Skipping...")
                 continue
@@ -123,24 +124,42 @@ class FLIBE:
         # tallies.export_to_xml("./xml/tallies.xml") --don't need bc 'model.export_to_model_xml' below --ppark 2025-06-28
 
 
+        
+        """First Wall Effects"""
+        sp = openmc.StatePoint(f'./OpenMC/FirstWallTest/statepoint.100.h5')  
+        out_tally = sp.get_tally(name='outgoing_spectrum')
+
+        energy_bins = out_tally.filters[1].bins
+        energy_bins = np.array(energy_bins)  # shape (N, 2)
+
+        energy_midpoints = 0.5 * (energy_bins[:, 0] + energy_bins[:, 1])
+
+        current_spectrum = out_tally.get_values(scores=['current']).flatten()
+
+        total_current = current_spectrum.sum()
+        probabilities = current_spectrum / total_current
+
         """ SETTINGS """
         self.settings = openmc.Settings()
 
-        """ Isotropic 14.07 MeV point source at center of each cube """
+        """ Source
+        Isotropic 14.07 MeV point source at center of each cube
+        """
+        energies = energy_midpoints.tolist()
+        weights = probabilities.tolist()
         source = []
         for p in box_centers:
             src = openmc.IndependentSource()
             src.space  = openmc.stats.Point((p,0,0))
             src.angle  = openmc.stats.Isotropic()
-            src.energy = openmc.stats.Discrete([14.07e6], [1.0])
+            src.energy = openmc.stats.Discrete(energies, weights)
             source.append(src)
         self.settings.source = source
 
         """ Run type """
         self.settings.run_mode = 'fixed source'
-        self.settings.particles = len(self.u_list) * int(1e6)  #
+        self.settings.particles = len(MASS_U_LIST) * int(1e6)  #  
         self.settings.batches = 100
-
 
     def run_openmc(self):
         self.model = openmc.model.Model(self.geometry, self.materials, self.settings, self.tallies)
