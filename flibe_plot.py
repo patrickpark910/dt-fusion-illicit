@@ -1,47 +1,45 @@
 import openmc
-import os, sys, re
-import numpy as np
+import os, sys
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
 from matplotlib.ticker import MultipleLocator, ScalarFormatter
-from scipy.interpolate import make_interp_spline
 import imageio.v2 as iio # use v2 to avoid deprecation warnings --ppark
 
-""" import helper functions """
-from parameters import *
-sys.path.insert(0, f"{os.getcwd()}/helper")
-from utilities import *
-from flibe_plots_extra import *
+# Import helper functions
+from Python.parameters import *
+from Python.utilities import *
+from Python.flibe_plots_extra import *
 
 
 def main():
     for e in ENRICH_LI_LIST:
-        # Read and plot tallies for each Li enrich case
-        current_sp = PlotStatepoint(enrich_li=e, save=True, show=False, to_csv=True)
+        for t in TEMP_LIST:
+            # Read and plot tallies for each Li enrich case
+            current_sp = PlotStatepoint(enrich_li=e, temp_k=t, save=True, show=False, to_csv=True)
 
-        current_sp.plot_pu_per_yr()
+            current_sp.plot_pu_per_yr()
 
 
-        '''
-        
-        current_sp.print_rxn_rates()
-        current_sp.plot_tbr()
-        current_sp.plot_pu()
-        current_sp.plot_pu_per_mtu()
-        
-        current_sp.plot_rxn_rates()
-        current_sp.plot_pu_vs_energy()
-        current_sp.plot_rel_pu_vs_energy()
-        current_sp.plot_flux_vs_energy()
-        '''
+            '''
+            
+            current_sp.print_rxn_rates()
+            current_sp.plot_tbr()
+            current_sp.plot_pu()
+            current_sp.plot_pu_per_mtu()
+            
+            current_sp.plot_rxn_rates()
+            current_sp.plot_pu_vs_energy()
+            current_sp.plot_rel_pu_vs_energy()
+            current_sp.plot_flux_vs_energy()
+            '''
 
 
 class PlotStatepoint:
 
-    def __init__(self, enrich_li=7.5, save=False, show=True, to_csv=False):
+    def __init__(self, enrich_li=7.5, temp_k=900, save=False, show=True, to_csv=False):
         self.e = enrich_li
-        self.name = f"FLiBe_Li{self.e:04.1f}"
+        self.temp = temp_k
+        self.name = f"FLiBe_Li{self.e:04.1f}_{self.temp}K"
         self.save, self.show, self.to_csv = save, show, to_csv
 
         """ Load tallies """
