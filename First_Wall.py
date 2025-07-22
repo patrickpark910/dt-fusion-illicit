@@ -26,7 +26,7 @@ def main():
 class FirstWallTest:
 
     def __init__(self):
-        self.name = 'FirstWall_50'
+        self.name = 'FirstWall'
 
         """ MATERIALS """
         """ TUNGSTEN from ball"""
@@ -44,7 +44,6 @@ class FirstWallTest:
 
         tungsten.add_element('W',1-(5+5+5+4+2.5+3+0.5+0.5+0.5+5)/1e6,percent_type='wo')
         tungsten.set_density('g/cm3',19.3)
-        #tungsten.volume = 65636 #Wedge vol
         tungsten.depletable = False
 
         """ V-4Cr-4Ti """
@@ -67,7 +66,7 @@ class FirstWallTest:
         vcrti.add_element('Ni',13/1e6,percent_type='wo')
         vcrti.add_element('Cu',4/1e6,percent_type='wo')
         vcrti.add_element('V',1-0.04-0.04-(56+181+103+7+17+0.5+119+280+0.5+80+13+4)/1e6,percent_type='wo')
-        vcrti.set_density('g/cm3',6.05) #This density value is sus and needs a good source
+        vcrti.set_density('g/cm3',6.05)
 
         
         self.materials = openmc.Materials([tungsten,vcrti])
@@ -77,9 +76,9 @@ class FirstWallTest:
         '''first wall slab thickness approximations from balls simplified model
         but we are ignoring the effects of imbeded structural components within the flibe mixture
         such as the channel structures, RF heating, and vacuum systems.'''
-        plasma_thickness = 50
-        tung_thickness = 0.3 #cm
-        vcrti_thickness = 4
+        plasma_thickness = 100 #1 meter radius of plasma
+        tung_thickness = 0.3 #3mm thickness of tungsten
+        vcrti_thickness = 4 #4cm thickness vanadium alloy
 
         r0 = openmc.Sphere(r=plasma_thickness)
         r1 = openmc.Sphere(r=tung_thickness + plasma_thickness)  # inner radius 10 cm
