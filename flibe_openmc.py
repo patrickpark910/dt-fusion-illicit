@@ -8,32 +8,31 @@ from Python.utilities import *
 
 
 def main():
-    for e in ENRICH_LI_LIST:
-        for t in TEMP_LIST:
-            print("\n\n")
-            print("="*42)
-            print(f"Running FLiBe OpenMC model for Li-6 enrichment: {e} wt%")
+    for e in [7.5]:
+        print("\n\n")
+        print("="*42)
+        print(f"Running FLiBe OpenMC model for Li-6 enrichment: {e} wt%")
 
-            current_run = FLIBE(enrich_li=e, temp_k=t)
+        current_run = FLIBE(enrich_li=e, temp_k=300)
 
-            print(f"Check if '{current_run.path}' exists: {os.path.isdir(current_run.path)}")
+        print(f"Check if '{current_run.path}' exists: {os.path.isdir(current_run.path)}")
 
-            if os.path.isdir(current_run.path):
-                print(f"Warning. Directory {current_run.path} already exists, so running OpenMC will fail. Skipping...")
-                continue
-            else:
-                current_run.set_xs_path()
-                current_run.run_openmc()
+        if os.path.isdir(current_run.path):
+            print(f"Warning. Directory {current_run.path} already exists, so running OpenMC will fail. Skipping...")
+            continue
+        else:
+            current_run.set_xs_path()
+            current_run.run_openmc()
 
 
 class FLIBE:
 
-    def __init__(self, u_list=MASS_U_LIST_FLIBE, enrich_li=7.5, temp_k=900):
+    def __init__(self, u_list=MASS_U_LIST_FLIBE, enrich_li=7.5, temp_k=300):
 
         self.lie = enrich_li
         self.temp = temp_k
         self.u_list = u_list
-        self.name = f"FLiBe_Li{self.lie:04.1f}_{round(self.temp)}K"
+        self.name = f"FLiBe_Li{self.lie:04.1f}_7_22"
         self.path = f"./OpenMC/{self.name}/"
 
         flibe = openmc.Material()
@@ -126,7 +125,7 @@ class FLIBE:
 
         
         """First Wall Effects"""
-        sp = openmc.StatePoint(f'./OpenMC/FirstWallTest/statepoint.100.h5')  
+        sp = openmc.StatePoint(f'./OpenMC/FirstWall/statepoint.100.h5')  
         out_tally = sp.get_tally(name='outgoing_spectrum')
 
         energy_bins = out_tally.filters[1].bins
@@ -158,7 +157,7 @@ class FLIBE:
 
         """ Run type """
         self.settings.run_mode = 'fixed source'
-        self.settings.particles = len(MASS_U_LIST) * int(1e6)  #  
+        self.settings.particles = len(MASS_U_LIST) * int(1e1)  #  
         self.settings.batches = 100
 
     def run_openmc(self):

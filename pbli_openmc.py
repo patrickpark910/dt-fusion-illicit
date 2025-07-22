@@ -16,11 +16,13 @@ def main():
         
     current_run = PBLI(enrich_li=90, u_list=MASS_U_LIST_PBLI)
 
-    if os.path.isdir(f"./OpenMC/{current_run.name}/"):
-        print(f"Warning. Directory {f"./OpenMC/{current_run.name}/"} already exists, so running OpenMC will fail. Skipping...")
-
+    if os.path.isdir(current_run.path):
+        print(f"Warning. Directory {current_run.path} already exists, so running OpenMC will fail. Skipping...")
+        return
     else:
+        current_run.set_xs_path()
         current_run.run_openmc()
+
 
 
 class PBLI:
@@ -28,8 +30,9 @@ class PBLI:
     def __init__(self, enrich_li=90, u_list=MASS_U_LIST_PBLI):
 
         self.e = enrich_li
-        self.name = f'PbLi_Li{self.e}'
+        self.name = f'PbLi_Li{self.e}_7_22'
         self.u_list = u_list
+        self.path = f"./OpenMC/{self.name}/"
 
         # PbLi
         pbli = openmc.Material()  # 83% Pb, 17% Li by atomic fraction
@@ -110,8 +113,8 @@ class PBLI:
             mix.volume = VOL_CC
             mix_list.append(mix)
 
-            print(f"\nProperties of PbLi-TRISO with {mtu} MTU:")
-            print(mix)
+            #print(f"\nProperties of PbLi-TRISO with {mtu} MTU:")
+            #print(mix)
 
         self.materials = openmc.Materials(mix_list)
         self.materials.cross_sections = set_xs_path()
@@ -172,24 +175,42 @@ class PBLI:
 
         self.tallies.extend([flux_tally, U_tally, Li_tally, Pb_tally])
 
+ 
+        
+        """First Wall Effects"""
+        sp = openmc.StatePoint(f'./OpenMC/FirstWall_50/statepoint.100.h5')  
+        out_tally = sp.get_tally(name='outgoing_spectrum')
+
+        energy_bins = out_tally.filters[1].bins
+        energy_bins = np.array(energy_bins)  # shape (N, 2)
+
+        energy_midpoints = 0.5 * (energy_bins[:, 0] + energy_bins[:, 1])
+
+        current_spectrum = out_tally.get_values(scores=['current']).flatten()
+
+        total_current = current_spectrum.sum()
+        probabilities = current_spectrum / total_current
+
         """ SETTINGS """
         self.settings = openmc.Settings()
 
         """ Source
         Isotropic 14.07 MeV point source at center of each cube
         """
+        energies = energy_midpoints.tolist()
+        weights = probabilities.tolist()
         source = []
         for p in box_centers:
             src = openmc.IndependentSource()
-            src.space = openmc.stats.Point((p, 0, 0))
-            src.angle = openmc.stats.Isotropic()
-            src.energy = openmc.stats.Discrete([14.07e6], [1.0])
+            src.space  = openmc.stats.Point((p,0,0))
+            src.angle  = openmc.stats.Isotropic()
+            src.energy = openmc.stats.Discrete(energies, weights)
             source.append(src)
         self.settings.source = source
 
         """ Run type """
         self.settings.run_mode = 'fixed source'
-        self.settings.particles = int(1e6) * len(self.u_list)
+        self.settings.particles = len(MASS_U_LIST) * int(1e1)  #  
         self.settings.batches = 100
 
 
@@ -197,6 +218,20 @@ class PBLI:
         self.model = openmc.model.Model(self.geometry, self.materials, self.settings, self.tallies)
         self.model.export_to_model_xml(f"./OpenMC/{self.name}/")
         self.model.run(cwd=f"./OpenMC/{self.name}/")
+
+    def set_xs_path(self):
+        """ 
+        Temporary solution for finding xs files between WSL and Ubuntu on Computing Cluster without editing PATH --ppark 2025-06-28 
+        """
+        xs_path_ubuntu = '/opt/openmc_data/endfb-viii.0-hdf5/cross_sections.xml'
+        xs_path_wsl   = '/mnt/c/openmc/data/endfb-viii.0-hdf5/cross_sections.xml'
+        if os.path.isfile(xs_path_ubuntu):
+            self.materials.cross_sections = xs_path_ubuntu # use this on Zotacs --ppark
+        elif os.path.isfile(xs_path_wsl):
+            self.materials.cross_sections = xs_path_wsl
+            #print(self.materials.cross_sections )
+        else:
+            sys.exit(f"Error finding cross section XML!")
 
 
 

@@ -14,10 +14,14 @@ AMU_LI6, AMU_LI7 = 6.0150, 7.0160 # 6.01512288742, 7.01600343426 # amu = g/mol
 AMU_F19 = 18.9984 # 18.99840316207
 AMU_BE9 =  9.0120 # 9.012183062
 AMU_U = 238.02891 # for natural enrichment
+AMU_Th = 232.0381
 AMU_UF4 = AMU_U + 4 * AMU_F19
+AMU_ThF4 = AMU_Th + 4 * AMU_F19
 AMU_FLIBE = 98.89 # g/mol
 DENSITY_UF4 = 6.7 # g/cm3
+DENSITY_ThF4 = 6.3
 AMU_PU239 = 239.0521634
+AMU_U233 = 233.039635207
 SEC_PER_YR = 3600 * 24 * 365
 
 """
@@ -175,6 +179,41 @@ def calc_mix_vol_fracs(mtu, volume=342e6, density_flibe=1.94, displace=False):
     vf_uf4   = vol_uf4/(vol_flibe+vol_uf4)
 
     return vf_flibe, vf_uf4
+def calc_mix_vol_fracs_th(mtu, volume=342e6, density_flibe=1.94, displace=False):
+    """
+    Calculate the volume fractions of FLiBe and ThF4. 
+    Assumes ThF4 concentration small enough that its addition does NOT change FLiBe volume
+    after conversaion with J. L. Ball --ppark 2025-07-03
+
+    Args:
+        mtu : float : metric tons uranium
+        volume : float : cc of system
+        density_flibe : float : g/cm3 of FLiBe
+        displace : bool : default False, whether to deduct UF4 volume from FLiBe volume (if UF4 is assumed to/not to dissolve in FLiBe)
+
+    Returns:
+        (vf_flibe, vf_uf4) : 2-ple of floats : volume fractions
+    """
+    # Convert inputs to SI units
+    mass_u = mtu * 1e3
+    density_flibe = density_flibe * 1e3 # kg/m3
+    density_thf4   = DENSITY_ThF4 * 1e3   # kg/m3  
+    volume = float(volume) / 1e6
+
+    # Compute volumes
+    mass_thf4 = mass_th * (AMU_ThF4 / AMU_Th)
+    vol_thf4 = mass_thf4 / density_thf4
+    
+    if displace:
+        vol_flibe = volume - vol_thf4
+    if not displace:
+        vol_flibe = volume
+
+    # Compute volume fractions
+    vf_flibe = vol_flibe/(vol_flibe+vol_thf4)
+    vf_thf4   = vol_thf4/(vol_flibe+vol_thf4)
+
+    return vf_flibe, vf_thf4
 
 
 def mass_to_molar_fracs(mass_fracs, molar_masses):

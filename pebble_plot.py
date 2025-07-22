@@ -14,15 +14,17 @@ from utilities import *
 def main():
 
     # Read and plot tallies for each Li enrich case
-    current_sp = PlotStatepointPebble(enrich_li=60, u_list=MASS_U_LIST_PBLI, save=True, show=False, to_csv=True)
+    current_sp = PlotStatepointPebble(enrich_li=60, u_list=MASS_U_LIST_PEBBLE, save=True, show=False, to_csv=True)
 
+    current_sp.print_rxn_rates()
     current_sp.plot_tbr()
     current_sp.plot_pu()
-    # current_sp.plot_pu_per_yr()
+    current_sp.plot_pu_per_yr()
     current_sp.plot_pu_vs_energy()
     current_sp.plot_rel_pu_vs_energy()
     current_sp.plot_flux_vs_energy()
-
+    current_sp.plot_pu_per_mtu()
+    current_sp.plot_cum_norm_u_vs_energy()
 
     '''  
     current_sp.print_rxn_rates()
@@ -39,13 +41,13 @@ def main():
 
 class PlotStatepointPebble:
 
-    def __init__(self, enrich_li=60, u_list=MASS_U_LIST_PBLI, save=False, show=True, to_csv=False):
+    def __init__(self, enrich_li=60, u_list=MASS_U_LIST_PEBBLE, save=False, show=True, to_csv=False):
 
         self.e = enrich_li
         self.u_list = u_list
         self.temp = 900
         self.save, self.show, self.to_csv = save, show, to_csv
-        self.name = f'Pebble_Li{self.e}'
+        self.name = f'Pebble_Li{self.e}_7_18'
 
         """ Load tallies """
         sp_path = f'./OpenMC/{self.name}/statepoint.100.h5'
@@ -114,7 +116,7 @@ class PlotStatepointPebble:
         # Plutonium kg per year
         self.Pu_per_yr_list = []
         for Pu_per_srcn in self.U238_ng_list:
-            self.Pu_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3 )
+            self.Pu_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3 / 5 )
 
         """Create list of cell IDs randomly assigned by OpenMC to match mtu loading to cell ID"""
         self.cell_ids = U_df['cell'].unique().tolist()
@@ -147,8 +149,7 @@ class PlotStatepointPebble:
         plt.errorbar(self.u_list, self.tbr_list, yerr=self.tbr_err_list, fmt='o-', markersize=2, capsize=0, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
 
         plt.xlim(-1.5,51.5)
-        plt.ylim(1.59,1.53)
-
+        
         plt.title(f'Tritium breeding ratio (Pebble, {self.e}wt% Li-6)')
         plt.xlabel('Uranium loaded [metric tons]')
         plt.ylabel('Tritium breeding ratio')
@@ -228,13 +229,13 @@ class PlotStatepointPebble:
         """
         print(f"\nPlotting kg of Pu produced per year...")
 
-        try: i = self.u_list.index(0.0096)
+        try: i = self.u_list.index(0.076)
         except Exception as e:
             print(f"\n{e}\n")
-            print(f"Fatal: This function requires you to have '0.0096' in your `MASS_U_LIST_PBLI`.")
+            print(f"Fatal: This function requires you to have '0.076' in your `MASS_U_LIST_PEBBLE`.")
 
         print(self.u_list)
-        Pu_rate_per_mtu = self.Pu_per_yr_list[i] / 0.0096  # = Pu kg/yr/mtu  # 0.3 / 0.0096 #
+        Pu_rate_per_mtu = self.Pu_per_yr_list[i] / 0.076 # = Pu kg/yr/mtu  # 0.3 / 0.0096 #
         y = [m * Pu_rate_per_mtu for m in self.u_list]
         print(f'\nPu-239 production per year per 12.1 kg U: {Pu_rate_per_mtu*0.01209475} | {NPS_FUS} nps')
         print(y)
@@ -243,11 +244,38 @@ class PlotStatepointPebble:
         plt.plot(self.u_list, self.Pu_per_yr_list, markersize=2, linewidth=0.75, color='#000000', label=f'OpenMC') # turn capsize > 0 to show error bars, but they're super smol
         plt.plot(self.u_list, y, 'r--', linewidth=0.75, label=f'200 wppm U')
 
+        mtu_points = [0.076, 5, 30]
+        def get_closest_value(mtu_val, mtu_list, pu_list):
+            idx = (abs(mtu_list - mtu_val)).argmin()
+            return pu_list[idx]
+
+        # Gather Pu production values for all fuels at each MTU point
+        annotations = []
+        for mtu in mtu_points:
+            pebble_val = get_closest_value(mtu, np.array(self.u_list), self.Pu_per_yr_list)
+            annotations.append((mtu, pebble_val))
+        ax = plt.gca()
+        box_props = dict(boxstyle="round,pad=0.5", facecolor="white", edgecolor="black", alpha=0.85)
+        box_positions = {
+            30: (30, max(self.Pu_per_yr_list) * 0.6),
+            5: (15, max(self.Pu_per_yr_list) * 0.5),
+            0.076: (0.01, max(self.Pu_per_yr_list) * 0.2),
+        }
+
+        # Create one box for each MTU value showing all three fuels' Pu production
+        for mtu, pebble_val in annotations:
+            x, y = box_positions[mtu]
+            text = (f"MTU: {mtu}\n"
+                    f"Pebble: {pebble_val:.3f} kg/yr/MW *100")
+            ax.text(x, y, text, fontsize=9, bbox=box_props)
+
+        plt.legend()
+
         plt.xlim(-1.5,51.5)
         # plt.ylim(-0.005,0.105)
-        plt.title(f'Pu-239 production per year (Pebble, {self.e}wt% Li-6, {P_FUS_MW} MW = {NPS_FUS:.2e} n/s)')
+        plt.title(f'Pu-239 production per year per MW(Pebble, {self.e}wt% Li-6, {P_FUS_MW} MW = {NPS_FUS:.2e} n/s)')
         plt.xlabel('Uranium loaded [metric tons]')
-        plt.ylabel(r'Pu-239 produced [kg$/$yr]')
+        plt.ylabel(r'Pu-239 produced [kg$/$yr$/$MW]')
         plt.tight_layout()
 
         if self.save:
@@ -353,7 +381,7 @@ class PlotStatepointPebble:
         """
         print(f"\nPlotting Pu production vs. energy with MTU contours ...")
 
-        plt.figure(figsize=(18,9))
+        plt.figure(figsize=(18,4))
 
         for i, cell_id in enumerate(self.cell_ids):
             if self.u_list[i] in [0, 10, 20, 30, 40, 50]:
@@ -395,7 +423,7 @@ class PlotStatepointPebble:
         """ Plots factor change in Pu rel 1 MTU vs. energy, for contours of MTU """
         print(f"\nPlotting factor change in Pu rel 1 MTU vs. energy with MTU contours ...")
 
-        plt.figure(figsize=(18,9))
+        plt.figure(figsize=(18,4))
 
         for i, cell_id in enumerate(self.cell_ids):
             if self.u_list[i] in [1]:
@@ -440,7 +468,7 @@ class PlotStatepointPebble:
         """
         print(f"\nPlotting flux vs. energy with MTU contours...")
 
-        plt.figure(figsize=(18,9))
+        plt.figure(figsize=(18,4))
         for i, cell_id in enumerate(self.cell_ids):
             if self.u_list[i] in [0, 10, 20, 30, 40, 50]:
                 x = self.flux_df[(self.flux_df['cell'] == cell_id)]['energy mid [eV]']
@@ -451,7 +479,7 @@ class PlotStatepointPebble:
         plt.ylabel('Neutrons $/$ source neutron')
         plt.title(f'Neutron flux (Pebble, {self.e}wt% Li-6)')
         plt.xscale('log'), plt.yscale('log')
-        plt.xlim(1e1,1e3) , plt.ylim(0.3,1e0)
+        plt.xlim(1e1,1e3) 
 
         # Reposition legend
         leg = plt.legend(loc='upper left', ncols=1, frameon=True, fancybox=False, edgecolor='black', framealpha=.75,) # fontsize='small', ncols=1, 
@@ -471,6 +499,54 @@ class PlotStatepointPebble:
             
         if self.show: plt.show()
         plt.close('all')
+
+    def plot_cum_norm_u_vs_energy(self):
+        """
+        Plots cumulative, normalized Pu production vs. energy for contours of MTU.
+        """
+        print(f"\nPlotting cumulative, normalized Pu production vs. energy with MTU contours ...")
+
+        plt.figure(figsize=(18,4))
+
+        for i, cell_id in enumerate(self.cell_ids):
+            if MASS_U_LIST_PEBBLE[i] in [0, 10, 20, 30, 40, 50]:
+                df = self.U238_ng_Ebin_df[self.U238_ng_Ebin_df['cell'] == cell_id]
+                x = df['energy mid [eV]']
+                y = df['mean']
+
+                # Compute cumulative sum
+                cum_y = np.cumsum(y)
+
+                # Normalize cumulative sum to max value
+                cum_y_norm = cum_y / cum_y.iloc[-1] if cum_y.iloc[-1] != 0 else cum_y
+
+                plt.plot(x, cum_y_norm, linewidth=0.75, label=f'{MASS_U_LIST[i]} MTU')
+
+        plt.xlabel('Energy [eV]')
+        plt.ylabel('Cumulative normalized reactions')
+        plt.title(f'Cumulative normalized Pebble U-238 (n,gamma) rxn rate (Li-6 {self.e}wt%, {self.temp} K)')
+        plt.xscale('log'), plt.yscale('linear')
+        plt.xlim(1e1,1e3), plt.ylim(0,1.05)
+
+        # Reposition legend
+        leg = plt.legend(loc='lower right', ncols=1, frameon=True, fancybox=False, edgecolor='black', framealpha=.75,)
+        leg.get_frame().set_linewidth(1)
+
+        # Export figure
+        if self.save:
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238ng_cum_norm.pdf', bbox_inches='tight', format='pdf') 
+            plt.savefig(f'./Figures/png/{self.name}/fig_U238ng_cum_norm.png', bbox_inches='tight', format='png')
+            print(f"   Exported cumulative normalized Pu production vs. energy with MTU contours plot.")
+
+            plt.xlim(1e0,2e7), plt.ylim(0,1.05)
+
+
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238ng_cum_norm_full.pdf', bbox_inches='tight', format='pdf') 
+            plt.savefig(f'./Figures/png/{self.name}/fig_U238ng_cum_norm_full.png', bbox_inches='tight', format='png')
+
+        if self.show:plt.show()
+        plt.close('all')
+
 
 
 
