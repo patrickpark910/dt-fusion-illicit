@@ -117,7 +117,7 @@ class PlotStatepoint:
         # Uranium kg per year
         self.U_per_yr_list = []
         for U_per_srcn in self.Th232_ng_list:
-            self.U_per_yr_list.append( U_per_srcn * NPS_FUS * SEC_PER_YR * AMU_U233 / AVO / 1e3 /5 )
+            self.U_per_yr_list.append( U_per_srcn * NPS_FUS * SEC_PER_YR * AMU_U233 / AVO / 1e3 )
 
         """Create list of cell IDs randomly assigned by OpenMC to match mtu loading to cell ID"""
         self.cell_ids = Th_df['cell'].unique().tolist()
@@ -266,16 +266,16 @@ class PlotStatepoint:
         for mtu, pbli_val in annotations:
             x, y = box_positions[mtu]
             text = (f"MTU: {mtu}\n"
-                    f"FLiBe: {pbli_val:.3f} kg/yr/MW *100")
+                    f"FLiBe: {pbli_val:.3f} kg/yr")
             ax.text(x, y, text, fontsize=9, bbox=box_props)
 
         plt.legend()
 
         plt.xlim(-1.5,51.5)
         # plt.ylim(-0.005,0.105)
-        plt.title(f'U-233 production per year per MW(Li-6 {self.e}wt%, {self.temp} K, {P_FUS_MW} MW = {NPS_FUS:.2e} n/s)')
+        plt.title(f'U-233 production per year (Li-6 {self.e}wt%, {self.temp} K, {P_FUS_MW} MW = {NPS_FUS:.2e} n/s)')
         plt.xlabel('Thorium loaded [metric tons]')
-        plt.ylabel(r'U-233 produced [kg$/$yr$/$MW]')
+        plt.ylabel(r'U-233 produced [kg$/$yr]')
         plt.tight_layout()
 
         if self.save:

@@ -10,7 +10,7 @@ from Python.utilities import *
 def main():
     print("\n\n")
     print("="*42)
-    print(f"Running FLiBe OpenMC model for Li-6 enrichment: {7.5} wt%")
+    print(f"Running FLiBe Thorium OpenMC model for Li-6 enrichment: {7.5} wt%")
 
     current_run = FLIBE_Th(enrich_li=7.5, temp_k=900)
 
@@ -31,14 +31,15 @@ class FLIBE_Th:
         self.lie = enrich_li
         self.temp = temp_k
         self.u_list = u_list
-        self.name = f"FLiBe_Th_Li{self.lie:04.1f}_7_18"
+        self.name = f"FLiBe_Th_Li{self.lie:04.1f}_7_22"
         self.path = f"./OpenMC/{self.name}/"
 
         flibe = openmc.Material()
         flibe.add_elements_from_formula('F4Li2Be', 'ao', enrichment_target='Li6', enrichment_type='wo', enrichment=self.lie)
         flibe.set_density('g/cm3', DENSITY_FLIBE) 
 
-        # Uranium tetrafluoride -- assumed to dissolve in FLiBe --ppark 2025-07-04
+        # Uranium tetrafluoride -- assumed to dissolve in FLiBe
+        # Modeled Thorium due to concerns about Pu florination for reprocessing, it has not been proven that this method can work experimentally
         """ Thorium tetrafluoride """
         thf4 = openmc.Material()
         thf4.add_elements_from_formula('ThF4')
@@ -47,7 +48,7 @@ class FLIBE_Th:
         # Calculate volume ratios of UF4 and FLiBe, ensure they add up to 1
         mix_list = []
         for mtu in self.u_list:
-            vf_flibe, vf_thf4 = calc_mix_vol_fracs(mtu, volume=VOL_CC, density_flibe=DENSITY_FLIBE, displace=True) # './helper/utilities.py'
+            vf_flibe, vf_thf4 = calc_mix_vol_fracs_th(mtu, volume=VOL_CC, density_flibe=DENSITY_FLIBE, displace=True) # './helper/utilities.py'
             mix = openmc.Material.mix_materials([flibe, thf4], [vf_flibe, vf_thf4], 'vo') # fractions in 'mix_materials' MUST add up to 1
             mix.name, mix.volume, mix.temperature = f"FLiBe {mtu:.1f} MTU at {self.temp} K", VOL_CC, self.temp
             mix_list.append(mix)
@@ -83,11 +84,6 @@ class FLIBE_Th:
 
         E_bin_edges = logspace_per_decade(1e-5, 20e6, 100) # './helpers/utilities.py'
         energy_filter = openmc.EnergyFilter(E_bin_edges)
-        # energy_filter = openmc.EnergyFilter([0., 0.625, 20.0e6])
-        # --Default thermal, intermediate, fast energy cutoffs in MCNP
-        # energy_filter = openmc.EnergyFilter.from_group_structure('CCFE-709')
-        # --These have extra bins in key energy ranges. A full list of energy structures is available here: --ppark 2025-06-27
-        #   https://github.com/openmc-dev/openmc/blob/6254be37582e09acff038f5656332b89e53e4eae/openmc/mgxs/__init__.py#L50-L420
         filters = [energy_filter, cell_filter]
 
         # Flux tally 
@@ -157,7 +153,7 @@ class FLIBE_Th:
 
         """ Run type """
         self.settings.run_mode = 'fixed source'
-        self.settings.particles = len(MASS_U_LIST) * int(1e5)  #  
+        self.settings.particles = len(MASS_U_LIST) * int(1e6)  #  
         self.settings.batches = 100
 
     def run_openmc(self):

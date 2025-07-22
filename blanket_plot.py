@@ -16,10 +16,10 @@ from pebble_plot import PlotStatepointPebble
 
 def main():
     # Read CSV data into pandas DataFrames
-    flibe = pd.read_csv('./Figures/data/FLiBe_Li07.5_7_18_tot_rxn_rates.csv')
-    flibeTh = pd.read_csv('./Figures/data/FLiBe_Th_Li07.5_7_18_tot_rxn_rates.csv')
-    pbli = pd.read_csv('./Figures/data/PbLi_Li90_7_18_tot_rxn_rates.csv')
-    pebble = pd.read_csv('./Figures/data/Pebble_Li60_7_18_tot_rxn_rates.csv')
+    flibe = pd.read_csv('./Figures/data/FLiBe_Li07.5_7_22_tot_rxn_rates.csv')
+    flibeTh = pd.read_csv('./Figures/data/FLiBe_Th_Li07.5_7_22_tot_rxn_rates.csv')
+    pbli = pd.read_csv('./Figures/data/PbLi_Li90_7_22_tot_rxn_rates.csv')
+    pebble = pd.read_csv('./Figures/data/Pebble_Li60_7_22_tot_rxn_rates.csv')
     
     combined_plot = PlotStatepointALL(flibe, flibeTh, pbli, pebble, save=True, show=False, to_csv=True)
     
@@ -173,7 +173,7 @@ class PlotStatepointALL:
         flibe_pu_per_mtu = self.flibe['U-238(n,gamma)'] / self.flibe['MTU']
         plt.plot(self.flibe['MTU'], flibe_pu_per_mtu,
                  'o-', markersize=2, linewidth=0.75, color='#00FFFF', label='FLiBe UF4')
-        flibe_u_per_mtu = self.flibeTh['Th-232(n,gamma)'] / self.flibe['MTU']
+        flibe_u_per_mtu = self.flibeTh['Th-232(n,gamma)'] / self.flibeTh['MTU']
         plt.plot(self.flibeTh['MTU'], flibe_u_per_mtu,
                  'o-', markersize=2, linewidth=0.75, color='#FF8000', label='FLiBe ThF4')
         pbli_pu_per_mtu = self.pbli['U-238(n,gamma)'] / self.pbli['MTU']
@@ -212,8 +212,10 @@ class PlotStatepointALL:
                 'o-', markersize=2, linewidth=0.75, color='#FF00FF', label='PbLi')
         plt.plot(self.pebble['MTU'], self.pebblePu_per_yr_list,
                 'o-', markersize=2, linewidth=0.75, color='#FFA500', label='Pebble')
-            # The three MTU points for annotation boxes
-        mtu_points = [30, 5, 0.0096]
+        # The three MTU points for FLiBe annotation boxes
+        mtu_fpoints = [0.0096, 5, 30]
+        mtu_pbpoints = [2.65, 5, 50]
+        mtu_ppoints = [0.076, 5, 30]
 
         # Function to get Pu value closest to given MTU for each fuel
         def get_closest_value(mtu_val, mtu_list, pu_list):
@@ -221,41 +223,39 @@ class PlotStatepointALL:
             return pu_list[idx]
 
         # Gather Pu production values for all fuels at each MTU point
-        annotations = []
-        for mtu in mtu_points:
-            flibe_val = get_closest_value(mtu, self.flibe['MTU'], self.flibePu_per_yr_list)
-            flibeTh_val = get_closest_value(mtu, self.flibeTh['MTU'], self.flibeU_per_yr_list)
-            pbli_val = get_closest_value(mtu, self.pbli['MTU'], self.pbliPu_per_yr_list)
-            pebble_val = get_closest_value(mtu, self.pebble['MTU'], self.pebblePu_per_yr_list)
-            annotations.append((mtu, flibe_val, flibeTh_val, pbli_val, pebble_val))
+        # Annotation for FLiBe points
+        textstr = '--- Pu-239 production summary ---\n'
 
-        ax = plt.gca()
-        box_props = dict(boxstyle="round,pad=0.5", facecolor="white", edgecolor="black", alpha=0.85)
+        textstr += 'FLiBe UF4:\n'
+        for mtu in mtu_fpoints:
+            val = get_closest_value(mtu, self.flibe['MTU'], self.flibePu_per_yr_list)
+            textstr += f"  {mtu:.4f} MTU: {val:.4e} kg/yr\n"
 
-        # Positions for boxes on the plot (x, y coords in data units)
-        # Adjust these positions if needed so boxes don’t overlap or clutter
-        box_positions = {
-            30: (30, max(self.flibePu_per_yr_list) * 0.6),
-            5: (15, max(self.pbliPu_per_yr_list) * 0.5),
-            0.0096: (0.01, max(self.pebblePu_per_yr_list) * 0.2),
-        }
+        textstr += 'FLiBe ThF4:\n'
+        for mtu in mtu_fpoints:
+            val = get_closest_value(mtu, self.flibeTh['MTU'], self.flibeU_per_yr_list)
+            textstr += f"  {mtu:.4f} MTU: {val:.4e} kg/yr\n"
 
-        # Create one box for each MTU value showing all three fuels' Pu production
-        for mtu, flibe_val, flibeTh_val, pbli_val, pebble_val in annotations:
-            x, y = box_positions[mtu]
-            text = (f"MTU: {mtu}\n"
-                    f"FLiBe UF4: {flibe_val:.3f} kg/yr\n"
-                    f"FLiBe ThF4: {flibeTh_val:.3f} kg/yr\n"
-                    f"PbLi: {pbli_val:.3f} kg/yr\n"
-                    f"Pebble: {pebble_val:.3f} kg/yr")
-            ax.text(x, y, text, fontsize=9, bbox=box_props)
+        textstr += 'PbLi:\n'
+        for mtu in mtu_pbpoints:
+            val = get_closest_value(mtu, self.pbli['MTU'], self.pbliPu_per_yr_list)
+            textstr += f"  {mtu:.4f} MTU: {val:.4e} kg/yr\n"
+
+        textstr += 'Pebble:\n'
+        for mtu in mtu_ppoints:
+            val = get_closest_value(mtu, self.pebble['MTU'], self.pebblePu_per_yr_list)
+            textstr += f"  {mtu:.4f} MTU: {val:.4e} kg/yr\n"
+
+        # Add the single annotation box on the side of the plot
+        ax.text(1.05, 0.5, textstr, transform=ax.transAxes, fontsize=8,
+                verticalalignment='center', bbox=box_props, fontfamily='monospace')
 
         plt.title(f'Pu-239 / U-233 production per year (All Fuels)')
         plt.xlabel('Uranium / Thorium loaded [metric tons]')
         plt.ylabel(r'Pu-239 / U-233 produced [kg$/$yr]')
         plt.tight_layout()
         plt.legend()
-
+    
         if self.save:
             plt.savefig(f'./Figures/pdf/{self.name}/fig_Pu_per_yr_all.pdf', bbox_inches='tight', format='pdf')
             plt.savefig(f'./Figures/png/{self.name}/fig_Pu_per_yr_all.png', bbox_inches='tight', format='png')
