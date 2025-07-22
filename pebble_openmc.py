@@ -14,22 +14,25 @@ def main():
     print("="*42)
     print(f"Running Pebble OpenMC model for Li-6 enrichment: 60 wt%")
         
-    current_run = Pebble(enrich_li=60, u_list=MASS_U_LIST_PBLI)
+    current_run = Pebble(enrich_li=60, u_list=MASS_U_LIST_PEBBLE)
 
-    if os.path.isdir(f"./OpenMC/{current_run.name}/"):
-        print(f"Warning. Directory {f"./OpenMC/{current_run.name}/"} already exists, so running OpenMC will fail. Skipping...")
-
+    if os.path.isdir(current_run.path):
+        print(f"Warning. Directory {current_run.path} already exists, so running OpenMC will fail. Skipping...")
+        return
     else:
+        current_run.set_xs_path()
         current_run.run_openmc()
+
 
 
 class Pebble:
 
-    def __init__(self, enrich_li=60, u_list=MASS_U_LIST_PBLI):
+    def __init__(self, enrich_li=60, u_list=MASS_U_LIST_PEBBLE):
 
         self.e = enrich_li
-        self.name = f'Pebble_Li{self.e}'
+        self.name = f'Pebble_Li{self.e}_7_18'
         self.u_list = u_list
+        self.path = f"./OpenMC/{self.name}/"
 
         # Eurofer
         eurofer = openmc.Material(name='Eurofer')
@@ -138,9 +141,9 @@ class Pebble:
         he.set_density('g/cm3', 0.0001785)
         he.add_element('He', 1)
 
-        # Calculate volume ratios of TRISO vs PbLi+structure, ensure they add up to 1
+        # Calculate volume ratios of TRISO vs Lithium ceramic+structure, ensure they add up to 1
         mix_list = []
-        for mtu in MASS_U_LIST_PBLI:
+        for mtu in MASS_U_LIST_PEBBLE:
             mass_fuel = mtu * 10**6 * (Mfuel / Mu238)
             V_fuel = mass_fuel / 10.5 #mass over fuel density
             V_triso = V_fuel / vf_fuel 
@@ -224,7 +227,7 @@ class Pebble:
 
         
         """First Wall Effects"""
-        sp = openmc.StatePoint(f'./OpenMC/FirstWallTest/statepoint.100.h5')  
+        sp = openmc.StatePoint(f'./OpenMC/FirstWall/statepoint.100.h5')  
         out_tally = sp.get_tally(name='outgoing_spectrum')
 
         energy_bins = out_tally.filters[1].bins
@@ -256,7 +259,7 @@ class Pebble:
 
         """ Run type """
         self.settings.run_mode = 'fixed source'
-        self.settings.particles = len(MASS_U_LIST) * int(1e5)  #  
+        self.settings.particles = len(MASS_U_LIST) * int(1e4)  #  
         self.settings.batches = 100
 
 
@@ -266,6 +269,19 @@ class Pebble:
         self.model.export_to_model_xml(f"./OpenMC/{self.name}/")
         self.model.run(cwd=f"./OpenMC/{self.name}/")
 
+    def set_xs_path(self):
+        """ 
+        Temporary solution for finding xs files between WSL and Ubuntu on Computing Cluster without editing PATH --ppark 2025-06-28 
+        """
+        xs_path_ubuntu = '/opt/openmc_data/endfb-viii.0-hdf5/cross_sections.xml'
+        xs_path_wsl   = '/mnt/c/openmc/data/endfb-viii.0-hdf5/cross_sections.xml'
+        if os.path.isfile(xs_path_ubuntu):
+            self.materials.cross_sections = xs_path_ubuntu # use this on Zotacs --ppark
+        elif os.path.isfile(xs_path_wsl):
+            self.materials.cross_sections = xs_path_wsl
+            print(self.materials.cross_sections )
+        else:
+            sys.exit(f"Error finding cross section XML!")
 
 
 

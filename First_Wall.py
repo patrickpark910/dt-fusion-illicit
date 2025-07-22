@@ -26,7 +26,7 @@ def main():
 class FirstWallTest:
 
     def __init__(self):
-        self.name = 'FirstWallTest'
+        self.name = 'FirstWall_50'
 
         """ MATERIALS """
         """ TUNGSTEN from ball"""
@@ -77,20 +77,23 @@ class FirstWallTest:
         '''first wall slab thickness approximations from balls simplified model
         but we are ignoring the effects of imbeded structural components within the flibe mixture
         such as the channel structures, RF heating, and vacuum systems.'''
-
+        plasma_thickness = 50
         tung_thickness = 0.3 #cm
-        vcrti_thickness = 1
+        vcrti_thickness = 4
 
-        r1 = openmc.Sphere(r=tung_thickness)  # inner radius 10 cm
-        r2 = openmc.Sphere(r=vcrti_thickness+tung_thickness, boundary_type='vacuum')
+        r0 = openmc.Sphere(r=plasma_thickness)
+        r1 = openmc.Sphere(r=tung_thickness + plasma_thickness)  # inner radius 10 cm
+        r2 = openmc.Sphere(r=vcrti_thickness+tung_thickness+plasma_thickness, boundary_type='vacuum')
 
-        tung_region = -r1
+        plasma_region = -r0
+        tung_region = +r0 & -r1
         vcrti_region = +r1 & -r2
 
+        plasma_cell = openmc.Cell(region=plasma_region)
         tung_cell = openmc.Cell(fill=tungsten, region=tung_region)
         vcrti_cell = openmc.Cell(fill=vcrti, region=vcrti_region)
 
-        self.geometry = openmc.Geometry([tung_cell, vcrti_cell])
+        self.geometry = openmc.Geometry([plasma_cell, tung_cell, vcrti_cell])
 
 
         """ TALLIES """
@@ -114,12 +117,12 @@ class FirstWallTest:
         self.settings = openmc.Settings()
 
         """ Source
-        Isotropic 14.07 MeV plane source at left side surface
+        Isotropic 14.07 MeV 
         """
         """ Run type """
         self.settings = openmc.Settings()
         self.settings.run_mode = 'fixed source'
-        self.settings.particles = int(1e6)
+        self.settings.particles = int(1e7)
         self.settings.batches = 100
 
         source = openmc.IndependentSource()
