@@ -116,7 +116,7 @@ class PlotStatepointPebble:
         # Plutonium kg per year
         self.Pu_per_yr_list = []
         for Pu_per_srcn in self.U238_ng_list:
-            self.Pu_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3 )
+            self.Pu_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3 / 5 )
 
         """Create list of cell IDs randomly assigned by OpenMC to match mtu loading to cell ID"""
         self.cell_ids = U_df['cell'].unique().tolist()
@@ -266,16 +266,16 @@ class PlotStatepointPebble:
         for mtu, pebble_val in annotations:
             x, y = box_positions[mtu]
             text = (f"MTU: {mtu}\n"
-                    f"Pebble: {pebble_val:.3f} kg/yr")
+                    f"Pebble: {pebble_val:.3f} kg/yr/MW *100")
             ax.text(x, y, text, fontsize=9, bbox=box_props)
 
         plt.legend()
 
         plt.xlim(-1.5,51.5)
         # plt.ylim(-0.005,0.105)
-        plt.title(f'Pu-239 production per year (Pebble, {self.e}wt% Li-6, {P_FUS_MW} MW = {NPS_FUS:.2e} n/s)')
+        plt.title(f'Pu-239 production per year per MW(Pebble, {self.e}wt% Li-6, {P_FUS_MW} MW = {NPS_FUS:.2e} n/s)')
         plt.xlabel('Uranium loaded [metric tons]')
-        plt.ylabel(r'Pu-239 produced [kg$/$yr]')
+        plt.ylabel(r'Pu-239 produced [kg$/$yr$/$MW]')
         plt.tight_layout()
 
         if self.save:
