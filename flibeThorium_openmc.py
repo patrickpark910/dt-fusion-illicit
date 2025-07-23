@@ -31,7 +31,7 @@ class FLIBE_Th:
         self.lie = enrich_li
         self.temp = temp_k
         self.u_list = u_list
-        self.name = f"FLiBe_Th_Li{self.lie:04.1f}_7_22"
+        self.name = f"FLiBe-Th_Li{self.lie:04.1f}_7_22"
         self.path = f"./OpenMC/{self.name}/"
 
         flibe = openmc.Material()

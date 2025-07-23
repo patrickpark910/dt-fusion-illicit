@@ -77,13 +77,13 @@ class FirstWall:
         # This value is from Metals Handbook, 9th ed, vol 2: "Properties and Selection: Nonferrous Alloys and Pure Metals" (1979) --ppark 2025-07-22
    
         self.materials = openmc.Materials([tungsten,vcrti])
-        self.materials.cross_sections = set_xs_path()
+        # self.materials.cross_sections = set_xs_path()
 
         """GEOMETRY"""
         '''first wall slab thickness approximations from balls simplified model
         but we are ignoring the effects of imbeded structural components within the flibe mixture
         such as the channel structures, RF heating, and vacuum systems.'''
-        plasma_thickness = 50
+        plasma_thickness = 100
         tung_thickness = 0.3 #cm
         vcrti_thickness = 4
 

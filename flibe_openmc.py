@@ -1,5 +1,5 @@
 import openmc
-import os, sys
+import sys
 import numpy as np
 
 # Import helper functions
@@ -13,27 +13,28 @@ def main():
         print("="*42)
         print(f"Running FLiBe OpenMC model for Li-6 enrichment: {e} wt%")
 
-        current_run = FLIBE(enrich_li=e, temp_k=900)
+        current_run = FLIBE(enrich_li=e, temp_k=900, run_openmc=True)
 
         print(f"Check if '{current_run.path}' exists: {os.path.isdir(current_run.path)}")
 
-        if os.path.isdir(current_run.path):
-            print(f"Warning. Directory {current_run.path} already exists, so running OpenMC will fail. Skipping...")
-            continue
-        else:
-            current_run.set_xs_path()
-            current_run.run_openmc()
+        if current_run.run:
+            if os.path.isdir(current_run.path):
+                print(f"Warning. Directory {current_run.path} already exists, so running OpenMC will fail. Skipping...")
+                continue
+            else:
+                current_run.run_openmc()
 
 
 class FLIBE:
 
-    def __init__(self, u_list=MASS_U_LIST_FLIBE, enrich_li=7.5, temp_k=900):
+    def __init__(self, u_list=MASS_U_LIST_FLIBE, enrich_li=7.5, temp_k=900, run_openmc=False):
 
         self.lie = enrich_li
         self.temp = temp_k
         self.u_list = u_list
-        self.name = f"FLiBe_Li{self.lie:04.1f}_7_22"
+        self.name = f"FLiBe_FW_Li{self.lie:04.1f}_{self.temp}K_2025-07-22"
         self.path = f"./OpenMC/{self.name}/"
+        self.run = run_openmc
 
         flibe = openmc.Material()
         flibe.add_elements_from_formula('F4Li2Be', 'ao', enrichment_target='Li6', enrichment_type='wo', enrichment=self.lie)
@@ -122,32 +123,25 @@ class FLIBE:
         self.tallies.extend([flux_tally, U_tally, Li_tally, F_tally, Be_tally])
 
 
-        
-        """First Wall Effects"""
-        #Determine a flux spectrum from the neutrons leaving the surface of a two layer first wall model './Python/FirstWall.py'
-        #The neutrons added to each MTU box in our model reflect the outgoing current spectrum of out vanadium shell
-        sp = openmc.StatePoint(f'./OpenMC/FirstWall/statepoint.100.h5')  
-        out_tally = sp.get_tally(name='outgoing_spectrum')
-
-        energy_bins = out_tally.filters[1].bins
-        energy_bins = np.array(energy_bins)  # shape (N, 2)
-
-        energy_midpoints = 0.5 * (energy_bins[:, 0] + energy_bins[:, 1])
-
-        current_spectrum = out_tally.get_values(scores=['current']).flatten() #Neutron generation at each current in the spectrum is weighted by its probability of occurrence
- 
-        total_current = current_spectrum.sum()
-        probabilities = current_spectrum / total_current
-
         """ SETTINGS """
         self.settings = openmc.Settings()
 
-        """ Source
-        Isotropic 14.07 MeV point source at center of each cube
-        """
-        energies = energy_midpoints.tolist()
-        weights = probabilities.tolist()
+        """Source from First Wall Effects"""
+        # Determine a flux spectrum from the neutrons leaving the surface of a two layer first wall model './Python/FirstWall.py'
+        # The neutrons added to each MTU box in our model reflect the outgoing current spectrum of out vanadium shell
+        sp = openmc.StatePoint(f'./OpenMC/FirstWall_V4cm_900K_2025-07-22/statepoint.100.h5')
+        out_tally = sp.get_tally(name='outgoing_spectrum')
+
+        energy_bins = np.array(out_tally.filters[1].bins) # shape (N, 2)
+        energy_midpoints = 0.5 * (energy_bins[:, 0] + energy_bins[:, 1])
+
+        current_spectrum = out_tally.get_values(scores=['current']).flatten() # Neutron generation at each current in the spectrum is weighted by its probability of occurrence
+        total_current = current_spectrum.sum()
+        probabilities = current_spectrum / total_current
+
+        energies, weights = energy_midpoints.tolist(), probabilities.tolist()
         source = []
+
         for p in box_centers:
             src = openmc.IndependentSource()
             src.space  = openmc.stats.Point((p,0,0))
@@ -156,30 +150,21 @@ class FLIBE:
             source.append(src)
         self.settings.source = source
 
+
         """ Run type """
         self.settings.run_mode = 'fixed source'
-        self.settings.particles = len(MASS_U_LIST) * int(1e6)  #  
+        self.settings.particles = len(MASS_U_LIST) * int(1e6)
         self.settings.batches = 100
 
+
     def run_openmc(self):
+        self.materials.cross_sections = set_xs_path()
         self.model = openmc.model.Model(self.geometry, self.materials, self.settings, self.tallies)
-        self.model.export_to_model_xml(f"./OpenMC/{self.name}/")  # _Li6-20wt
-        self.model.run(cwd=f"./OpenMC/{self.name}/")  # _Li6-20wt
+        self.model.export_to_model_xml(f"./OpenMC/{self.name}/")
+        self.model.run(cwd=f"./OpenMC/{self.name}/")
 
 
-    def set_xs_path(self):
-        """ 
-        Temporary solution for finding xs files between WSL and Ubuntu on Computing Cluster without editing PATH --ppark 2025-06-28 
-        """
-        xs_path_ubuntu = '/opt/openmc_data/endfb-viii.0-hdf5/cross_sections.xml'
-        xs_path_wsl   = '/mnt/c/openmc/data/endfb-viii.0-hdf5/cross_sections.xml'
-        if os.path.isfile(xs_path_ubuntu):
-            self.materials.cross_sections = xs_path_ubuntu # use this on Zotacs --ppark
-        elif os.path.isfile(xs_path_wsl):
-            self.materials.cross_sections = xs_path_wsl
-            print(self.materials.cross_sections )
-        else:
-            sys.exit(f"Error finding cross section XML!")
+
 
 
 if __name__ == "__main__":
