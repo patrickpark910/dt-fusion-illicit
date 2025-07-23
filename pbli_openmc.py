@@ -40,8 +40,8 @@ class DCLL:
         pbli.add_element('Pb', 0.83)
         pbli.add_element('Li', 0.17, enrichment=self.e, enrichment_target='Li6', enrichment_type='wo')  # Li-6 enrichment to 90%
 
-        # ceramic TRISO -- neglect buoyancy effects --ezoccoli 2025-07-07
-        # TRISO model from OpenMC examples
+        # ceramic TRISO -- neglect buoyancy effects 
+        # TRISO model from OpenMC example code
         fuel = openmc.Material(name='Fuel')
         fuel.set_density('g/cm3', 10.5)
         fuel.add_nuclide('U235', 4.6716e-02)
@@ -50,13 +50,17 @@ class DCLL:
         fuel.add_element('C', 1.6667e-01)
         Mu238 = fuel.get_mass_density('U238')
         Mfuel = fuel.density  # used to compute mass fraction of U238 in fuel
-        # calculate total fuel mass given a mass of U238 (self.u_list)
+        # calculate total fuel mass given a mass of U238 as MTU (self.u_list)
 
         # SiC FCI or structural inserts AND coating for TRISO
         SiC = openmc.Material(name='SiC')
         SiC.set_density('g/cm3', 3.2)
         SiC.add_element('C', 0.5)
         SiC.add_element('Si', 0.5)
+
+        #Glaser & Goldston BISO particles used for simplicity
+        #and to validate our results with their model
+        #BISO particles include our fuel pellet coated in one layer of SiC
 
         radius_fuel = 400e-4  # 400 μm = 0.0400 cm
         radius_sic = 500e-4  # 500 μm = 0.0500 cm
@@ -66,7 +70,7 @@ class DCLL:
         vf_sic = 1.0 - vf_fuel
 
         triso = openmc.Material.mix_materials([fuel, SiC], [vf_fuel, vf_sic], 'vo')
-        triso.set_density('g/cm3', DENSITY_TRISO)
+        triso.set_density('g/cm3', DENSITY_TRISO) #from Glaser & Goldston
 
         f82h = openmc.Material(name='F82H Steel')  # low-activation ferritic steel FS
         f82h.set_density('g/cm3', 7.87)  # typical density
@@ -89,6 +93,7 @@ class DCLL:
         f82h.add_element('Nb', 0.0001)
         # f82h.add_element('Ta', 0.0002) # no Ta180_m1 in ENDF8
 
+        #helium coolant
         he = openmc.Material(name='Helium')
         he.set_density('g/cm3', 0.0001785)
         he.add_element('He', 1)
@@ -100,19 +105,18 @@ class DCLL:
             V_fuel = mass_fuel / 10.5  # mass over fuel density
             V_triso = V_fuel / vf_fuel
             vf_triso = V_triso / (VOL_CC * 0.805)
-            vf_pbli = 1 - vf_triso
+            vf_pbli = 1 - vf_triso #determine vol fraction of TRISO(BISO) in PbLi, then input our PbLi+TRISO mix as 80.5% of our total mixtures volume
             pbliTRISO = openmc.Material.mix_materials([pbli, triso], [vf_pbli, vf_triso], 'vo')  # fractions in 'mix_materials' MUST add up to 1
             pbliTRISO.volume = 0.805 * VOL_CC
             vf_pbliTRISO = 0.805
             vf_he = 0.097
             vf_f82h = 0.019
-            vf_sic = 0.079  # volume fractions from Breeding Ch. 2 Table 1. Glaser and Goldston
+            vf_sic = 0.079  # volume fractions of each component from Breeding Ch. 2 Table 1. Glaser and Goldston
             mix = openmc.Material.mix_materials([pbliTRISO, he, f82h, SiC], [vf_pbliTRISO, vf_he, vf_f82h, vf_sic], 'vo')
             mix.name = 'Full PbLi + TRISO Blanket Homogenized'
             mix.temperature = TEMP_K
             mix.volume = VOL_CC
             mix_list.append(mix)
-
             #print(f"\nProperties of PbLi-TRISO with {mtu} MTU:")
             #print(mix)
 
@@ -152,24 +156,24 @@ class DCLL:
 
         # Flux tally 
         flux_tally = openmc.Tally(name='flux')
-        flux_tally.scores = ['flux'] # specific names required
+        flux_tally.scores = ['flux'] 
         flux_tally.filters = filters
 
         # Uranium reaction rates
         U_tally = openmc.Tally(name='uranium rxn rates')
-        U_tally.scores = ['(n,gamma)','fission', 'elastic'] # specific names required
+        U_tally.scores = ['(n,gamma)','fission', 'elastic'] 
         U_tally.nuclides = ['U238', 'U235']
         U_tally.filters = filters
 
         # Lithium reaction rates
         Li_tally = openmc.Tally(name='lithium rxn rates')
-        Li_tally.scores = ['(n,gamma)','(n,Xt)', 'elastic'] # specific names required
+        Li_tally.scores = ['(n,gamma)','(n,Xt)', 'elastic'] 
         Li_tally.nuclides = ['Li6', 'Li7']
         Li_tally.filters = filters
 
         # Lead reaction rates
         Pb_tally = openmc.Tally(name='lead rxn rates')
-        Pb_tally.scores = ['(n,gamma)', '(n,2n)', 'elastic']  # specific names required
+        Pb_tally.scores = ['(n,gamma)', '(n,2n)', 'elastic']  
         Pb_tally.nuclides = ['Pb204', 'Pb206', 'Pb207', 'Pb208']
         Pb_tally.filters = filters
 
@@ -177,8 +181,10 @@ class DCLL:
 
  
         
-        """First Wall Effects"""
-        sp = openmc.StatePoint(f'./OpenMC/FirstWall_50/statepoint.100.h5')  
+        """FIRST WALL EFFECTS"""
+        #Determine a flux spectrum from the neutrons leaving the surface of a two layer first wall model './Python/FirstWall.py'
+        #The neutrons added to each MTU box in our model reflect the outgoing current spectrum of out vanadium shell
+        sp = openmc.StatePoint(f'./OpenMC/FirstWall/statepoint.100.h5')  
         out_tally = sp.get_tally(name='outgoing_spectrum')
 
         energy_bins = out_tally.filters[1].bins
@@ -189,13 +195,13 @@ class DCLL:
         current_spectrum = out_tally.get_values(scores=['current']).flatten()
 
         total_current = current_spectrum.sum()
-        probabilities = current_spectrum / total_current
+        probabilities = current_spectrum / total_current #Neutron generation at each current in the spectrum is weighted by its probability of occurrence
 
         """ SETTINGS """
-        self.settings = openmc.Settings()
+        self.settings = openmc.Settings()# initialize
 
         """ Source
-        Isotropic 14.07 MeV point source at center of each cube
+        Isotropic 14.07 MeV point source at center of each MTU cube
         """
         energies = energy_midpoints.tolist()
         weights = probabilities.tolist()
@@ -210,7 +216,7 @@ class DCLL:
 
         """ Run type """
         self.settings.run_mode = 'fixed source'
-        self.settings.particles = len(MASS_U_LIST) * int(1e1)  #  
+        self.settings.particles = len(MASS_U_LIST) * int(1e6)    
         self.settings.batches = 100
 
 

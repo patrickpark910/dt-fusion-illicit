@@ -13,7 +13,7 @@ def main():
         print("="*42)
         print(f"Running FLiBe OpenMC model for Li-6 enrichment: {e} wt%")
 
-        current_run = FLIBE(enrich_li=e, temp_k=300)
+        current_run = FLIBE(enrich_li=e, temp_k=900)
 
         print(f"Check if '{current_run.path}' exists: {os.path.isdir(current_run.path)}")
 
@@ -27,7 +27,7 @@ def main():
 
 class FLIBE:
 
-    def __init__(self, u_list=MASS_U_LIST_FLIBE, enrich_li=7.5, temp_k=300):
+    def __init__(self, u_list=MASS_U_LIST_FLIBE, enrich_li=7.5, temp_k=900):
 
         self.lie = enrich_li
         self.temp = temp_k
@@ -39,9 +39,9 @@ class FLIBE:
         flibe.add_elements_from_formula('F4Li2Be', 'ao', enrichment_target='Li6', enrichment_type='wo', enrichment=self.lie)
         flibe.set_density('g/cm3', DENSITY_FLIBE) 
 
-        # Uranium tetrafluoride -- assumed to dissolve in FLiBe --ppark 2025-07-04
+        # Uranium tetrafluoride -- assumed to dissolve in FLiBe
         uf4 = openmc.Material()
-        uf4.add_elements_from_formula('UF4','ao',ENRICH_U) # 'ao' here refers to 1:4 atomic ratio of U:F in UF4!!!
+        uf4.add_elements_from_formula('UF4','ao',ENRICH_U) # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
         uf4.set_density('g/cm3', DENSITY_UF4) 
 
         # Calculate volume ratios of UF4 and FLiBe, ensure they add up to 1
@@ -120,11 +120,12 @@ class FLIBE:
         Be_tally.filters = filters
 
         self.tallies.extend([flux_tally, U_tally, Li_tally, F_tally, Be_tally])
-        # tallies.export_to_xml("./xml/tallies.xml") --don't need bc 'model.export_to_model_xml' below --ppark 2025-06-28
 
 
         
         """First Wall Effects"""
+        #Determine a flux spectrum from the neutrons leaving the surface of a two layer first wall model './Python/FirstWall.py'
+        #The neutrons added to each MTU box in our model reflect the outgoing current spectrum of out vanadium shell
         sp = openmc.StatePoint(f'./OpenMC/FirstWall/statepoint.100.h5')  
         out_tally = sp.get_tally(name='outgoing_spectrum')
 
@@ -133,8 +134,8 @@ class FLIBE:
 
         energy_midpoints = 0.5 * (energy_bins[:, 0] + energy_bins[:, 1])
 
-        current_spectrum = out_tally.get_values(scores=['current']).flatten()
-
+        current_spectrum = out_tally.get_values(scores=['current']).flatten() #Neutron generation at each current in the spectrum is weighted by its probability of occurrence
+ 
         total_current = current_spectrum.sum()
         probabilities = current_spectrum / total_current
 
@@ -157,7 +158,7 @@ class FLIBE:
 
         """ Run type """
         self.settings.run_mode = 'fixed source'
-        self.settings.particles = len(MASS_U_LIST) * int(1e1)  #  
+        self.settings.particles = len(MASS_U_LIST) * int(1e6)  #  
         self.settings.batches = 100
 
     def run_openmc(self):
