@@ -13,7 +13,7 @@ from Python.flibe_plots_extra import *
 
 def main():
     for e in [7.5]:
-        for t in [300]:
+        for t in [900]:
             # Read and plot tallies for each Li enrich case
             current_sp = PlotStatepoint(enrich_li=e, temp_k=t, save=True, show=False, to_csv=True)
 
@@ -22,30 +22,18 @@ def main():
             current_sp.plot_pu()
             current_sp.plot_pu_per_mtu()
             
-            #current_sp.plot_rxn_rates()
+            current_sp.plot_rxn_rates()
             current_sp.plot_pu_vs_energy()
             current_sp.plot_pu_per_yr()
             current_sp.plot_rel_pu_vs_energy()
             current_sp.plot_flux_vs_energy()
             current_sp.plot_cum_norm_u_vs_energy()
 
-            '''
-            
-            current_sp.print_rxn_rates()
-            current_sp.plot_tbr()
-            current_sp.plot_pu()
-            current_sp.plot_pu_per_mtu()
-            
-            current_sp.plot_rxn_rates()
-            current_sp.plot_pu_vs_energy()
-            current_sp.plot_rel_pu_vs_energy()
-            current_sp.plot_flux_vs_energy()
-            '''
 
 
 class PlotStatepoint:
 
-    def __init__(self, enrich_li=7.5, temp_k=300, save=False, show=True, to_csv=False):
+    def __init__(self, enrich_li=7.5, temp_k=900, save=False, show=True, to_csv=False):
         self.e = enrich_li
         self.temp = temp_k
         self.name = f"FLiBe_FW_Li{self.e:04.1f}_{self.temp}K_2025-07-22"
@@ -59,10 +47,10 @@ class PlotStatepoint:
         print(f"Loading statepoint: {sp_path}")
         
         try:
-            sp = openmc.StatePoint(sp_path) # _Li6-7.5wt  _Li6-20wt
+            sp = openmc.StatePoint(sp_path) # _Li6-7.5wt
         except Exception as e:
             print(f"\n{e}\n")
-            sys.exit(f"oopsie woopsie fucky wucky can't read the sp")
+            sys.exit(f"can't read the sp")
 
         # Make directories for Figures 
         for sd in ['pdf','png','gif','data']:
@@ -78,14 +66,12 @@ class PlotStatepoint:
         U    = sp.get_tally(name='uranium rxn rates')
         Li   = sp.get_tally(name='lithium rxn rates')
         F    = sp.get_tally(name='fluorine rxn rates') # unused
-        # Be   = sp.get(name='beryllium rxn rates')
-
+        
         # Convert Tally objects into pandas dataframes
         self.flux_df = flux.get_pandas_dataframe() # Convert Tally object! Not 'XXX_rr'! --ppark
         U_df  = U.get_pandas_dataframe()
         Li_df = Li.get_pandas_dataframe()
-        # F_df = F.get_pandas_dataframe() # unused
-
+        
         # Add new column for energy bin midpoint (for plotting)
         for df in [self.flux_df, U_df, Li_df]: # , F_df]:
             df['energy mid [eV]'] = (df['energy low [eV]'] + df['energy high [eV]'])/ 2
@@ -123,8 +109,7 @@ class PlotStatepoint:
         # Plutonium kg per year
         self.Pu_per_yr_list = []
         for Pu_per_srcn in self.U238_ng_list:
-            self.Pu_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3 /5 )
-        print('checking',self.Pu_per_yr_list)
+            self.Pu_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3) 
 
         """Create list of cell IDs randomly assigned by OpenMC to match mtu loading to cell ID"""
         self.cell_ids = U_df['cell'].unique().tolist()
@@ -154,7 +139,7 @@ class PlotStatepoint:
         print(f"\nPlotting tritium breeding ratio vs. uranium loading...")
 
         plt.figure()
-        plt.errorbar(MASS_U_LIST, self.tbr_list, yerr=self.tbr_err_list, fmt='o-', markersize=2, capsize=0, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
+        plt.errorbar(MASS_U_LIST, self.tbr_list, yerr=self.tbr_err_list, fmt='o-', markersize=2, capsize=0, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars
 
         plt.xlim(-1.5,51.5)
         
@@ -181,7 +166,7 @@ class PlotStatepoint:
         print(f"\nPlotting U-238 (n,gamma) reaction rate vs. uranium loading...")
 
         plt.figure()
-        plt.errorbar(MASS_U_LIST, self.U238_ng_list, yerr=self.U238_ng_err_list, fmt='o-', markersize=2, capsize=0, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
+        plt.errorbar(MASS_U_LIST, self.U238_ng_list, yerr=self.U238_ng_err_list, fmt='o-', markersize=2, capsize=0, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars
         plt.xlim(-1.5,51.5)
         
 
@@ -208,14 +193,14 @@ class PlotStatepoint:
         print(f"\nPlotting U-238 (n,gamma) reaction rate per MTU vs. uranium loading...")
 
         Pu_per_mtu_list = []
-        for i, m in enumerate(MASS_U_LIST[1:]):
-            Pu_per_mtu_list.append(self.U238_ng_list[i+1]/m) # fixed to [i+1] -ezoccoli 2025-07-11
+        for i, m in enumerate(MASS_U_LIST[1:]): #exclude 0 mass case
+            Pu_per_mtu_list.append(self.U238_ng_list[i+1]/m)
 
         plt.figure()
-        plt.plot(MASS_U_LIST[1:], Pu_per_mtu_list, markersize=2, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
+        plt.plot(MASS_U_LIST[1:], Pu_per_mtu_list, markersize=2, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars
 
         plt.xlim(-1.5,51.5)
-        # plt.ylim(-0.005,0.105)
+        
         plt.title(f'Pu-239 production per MTU (Li-6 {self.e}wt%, {self.temp} K)')
         plt.xlabel('Uranium loaded [metric tons]')
         plt.ylabel(r'Pu-239 produced per MTU [atoms$/$source neutron$/$MTU]')
@@ -275,16 +260,16 @@ class PlotStatepoint:
         for mtu, pbli_val in annotations:
             x, y = box_positions[mtu]
             text = (f"MTU: {mtu}\n"
-                    f"PbLi: {pbli_val:.3f} kg/yr/MW *100")
+                    f"PbLi: {pbli_val:.3f} kg/yr")
             ax.text(x, y, text, fontsize=9, bbox=box_props)
 
         plt.legend()
 
         plt.xlim(-1.5,51.5)
         # plt.ylim(-0.005,0.105)
-        plt.title(f'Pu-239 production per year per MW (Li-6 {self.e}wt%, {self.temp} K, {P_FUS_MW} MW = {NPS_FUS:.2e} n/s)')
+        plt.title(f'Pu-239 production per year (Li-6 {self.e}wt%, {self.temp} K, {P_FUS_MW} MW = {NPS_FUS:.2e} n/s)')
         plt.xlabel('Uranium loaded [metric tons]')
-        plt.ylabel(r'Pu-239 produced [kg$/$yr$/$MW]')
+        plt.ylabel(r'Pu-239 produced [kg$/$yr]')
         plt.tight_layout()
 
         if self.save:
@@ -484,7 +469,7 @@ class PlotStatepoint:
             if MASS_U_LIST[i] in [0, 10, 20, 30, 40, 50]:
                 x = self.flux_df[(self.flux_df['cell'] == cell_id)]['energy mid [eV]']
                 y = self.flux_df[self.flux_df['cell'] == cell_id]['mean']
-                plt.plot(x, y, linewidth=0.75, label=f'{MASS_U_LIST[i]} MTU') # green color='#00cd6c',
+                plt.plot(x, y, linewidth=0.75, label=f'{MASS_U_LIST[i]} MTU') 
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Neutrons $/$ source neutron')
