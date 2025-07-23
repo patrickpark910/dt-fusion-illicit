@@ -30,7 +30,7 @@ class Pebble:
     def __init__(self, enrich_li=60, u_list=MASS_U_LIST_PEBBLE):
 
         self.e = enrich_li
-        self.name = f'Pebble_Li{self.e}_7_18'
+        self.name = f'Pebble_Li{self.e}_7_22'
         self.u_list = u_list
         self.path = f"./OpenMC/{self.name}/"
 
@@ -60,7 +60,7 @@ class Pebble:
 
         # Lithium ceramic
         lithium_ceramic = openmc.Material(name='LithiumCeramic')
-        '''density form Activation calculations for multiple recycling of breeder ceramics by
+        '''density from Activation calculations for multiple recycling of breeder ceramics by
         melt processing'''
         lithium_ceramic.set_density('g/cm3', 2.42) 
         lithium_ceramic.add_element('Li', 22.415, percent_type='wo', enrichment_target='Li6', enrichment_type='wo', enrichment=enrich_li)
@@ -259,7 +259,7 @@ class Pebble:
 
         """ Run type """
         self.settings.run_mode = 'fixed source'
-        self.settings.particles = len(MASS_U_LIST) * int(1e4)  #  
+        self.settings.particles = len(MASS_U_LIST) * int(1e6)  #  
         self.settings.batches = 100
 
 

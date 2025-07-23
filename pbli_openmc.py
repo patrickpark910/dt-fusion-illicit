@@ -3,9 +3,8 @@ import os, sys
 import numpy as np
 
 # Import helper functions
-sys.path.insert(0, f"{os.getcwd()}/Python/")
-from parameters import *
-from utilities import *
+from Python.parameters import *
+from Python.utilities import *
 
 
 def main():
@@ -14,59 +13,67 @@ def main():
     print("="*42)
     print(f"Running PbLi OpenMC model for Li-6 enrichment: 90 wt%")
         
-    current_run = DCLL(enrich_li=90, u_list=MASS_U_LIST_PBLI)
+    current_run = DCLL(enrich_li=90, u_list=MASS_U_LIST_PBLI, run_openmc=True)
 
-    if os.path.isdir(current_run.path):
-        print(f"Warning. Directory {current_run.path} already exists, so running OpenMC will fail. Skipping...")
-        return
-    else:
-        current_run.set_xs_path()
-        current_run.run_openmc()
-
+    if current_run.run:
+        if os.path.isdir(current_run.path):
+            print(f"Warning. Directory {current_run.path} already exists, so running OpenMC will fail. Skipping...")
+        else:
+            current_run.run_openmc()
 
 
 class DCLL:
 
-    def __init__(self, enrich_li=90, u_list=MASS_U_LIST_PBLI):
+    def __init__(self, enrich_li=90, u_list=MASS_U_LIST_PBLI, run_openmc=False):
 
         self.e = enrich_li
-        self.name = f'PbLi_Li{self.e}_7_22'
+        self.name = f'DCLL_Li{self.e}_NUO2_900K_2025-07-22'
         self.u_list = u_list
         self.path = f"./OpenMC/{self.name}/"
+        self.run = run_openmc
 
-        # PbLi
+        # Pb-17Li
         pbli = openmc.Material()  # 83% Pb, 17% Li by atomic fraction
         pbli.set_density('g/cm3', DENSITY_PBLI)
         pbli.add_element('Pb', 0.83)
         pbli.add_element('Li', 0.17, enrichment=self.e, enrichment_target='Li6', enrichment_type='wo')  # Li-6 enrichment to 90%
 
-        # ceramic TRISO -- neglect buoyancy effects --ezoccoli 2025-07-07
-        # TRISO model from OpenMC examples
-        fuel = openmc.Material(name='Fuel')
-        fuel.set_density('g/cm3', 10.5)
-        fuel.add_nuclide('U235', 4.6716e-02)
-        fuel.add_nuclide('U238', 2.8697e-01)
-        fuel.add_nuclide('O16', 5.0000e-01)
-        fuel.add_element('C', 1.6667e-01)
-        Mu238 = fuel.get_mass_density('U238')
-        Mfuel = fuel.density  # used to compute mass fraction of U238 in fuel
-        # calculate total fuel mass given a mass of U238 (self.u_list)
+        # 13.8 wt%-enriched U2O3C (half UO2 + half UCO) -- from OpenMC demo --ppark 2025-07-23
+        # uco = openmc.Material(name='kernel')
+        # uco.set_density('g/cm3', 10.5)
+        # uco.add_nuclide('U235', 4.6716e-02)
+        # uco.add_nuclide('U238', 2.8697e-01)
+        # uco.add_nuclide('O16', 5.0000e-01)
+        # uco.add_element('C', 1.6667e-01)
+        # Mu238 = uco.get_mass_density('U238')
+        # Mfuel = uco.density  # used to compute mass fraction of U238 in fuel
+        # calculate total fuel mass given a mass of U238 as MTU (self.u_list)
+
+        # UO2 kernel (nominal ENRICH_U = 0.7204) --ppark 2025-07-23
+        uo2 = openmc.Material(name='UO2')
+        uo2.set_density('g/cm3', 10.5)
+        uo2.add_elements_from_formula('UO2',enrichment=ENRICH_U)
+        mf_uo2 = ((100-ENRICH_U)*AMU_U238+ENRICH_U*AMU_U235)/((100-ENRICH_U)*AMU_U238+ENRICH_U*AMU_U235+2*AMU_O)
+        # 'mf_uo2' = mass frac of U in UO2 = 0.88 at nat U // ENRICH_U in % so subtract from 100 not 1! --ppark 2025-07-23
 
         # SiC FCI or structural inserts AND coating for TRISO
-        SiC = openmc.Material(name='SiC')
-        SiC.set_density('g/cm3', 3.2)
-        SiC.add_element('C', 0.5)
-        SiC.add_element('Si', 0.5)
+        sic = openmc.Material(name='SiC')
+        sic.set_density('g/cm3', 3.2)
+        sic.add_elements_from_formula('SiC')
 
-        radius_fuel = 400e-4  # 400 μm = 0.0400 cm
-        radius_sic = 500e-4  # 500 μm = 0.0500 cm
-        vol_tot = (4 / 3) * np.pi * (radius_sic) ** 3
-        vol_fuel = (4 / 3) * np.pi * (radius_fuel) ** 3
-        vf_fuel = vol_fuel / vol_tot
-        vf_sic = 1.0 - vf_fuel
+        # Glaser & Goldston BISO particles used for simplicity
+        # and to validate our results with their model
+        # BISO particles include our fuel pellet coated in one layer of SiC
 
-        triso = openmc.Material.mix_materials([fuel, SiC], [vf_fuel, vf_sic], 'vo')
-        triso.set_density('g/cm3', DENSITY_TRISO)
+        r_uo2 = 400e-4  # r = 400 μm = 0.0400 cm // "800 μm kernel"
+        r_sic = 500e-4  # 500 μm = 0.0500 cm // "100 μm thickness"
+        V_biso_particle = (4 / 3) * np.pi * (r_sic)**3     # volume of single BISO particle
+        V_uo2_in_biso   = (4 / 3) * np.pi * (r_uo2)**3     # volume of UO2 in single BISO particle
+        Vf_uo2_in_biso  = V_uo2_in_biso / V_biso_particle  # vol frac UO2 in single BISO
+        Vf_sic_in_biso  = 1.0 - Vf_uo2_in_biso             # vol frac SiC in single BISO
+
+        biso = openmc.Material.mix_materials([uo2, sic], [Vf_uo2_in_biso, Vf_sic_in_biso], 'vo')
+        biso.set_density('g/cm3', 6.94) # ~7 g/cc from Glaser & Goldston // 6.93759 g/cc from 10.5 g/cc UO2, 3.2 g/cc SiC --ppark 2025-07-22
 
         f82h = openmc.Material(name='F82H Steel')  # low-activation ferritic steel FS
         f82h.set_density('g/cm3', 7.87)  # typical density
@@ -89,6 +96,7 @@ class DCLL:
         f82h.add_element('Nb', 0.0001)
         # f82h.add_element('Ta', 0.0002) # no Ta180_m1 in ENDF8
 
+        # helium coolant
         he = openmc.Material(name='Helium')
         he.set_density('g/cm3', 0.0001785)
         he.add_element('He', 1)
@@ -96,28 +104,26 @@ class DCLL:
         # Calculate volume ratios of TRISO vs PbLi+structure, ensure they add up to 1
         mix_list = []
         for mtu in self.u_list:
-            mass_fuel = mtu * 10 ** 6 * (Mfuel / Mu238)
-            V_fuel = mass_fuel / 10.5  # mass over fuel density
-            V_triso = V_fuel / vf_fuel
-            vf_triso = V_triso / (VOL_CC * 0.805)
-            vf_pbli = 1 - vf_triso
-            pbliTRISO = openmc.Material.mix_materials([pbli, triso], [vf_pbli, vf_triso], 'vo')  # fractions in 'mix_materials' MUST add up to 1
-            pbliTRISO.volume = 0.805 * VOL_CC
-            vf_pbliTRISO = 0.805
-            vf_he = 0.097
-            vf_f82h = 0.019
-            vf_sic = 0.079  # volume fractions from Breeding Ch. 2 Table 1. Glaser and Goldston
-            mix = openmc.Material.mix_materials([pbliTRISO, he, f82h, SiC], [vf_pbliTRISO, vf_he, vf_f82h, vf_sic], 'vo')
-            mix.name = 'Full PbLi + TRISO Blanket Homogenized'
-            mix.temperature = TEMP_K
-            mix.volume = VOL_CC
-            mix_list.append(mix)
+            # Calculate volume of BISO to put in
+            m_uo2 = mtu*1e6 * (1/mf_uo2)
+            V_uo2 = m_uo2 / 10.5  # total vol of uo2 to be put in model
+            V_biso = V_uo2 / Vf_uo2_in_biso # total vol of biso to be put in model
+            print(f"V_uo2 {V_uo2:.4f} // V_uo2_in_biso {V_uo2_in_biso:.4f}")
+            # Deduct BISO volume from Lead-Lithium's volume
+            Vf_fs, Vf_ll, Vf_sic, Vf_he = 0.019, 0.805, 0.079, 0.097  # volfracs Glaser & Goldston 12, Tb.1, breeding channel 2
+            Vf_biso = V_biso / VOL_CC
+            Vf_ll = 0.805 - Vf_biso
+            print(f"volume BISO: {V_biso:.4f}")
+            print(f"volume fractions FS/LL/SiC/He/BISO: {Vf_fs:.4f}, {Vf_ll:.4f}, {Vf_sic:.4f}, {Vf_he:.4f}, {Vf_biso:.4f}")
 
-            #print(f"\nProperties of PbLi-TRISO with {mtu} MTU:")
-            #print(mix)
+            mix = openmc.Material.mix_materials([f82h,pbli,sic,he,biso], [Vf_fs, Vf_ll, Vf_sic, Vf_he, Vf_biso], 'vo')
+            mix.name = 'FS+LL+SiC+He+BISO Homogenized'
+            mix.temperature = TEMP_K
+            mix_list.append(mix)
+            # print(f"\nProperties of PbLi-BISO with {mtu} MTU:")
+            # print(mix)
 
         self.materials = openmc.Materials(mix_list)
-        self.materials.cross_sections = set_xs_path()
 
 
         """ GEOMETRY """
@@ -152,54 +158,49 @@ class DCLL:
 
         # Flux tally 
         flux_tally = openmc.Tally(name='flux')
-        flux_tally.scores = ['flux'] # specific names required
+        flux_tally.scores = ['flux'] 
         flux_tally.filters = filters
 
         # Uranium reaction rates
         U_tally = openmc.Tally(name='uranium rxn rates')
-        U_tally.scores = ['(n,gamma)','fission', 'elastic'] # specific names required
+        U_tally.scores = ['(n,gamma)','fission', 'elastic'] 
         U_tally.nuclides = ['U238', 'U235']
         U_tally.filters = filters
 
         # Lithium reaction rates
         Li_tally = openmc.Tally(name='lithium rxn rates')
-        Li_tally.scores = ['(n,gamma)','(n,Xt)', 'elastic'] # specific names required
+        Li_tally.scores = ['(n,gamma)','(n,Xt)', 'elastic'] 
         Li_tally.nuclides = ['Li6', 'Li7']
         Li_tally.filters = filters
 
         # Lead reaction rates
         Pb_tally = openmc.Tally(name='lead rxn rates')
-        Pb_tally.scores = ['(n,gamma)', '(n,2n)', 'elastic']  # specific names required
+        Pb_tally.scores = ['(n,gamma)', '(n,2n)', 'elastic']  
         Pb_tally.nuclides = ['Pb204', 'Pb206', 'Pb207', 'Pb208']
         Pb_tally.filters = filters
 
         self.tallies.extend([flux_tally, U_tally, Li_tally, Pb_tally])
 
- 
-        
-        """First Wall Effects"""
-        sp = openmc.StatePoint(f'./OpenMC/FirstWall_50/statepoint.100.h5')  
-        out_tally = sp.get_tally(name='outgoing_spectrum')
-
-        energy_bins = out_tally.filters[1].bins
-        energy_bins = np.array(energy_bins)  # shape (N, 2)
-
-        energy_midpoints = 0.5 * (energy_bins[:, 0] + energy_bins[:, 1])
-
-        current_spectrum = out_tally.get_values(scores=['current']).flatten()
-
-        total_current = current_spectrum.sum()
-        probabilities = current_spectrum / total_current
 
         """ SETTINGS """
         self.settings = openmc.Settings()
 
-        """ Source
-        Isotropic 14.07 MeV point source at center of each cube
-        """
-        energies = energy_midpoints.tolist()
-        weights = probabilities.tolist()
+        """Source from First Wall Effects"""
+        # Determine a flux spectrum from the neutrons leaving the surface of a two layer first wall model './Python/FirstWall.py'
+        # The neutrons added to each MTU box in our model reflect the outgoing current spectrum of out vanadium shell
+        sp = openmc.StatePoint(f'./OpenMC/FirstWall_V4cm_900K_2025-07-22/statepoint.100.h5')
+        out_tally = sp.get_tally(name='outgoing_spectrum')
+
+        energy_bins = np.array(out_tally.filters[1].bins) # shape (N, 2)
+        energy_midpoints = 0.5 * (energy_bins[:, 0] + energy_bins[:, 1])
+
+        current_spectrum = out_tally.get_values(scores=['current']).flatten() # Neutron generation at each current in the spectrum is weighted by its probability of occurrence
+        total_current = current_spectrum.sum()
+        probabilities = current_spectrum / total_current
+
+        energies, weights = energy_midpoints.tolist(), probabilities.tolist()
         source = []
+
         for p in box_centers:
             src = openmc.IndependentSource()
             src.space  = openmc.stats.Point((p,0,0))
@@ -210,31 +211,15 @@ class DCLL:
 
         """ Run type """
         self.settings.run_mode = 'fixed source'
-        self.settings.particles = len(MASS_U_LIST) * int(1e1)  #  
+        self.settings.particles = len(MASS_U_LIST_PBLI) * int(1e6)
         self.settings.batches = 100
 
 
     def run_openmc(self):
+        self.materials.cross_sections = set_xs_path()
         self.model = openmc.model.Model(self.geometry, self.materials, self.settings, self.tallies)
         self.model.export_to_model_xml(f"./OpenMC/{self.name}/")
         self.model.run(cwd=f"./OpenMC/{self.name}/")
-
-    def set_xs_path(self):
-        """ 
-        Temporary solution for finding xs files between WSL and Ubuntu on Computing Cluster without editing PATH --ppark 2025-06-28 
-        """
-        xs_path_ubuntu = '/opt/openmc_data/endfb-viii.0-hdf5/cross_sections.xml'
-        xs_path_wsl   = '/mnt/c/openmc/data/endfb-viii.0-hdf5/cross_sections.xml'
-        if os.path.isfile(xs_path_ubuntu):
-            self.materials.cross_sections = xs_path_ubuntu # use this on Zotacs --ppark
-        elif os.path.isfile(xs_path_wsl):
-            self.materials.cross_sections = xs_path_wsl
-            #print(self.materials.cross_sections )
-        else:
-            sys.exit(f"Error finding cross section XML!")
-
-
-
 
 
 if __name__ == "__main__":
