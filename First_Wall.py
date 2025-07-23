@@ -14,19 +14,21 @@ def main():
     print("="*42)
     print(f"Running First Wall")
         
-    current_run = FirstWallTest()
+    current_run = FirstWall()
 
-    if os.path.isdir(f"./OpenMC/{current_run.name}/"):
-        print(f"Warning. Directory {f"./OpenMC/{current_run.name}/"} already exists, so running OpenMC will fail. Skipping...")
+    if current_run.run:
+        if os.path.isdir(f"./OpenMC/{current_run.name}/"):
+            print(f"Warning. Directory {f"./OpenMC/{current_run.name}/"} already exists, so running OpenMC will fail. Skipping...")
 
-    else:
-        current_run.run_openmc()
+        else:
+            current_run.run_openmc()
 
 
-class FirstWallTest:
+class FirstWall:
 
-    def __init__(self):
-        self.name = 'FirstWall'
+    def __init__(self, run_openmc=False):
+        self.name = 'FirstWall_50'
+        self.run  = run_openmc
 
         """ MATERIALS """
         """ TUNGSTEN from ball"""
@@ -47,6 +49,10 @@ class FirstWallTest:
         tungsten.depletable = False
 
         """ V-4Cr-4Ti """
+        # This code is from jlball but V-4Cr-4Ti specs also can be found
+        # from ANL material id BL-47, p.3 (1994) altho these are slightly different
+        # https://www.osti.gov/servlets/purl/10194461 --ppark 2025-07-22
+
         vcrti = openmc.Material(name='V-4Cr-4Ti VV')
         vcrti.depletable = False
 
@@ -66,9 +72,10 @@ class FirstWallTest:
         vcrti.add_element('Ni',13/1e6,percent_type='wo')
         vcrti.add_element('Cu',4/1e6,percent_type='wo')
         vcrti.add_element('V',1-0.04-0.04-(56+181+103+7+17+0.5+119+280+0.5+80+13+4)/1e6,percent_type='wo')
-        vcrti.set_density('g/cm3',6.05)
-
-        
+        vcrti.set_density('g/cm3',6.05) 
+        # This density value is sus and needs a good source --jlball 
+        # This value is from Metals Handbook, 9th ed, vol 2: "Properties and Selection: Nonferrous Alloys and Pure Metals" (1979) --ppark 2025-07-22
+   
         self.materials = openmc.Materials([tungsten,vcrti])
         self.materials.cross_sections = set_xs_path()
 
@@ -76,9 +83,9 @@ class FirstWallTest:
         '''first wall slab thickness approximations from balls simplified model
         but we are ignoring the effects of imbeded structural components within the flibe mixture
         such as the channel structures, RF heating, and vacuum systems.'''
-        plasma_thickness = 100 #1 meter radius of plasma
-        tung_thickness = 0.3 #3mm thickness of tungsten
-        vcrti_thickness = 4 #4cm thickness vanadium alloy
+        plasma_thickness = 50
+        tung_thickness = 0.3 #cm
+        vcrti_thickness = 4
 
         r0 = openmc.Sphere(r=plasma_thickness)
         r1 = openmc.Sphere(r=tung_thickness + plasma_thickness)  # inner radius 10 cm
