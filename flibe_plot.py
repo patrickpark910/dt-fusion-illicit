@@ -15,7 +15,7 @@ def main():
     for e in [7.5]:
         for t in [900]:
             # Read and plot tallies for each Li enrich case
-            current_sp = PlotStatepoint(enrich_li=7.5, temp_k=t, save=True, show=False, to_csv=True)
+            current_sp = PlotStatepoint(enrich_li=e, temp_k=t, save=True, show=False, to_csv=True)
 
             current_sp.print_rxn_rates()
             current_sp.plot_tbr()
@@ -36,7 +36,7 @@ class PlotStatepoint:
     def __init__(self, enrich_li=7.5, temp_k=900, save=False, show=True, to_csv=False):
         self.e = enrich_li
         self.temp = temp_k
-        self.name = f"FLiBe_Li{self.e:04.1f}_7_22"
+        self.name = f"FLiBe_FW_Li{self.e:04.1f}_{self.temp}K_2025-07-22"
         self.save, self.show, self.to_csv = save, show, to_csv
         self.u_list = MASS_U_LIST
 

@@ -14,6 +14,9 @@ AMU_LI6, AMU_LI7 = 6.0150, 7.0160 # 6.01512288742, 7.01600343426 # amu = g/mol
 AMU_F19 = 18.9984 # 18.99840316207
 AMU_BE9 =  9.0120 # 9.012183062
 AMU_U = 238.02891 # for natural enrichment
+AMU_U235 = 235.0439299
+AMU_U238 = 238.05078826
+AMU_O = 15.999
 AMU_Th = 232.0381
 AMU_UF4 = AMU_U + 4 * AMU_F19
 AMU_ThF4 = AMU_Th + 4 * AMU_F19
@@ -259,6 +262,28 @@ def extract_lie(path: str) -> float:
     if not match:
         raise ValueError(f"No 'Li<value>' pattern found in: {path!r}")
     return float(match.group(1))
+
+
+def set_xs_path():
+    """
+    Temporary solution for finding xs files between WSL and Ubuntu on Computing Cluster without editing PATH --ppark 2025-06-28
+    """
+    xs_path_ubuntu = '/opt/openmc_data/endfb-viii.0-hdf5/cross_sections.xml'
+    xs_path_wsl   = '/mnt/c/openmc/data/endfb-viii.0-hdf5/cross_sections.xml'
+
+    xs_path = os.environ.get("OPENMC_CROSS_SECTIONS")
+    print(f"Checking if 'OPENMC_CROSS_SECTIONS' is set: {xs_path}")
+
+    if xs_path is None:
+        if os.path.isfile(xs_path_ubuntu):
+            return xs_path_ubuntu # use this on Zotacs --ppark
+        elif os.path.isfile(xs_path_wsl):
+            return xs_path_wsl
+        else:
+            sys.exit(f"Error finding cross section XML!")
+    else:
+        print(f"'OPENMC_CROSS_SECTIONS' found!")
+        return xs_path
 
 
 
