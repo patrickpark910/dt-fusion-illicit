@@ -13,7 +13,11 @@ def main():
         print("="*42)
         print(f"Running FLiBe OpenMC model for Li-6 enrichment: {e} wt%")
 
+<<<<<<< HEAD
         current_run = FLIBE(enrich_li=e, temp_k=900, run_openmc=True)
+=======
+        current_run = FLIBE(enrich_li=e, temp_k=300)
+>>>>>>> dcab831ebcdd5de78f635f1b46cfac1cbae71f81
 
         print(f"Check if '{current_run.path}' exists: {os.path.isdir(current_run.path)}")
 
@@ -27,7 +31,11 @@ def main():
 
 class FLIBE:
 
+<<<<<<< HEAD
     def __init__(self, u_list=MASS_U_LIST_FLIBE, enrich_li=7.5, temp_k=900, run_openmc=False):
+=======
+    def __init__(self, u_list=MASS_U_LIST_FLIBE, enrich_li=7.5, temp_k=300):
+>>>>>>> dcab831ebcdd5de78f635f1b46cfac1cbae71f81
 
         self.lie = enrich_li
         self.temp = temp_k
@@ -40,9 +48,9 @@ class FLIBE:
         flibe.add_elements_from_formula('F4Li2Be', 'ao', enrichment_target='Li6', enrichment_type='wo', enrichment=self.lie)
         flibe.set_density('g/cm3', DENSITY_FLIBE) 
 
-        # Uranium tetrafluoride -- assumed to dissolve in FLiBe
+        # Uranium tetrafluoride -- assumed to dissolve in FLiBe --ppark 2025-07-04
         uf4 = openmc.Material()
-        uf4.add_elements_from_formula('UF4','ao',ENRICH_U) # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
+        uf4.add_elements_from_formula('UF4','ao',ENRICH_U) # 'ao' here refers to 1:4 atomic ratio of U:F in UF4!!!
         uf4.set_density('g/cm3', DENSITY_UF4) 
 
         # Calculate volume ratios of UF4 and FLiBe, ensure they add up to 1
@@ -121,8 +129,27 @@ class FLIBE:
         Be_tally.filters = filters
 
         self.tallies.extend([flux_tally, U_tally, Li_tally, F_tally, Be_tally])
+        # tallies.export_to_xml("./xml/tallies.xml") --don't need bc 'model.export_to_model_xml' below --ppark 2025-06-28
 
 
+<<<<<<< HEAD
+=======
+        
+        """First Wall Effects"""
+        sp = openmc.StatePoint(f'./OpenMC/FirstWall/statepoint.100.h5')  
+        out_tally = sp.get_tally(name='outgoing_spectrum')
+
+        energy_bins = out_tally.filters[1].bins
+        energy_bins = np.array(energy_bins)  # shape (N, 2)
+
+        energy_midpoints = 0.5 * (energy_bins[:, 0] + energy_bins[:, 1])
+
+        current_spectrum = out_tally.get_values(scores=['current']).flatten()
+
+        total_current = current_spectrum.sum()
+        probabilities = current_spectrum / total_current
+
+>>>>>>> dcab831ebcdd5de78f635f1b46cfac1cbae71f81
         """ SETTINGS """
         self.settings = openmc.Settings()
 
@@ -153,7 +180,11 @@ class FLIBE:
 
         """ Run type """
         self.settings.run_mode = 'fixed source'
+<<<<<<< HEAD
         self.settings.particles = len(MASS_U_LIST) * int(1e6)
+=======
+        self.settings.particles = len(MASS_U_LIST) * int(1e1)  #  
+>>>>>>> dcab831ebcdd5de78f635f1b46cfac1cbae71f81
         self.settings.batches = 100
 
 

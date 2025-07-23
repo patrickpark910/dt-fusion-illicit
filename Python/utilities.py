@@ -198,7 +198,7 @@ def calc_mix_vol_fracs_th(mtu, volume=342e6, density_flibe=1.94, displace=False)
         (vf_flibe, vf_uf4) : 2-ple of floats : volume fractions
     """
     # Convert inputs to SI units
-    mass_th = mtu * 1e3
+    mass_u = mtu * 1e3
     density_flibe = density_flibe * 1e3 # kg/m3
     density_thf4   = DENSITY_ThF4 * 1e3   # kg/m3  
     volume = float(volume) / 1e6

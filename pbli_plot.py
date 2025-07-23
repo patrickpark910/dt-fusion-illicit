@@ -19,14 +19,13 @@ def main():
     current_sp.print_rxn_rates()
     current_sp.plot_tbr()
     current_sp.plot_pu()
-    current_sp.plot_pu_per_mtu()
-    
-    current_sp.plot_rxn_rates()
-    current_sp.plot_pu_vs_energy()
     current_sp.plot_pu_per_yr()
+    current_sp.plot_pu_vs_energy()
     current_sp.plot_rel_pu_vs_energy()
     current_sp.plot_flux_vs_energy()
+    current_sp.plot_pu_per_mtu()
     current_sp.plot_cum_norm_u_vs_energy()
+
 
     '''  
     current_sp.print_rxn_rates()
@@ -150,7 +149,7 @@ class PlotStatepointPbLi:
         plt.figure()
         plt.errorbar(self.u_list, self.tbr_list, yerr=self.tbr_err_list, fmt='o-', markersize=2, capsize=0, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
 
-        plt.xlim(-1.5,501.5)
+        plt.xlim(-1.5,51.5)
         
         plt.title(f'Tritium breeding ratio (PbLi, {self.e}wt% Li-6)')
         plt.xlabel('Uranium loaded [metric tons]')
@@ -202,7 +201,7 @@ class PlotStatepointPbLi:
 
         Pu_per_mtu_list = []
         for i, m in enumerate(self.u_list[1:]):
-            Pu_per_mtu_list.append(self.U238_ng_list[i+1]/m) 
+            Pu_per_mtu_list.append(self.U238_ng_list[i+1]/m) # fixed to [i+1] -ezoccoli 2025-07-11
 
         plt.figure()
         plt.plot(self.u_list[1:], Pu_per_mtu_list, markersize=2, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
@@ -232,7 +231,7 @@ class PlotStatepointPbLi:
         print(f"\nPlotting kg of Pu produced per year...")
 
         print(self.u_list)
-        Pu_rate_per_mtu = self.Pu_per_yr_list[0] / (0.0096)  # = Pu kg/yr/mtu  # 0.3 / 0.0096 #
+        Pu_rate_per_mtu = self.Pu_per_yr_list[1] / (0.01)  # = Pu kg/yr/mtu  # 0.3 / 0.0096 #
         y = [m * Pu_rate_per_mtu for m in self.u_list]
         print(f'\nPu-239 production per year per 12.1 kg U: {Pu_rate_per_mtu*0.01209475} | {NPS_FUS} nps')
         print(y)
@@ -267,14 +266,14 @@ class PlotStatepointPbLi:
         for mtu, pbli_val in annotations:
             x, y = box_positions[mtu]
             text = (f"MTU: {mtu}\n"
-                    f"PbLi: {pbli_val:.3f} kg/yr")
+                    f"PbLi: {pbli_val:.3f} kg/yr/MW *100")
             ax.text(x, y, text, fontsize=9, bbox=box_props)
 
         plt.xlim(-1.5,51.5)
         # plt.ylim(-0.005,0.105)
-        plt.title(f'Pu-239 production per year (PbLi, {self.e}wt% Li-6, {P_FUS_MW} MW = {NPS_FUS:.2e} n/s)')
+        plt.title(f'Pu-239 production per year per MW(PbLi, {self.e}wt% Li-6, {P_FUS_MW} MW = {NPS_FUS:.2e} n/s)')
         plt.xlabel('Uranium loaded [metric tons]')
-        plt.ylabel(r'Pu-239 produced [kg$/$yr]')
+        plt.ylabel(r'Pu-239 produced [kg$/$yr$/MW]')
         plt.tight_layout()
 
         if self.save:
