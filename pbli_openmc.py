@@ -14,7 +14,7 @@ def main():
     print("="*42)
     print(f"Running PbLi OpenMC model for Li-6 enrichment: 90 wt%")
         
-    current_run = PBLI(enrich_li=90, u_list=MASS_U_LIST_PBLI)
+    current_run = DCLL(enrich_li=90, u_list=MASS_U_LIST_PBLI)
 
     if os.path.isdir(current_run.path):
         print(f"Warning. Directory {current_run.path} already exists, so running OpenMC will fail. Skipping...")
@@ -25,7 +25,7 @@ def main():
 
 
 
-class PBLI:
+class DCLL:
 
     def __init__(self, enrich_li=90, u_list=MASS_U_LIST_PBLI):
 
