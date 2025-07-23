@@ -49,7 +49,7 @@ class PlotStatepointPbLi:
         self.u_list = u_list
         self.temp = 900
         self.save, self.show, self.to_csv = save, show, to_csv
-        self.name = f'PbLi_Li{self.e}_7_22'
+        self.name = f'DCLL_Li{self.e}_NUO2_900K_2025-07-22'
 
         """ Load tallies """
         sp_path = f'./OpenMC/{self.name}/statepoint.100.h5'
@@ -58,7 +58,7 @@ class PlotStatepointPbLi:
         print(f"Loading statepoint: {sp_path}")
         
         try:
-            sp = openmc.StatePoint(sp_path) # _Li6-7.5wt  _Li6-20wt
+            sp = openmc.StatePoint(sp_path)
         except Exception as e:
             print(f"\n{e}\n")
             sys.exit(f"oopsie woopsie fucky wucky can't read the sp")
