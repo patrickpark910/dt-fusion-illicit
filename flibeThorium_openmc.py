@@ -20,7 +20,7 @@ def main():
         print(f"Warning. Directory {current_run.path} already exists, so running OpenMC will fail. Skipping...")
         return
     else:
-        current_run.set_xs_path()
+        # current_run.set_xs_path()
         current_run.run_openmc()
 
 
@@ -31,7 +31,7 @@ class FLIBE_Th:
         self.lie = enrich_li
         self.temp = temp_k
         self.u_list = u_list
-        self.name = f"FLiBe_Th_Li{self.lie:04.1f}_7_22"
+        self.name = f"FLiBe_Th_Li{self.lie:04.1f}_2025-07-22"
         self.path = f"./OpenMC/{self.name}/"
 
         flibe = openmc.Material()
