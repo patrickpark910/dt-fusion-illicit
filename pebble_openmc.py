@@ -13,7 +13,7 @@ def main():
     print("="*42)
     print(f"Running Helium-Cooled Pebble Bed OpenMC model for Li-6 enrichment: 60 wt%")
         
-    current_run = HCPB(enrich_li=60, u_list=MASS_U_LIST_HCPB, run_openmc=False)
+    current_run = HCPB(enrich_li=60, u_list=MASS_U_LIST_HCPB, run_openmc=True)
 
     if current_run.run:
         if os.path.isdir(current_run.path):
@@ -59,7 +59,7 @@ class HCPB:
         eurofer.add_element('Cu', 0.003, percent_type='wo')
         eurofer.add_element('Nb', 0.005, percent_type='wo')
         eurofer.add_element('Mo', 0.003, percent_type='wo')
-        eurofer.add_element('Ta', 0.12, percent_type='wo')
+        # eurofer.add_element('Ta', 0.12, percent_type='wo') # openmc error finding Ta180_m1 in ENDF8
         eurofer.add_element('W', 1.0987, percent_type='wo')
 
         # Li4SiO4 -- lithium ceramic breeder
@@ -111,7 +111,7 @@ class HCPB:
         be.add_element('Nb', 0.001, percent_type='wo')
         be.add_element('Ni', 0.0005, percent_type='wo')
         be.add_element('Pb', 0.0005, percent_type='wo')
-        be.add_element('Ta', 0.002, percent_type='wo')
+        # be.add_element('Ta', 0.002, percent_type='wo') # openmc error finding Ta180_m1 in ENDF8
 
         # Helium coolant
         he = openmc.Material(name='Helium')
