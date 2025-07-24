@@ -6,15 +6,14 @@ from matplotlib.ticker import MultipleLocator, ScalarFormatter
 import imageio.v2 as iio # use v2 to avoid deprecation warnings --ppark
 
 """ import helper functions """
-sys.path.insert(0, f"{os.getcwd()}/Python")
-from parameters import *
-from utilities import *
+from Python.parameters import *
+from Python.utilities import *
 
 
 def main():
 
     # Read and plot tallies for each Li enrich case
-    current_sp = PlotStatepointPebble(enrich_li=60, u_list=MASS_U_LIST_PEBBLE, save=True, show=False, to_csv=True)
+    current_sp = PlotStatepointPebble(enrich_li=60, u_list=MASS_U_LIST_HCPB, save=True, show=False, to_csv=True)
 
     current_sp.print_rxn_rates()
     current_sp.plot_tbr()
@@ -26,28 +25,17 @@ def main():
     current_sp.plot_pu_per_mtu()
     current_sp.plot_cum_norm_u_vs_energy()
 
-    '''  
-    current_sp.print_rxn_rates()
-    current_sp.plot_tbr()
-    current_sp.plot_pu()
-    current_sp.plot_pu_per_mtu()
-    
-    current_sp.plot_rxn_rates()
-    current_sp.plot_pu_vs_energy()
-    current_sp.plot_rel_pu_vs_energy()
-    
-    '''
 
 
 class PlotStatepointPebble:
 
-    def __init__(self, enrich_li=60, u_list=MASS_U_LIST_PEBBLE, save=False, show=True, to_csv=False):
+    def __init__(self, enrich_li=60, u_list=MASS_U_LIST_HCPB, save=False, show=True, to_csv=False):
 
         self.e = enrich_li
         self.u_list = u_list
         self.temp = 900
         self.save, self.show, self.to_csv = save, show, to_csv
-        self.name = f'Pebble_Li{self.e}_7_18'
+        self.name = f'HCPB_FW4cm_Li{self.e}_NUO2_900K_2025-07-22'
 
         """ Load tallies """
         sp_path = f'./OpenMC/{self.name}/statepoint.100.h5'
@@ -232,7 +220,7 @@ class PlotStatepointPebble:
         try: i = self.u_list.index(0.076)
         except Exception as e:
             print(f"\n{e}\n")
-            print(f"Fatal: This function requires you to have '0.076' in your `MASS_U_LIST_PEBBLE`.")
+            print(f"Fatal: This function requires you to have '0.076' in your `MASS_U_LIST_HCPB`.")
 
         print(self.u_list)
         Pu_rate_per_mtu = self.Pu_per_yr_list[i] / 0.076 # = Pu kg/yr/mtu  # 0.3 / 0.0096 #
@@ -509,7 +497,7 @@ class PlotStatepointPebble:
         plt.figure(figsize=(18,4))
 
         for i, cell_id in enumerate(self.cell_ids):
-            if MASS_U_LIST_PEBBLE[i] in [0, 10, 20, 30, 40, 50]:
+            if self.u_list[i] in [0, 10, 20, 30, 40, 50]:
                 df = self.U238_ng_Ebin_df[self.U238_ng_Ebin_df['cell'] == cell_id]
                 x = df['energy mid [eV]']
                 y = df['mean']
