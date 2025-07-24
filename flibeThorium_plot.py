@@ -19,11 +19,12 @@ def main():
     current_sp.plot_u()
     current_sp.plot_u_per_mtu()
     
-    current_sp.plot_rxn_rates()
+    #current_sp.plot_rxn_rates()
     current_sp.plot_u_vs_energy()
     current_sp.plot_rel_u_vs_energy()
     current_sp.plot_flux_vs_energy()
-    current_sp.plot_cum_norm_u_vs_energy()
+    current_sp.plot_u_per_yr()
+    current_sp.plot_cum_norm_th_vs_energy()
 
     '''
     
@@ -44,8 +45,9 @@ class PlotStatepoint:
     def __init__(self, enrich_li=7.5, temp_k=900, save=False, show=True, to_csv=False):
         self.e = enrich_li
         self.temp = temp_k
-        self.name = f"FLiBe_Th_Li{self.e:04.1f}_7_18"
+        self.name = f"FLiBe_Th_Li{self.e:04.1f}_2025-07-22"
         self.save, self.show, self.to_csv = save, show, to_csv
+        self.u_list = MASS_U_LIST
 
         """ Load tallies """
         sp_path = f'./OpenMC/{self.name}/statepoint.100.h5'
@@ -252,14 +254,14 @@ class PlotStatepoint:
         # Gather Pu production values for all fuels at each MTU point
         annotations = []
         for mtu in mtu_points:
-            pbli_val = get_closest_value(mtu, np.array(self.u_list), self.Pu_per_yr_list)
+            pbli_val = get_closest_value(mtu, np.array(self.u_list), self.U_per_yr_list)
             annotations.append((mtu, pbli_val))
         ax = plt.gca()
         box_props = dict(boxstyle="round,pad=0.5", facecolor="white", edgecolor="black", alpha=0.85)
         box_positions = {
-            50: (30, max(self.Pu_per_yr_list) * 0.6),
-            5: (15, max(self.Pu_per_yr_list) * 0.5),
-            0.0096: (0.01, max(self.Pu_per_yr_list) * 0.2),
+            50: (30, max(self.U_per_yr_list) * 0.6),
+            5: (15, max(self.U_per_yr_list) * 0.5),
+            0.0096: (0.01, max(self.U_per_yr_list) * 0.2),
         }
 
         # Create one box for each MTU value showing all three fuels' Pu production
@@ -455,7 +457,7 @@ class PlotStatepoint:
             plt.xlim(1e0,2e7)
 
             plt.savefig(f'./Figures/pdf/{self.name}/fig_Th232ng_rel_full.pdf', bbox_inches='tight', format='pdf') 
-            plt.savefig(f'./Figures/png/{self.name}/fig_U238ng_rel_full.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/png/{self.name}/fig_Th232ng_rel_full.png', bbox_inches='tight', format='png')
 
             print(f"   Exported factor change in Pu rel 1 MTU vs. energy with MTU contours plot.")
             
@@ -501,16 +503,17 @@ class PlotStatepoint:
             
         if self.show: plt.show()
         plt.close('all')
-    def plot_cum_norm_u_vs_energy(self):
+
+    def plot_cum_norm_th_vs_energy(self):
         """
         Plots cumulative, normalized Pu production vs. energy for contours of MTU.
         """
-        print(f"\nPlotting cumulative, normalized U production vs. energy with MTU contours ...")
+        print(f"\nPlotting cumulative, normalized Pu production vs. energy with MTU contours ...")
 
         plt.figure(figsize=(18,4))
 
         for i, cell_id in enumerate(self.cell_ids):
-            if MASS_U_LIST[i] in [0, 10, 20, 30, 40, 50]:
+            if self.u_list[i] in [0, 10, 20, 30, 40, 50]:
                 df = self.Th232_ng_Ebin_df[self.Th232_ng_Ebin_df['cell'] == cell_id]
                 x = df['energy mid [eV]']
                 y = df['mean']
@@ -521,7 +524,7 @@ class PlotStatepoint:
                 # Normalize cumulative sum to max value
                 cum_y_norm = cum_y / cum_y.iloc[-1] if cum_y.iloc[-1] != 0 else cum_y
 
-                plt.plot(x, cum_y_norm, linewidth=0.75, label=f'{MASS_U_LIST[i]} MTU')
+                plt.plot(x, cum_y_norm, linewidth=0.75, label=f'{self.u_list[i]} MTU')
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Cumulative normalized reactions')
@@ -537,9 +540,10 @@ class PlotStatepoint:
         if self.save:
             plt.savefig(f'./Figures/pdf/{self.name}/fig_Th232ng_cum_norm.pdf', bbox_inches='tight', format='pdf') 
             plt.savefig(f'./Figures/png/{self.name}/fig_Th232ng_cum_norm.png', bbox_inches='tight', format='png')
-            print(f"   Exported cumulative normalized U production vs. energy with MTU contours plot.")
+            print(f"   Exported cumulative normalized U-233 production vs. energy with MTU contours plot.")
 
             plt.xlim(1e0,2e7), plt.ylim(0,1.05)
+
 
             plt.savefig(f'./Figures/pdf/{self.name}/fig_Th232ng_cum_norm_full.pdf', bbox_inches='tight', format='pdf') 
             plt.savefig(f'./Figures/png/{self.name}/fig_Th232ng_cum_norm_full.png', bbox_inches='tight', format='png')

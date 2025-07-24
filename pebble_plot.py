@@ -509,7 +509,7 @@ class PlotStatepointPebble:
         plt.figure(figsize=(18,4))
 
         for i, cell_id in enumerate(self.cell_ids):
-            if MASS_U_LIST_PEBBLE[i] in [0, 10, 20, 30, 40, 50]:
+            if self.u_list[i] in [0, 10, 20, 30, 40, 50]:
                 df = self.U238_ng_Ebin_df[self.U238_ng_Ebin_df['cell'] == cell_id]
                 x = df['energy mid [eV]']
                 y = df['mean']
@@ -520,11 +520,11 @@ class PlotStatepointPebble:
                 # Normalize cumulative sum to max value
                 cum_y_norm = cum_y / cum_y.iloc[-1] if cum_y.iloc[-1] != 0 else cum_y
 
-                plt.plot(x, cum_y_norm, linewidth=0.75, label=f'{MASS_U_LIST[i]} MTU')
+                plt.plot(x, cum_y_norm, linewidth=0.75, label=f'{self.u_list[i]} MTU')
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Cumulative normalized reactions')
-        plt.title(f'Cumulative normalized Pebble U-238 (n,gamma) rxn rate (Li-6 {self.e}wt%, {self.temp} K)')
+        plt.title(f'Cumulative normalized U-238 (n,gamma) rxn rate (Li-6 {self.e}wt%, {self.temp} K)')
         plt.xscale('log'), plt.yscale('linear')
         plt.xlim(1e1,1e3), plt.ylim(0,1.05)
 
@@ -546,7 +546,6 @@ class PlotStatepointPebble:
 
         if self.show:plt.show()
         plt.close('all')
-
 
 
 

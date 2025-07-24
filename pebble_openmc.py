@@ -58,6 +58,7 @@ class Pebble:
         eurofer.add_element('Ta', 0.12, percent_type='wo')
         eurofer.add_element('W', 1.0987, percent_type='wo')
 
+
         # Lithium ceramic
         lithium_ceramic = openmc.Material(name='LithiumCeramic')
         '''density from Activation calculations for multiple recycling of breeder ceramics by
@@ -82,6 +83,7 @@ class Pebble:
         lithium_ceramic.add_element('Ti', 0.0005, percent_type='wo')
         lithium_ceramic.add_element('Zn', 0.0002, percent_type='wo')
         lithium_ceramic.add_element('Zr', 0.0001, percent_type='wo')
+        print("lithium_ceramic", lithium_ceramic.get_nuclide_atom_densities())
 
         # Beryllium
         beryllium = openmc.Material(name='Beryllium')
@@ -108,6 +110,7 @@ class Pebble:
         beryllium.add_element('Ni', 0.0005, percent_type='wo')
         beryllium.add_element('Pb', 0.0005, percent_type='wo')
         beryllium.add_element('Ta', 0.002, percent_type='wo')
+        print('Beryllium', beryllium.get_nuclide_atom_densities())
 
         # ceramic TRISO -- neglect buoyancy effects --ezoccoli 2025-07-07
         # TRISO model from OpenMC examples
@@ -120,6 +123,7 @@ class Pebble:
         Mu238 = fuel.get_mass_density('U238')
         Mfuel = fuel.density  # used to compute mass fraction of U238 in fuel
         # calculate total fuel mass given a mass of U238 (self.u_list)
+        print('fuelkernel', fuel.get_nuclide_atom_densities())
 
         # SiC FCI or structural inserts AND coating for TRISO
         SiC = openmc.Material(name='SiC')
@@ -165,6 +169,7 @@ class Pebble:
 
             print(f"\nProperties of Pebble-TRISO with {mtu} MTU:")
             print(mix)
+            print('MIX ATOM/b-cm', mix.get_nuclide_atom_densities())
 
         self.materials = openmc.Materials(mix_list)
         self.materials.cross_sections = set_xs_path()
