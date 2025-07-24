@@ -505,7 +505,7 @@ class PlotStatepoint:
         plt.figure(figsize=(18,4))
 
         for i, cell_id in enumerate(self.cell_ids):
-            if MASS_U_LIST[i] in [0, 10, 20, 30, 40, 50]:
+            if self.u_list[i] in [0, 10, 20, 30, 40, 50]:
                 df = self.U238_ng_Ebin_df[self.U238_ng_Ebin_df['cell'] == cell_id]
                 x = df['energy mid [eV]']
                 y = df['mean']
@@ -516,7 +516,7 @@ class PlotStatepoint:
                 # Normalize cumulative sum to max value
                 cum_y_norm = cum_y / cum_y.iloc[-1] if cum_y.iloc[-1] != 0 else cum_y
 
-                plt.plot(x, cum_y_norm, linewidth=0.75, label=f'{MASS_U_LIST[i]} MTU')
+                plt.plot(x, cum_y_norm, linewidth=0.75, label=f'{self.u_list[i]} MTU')
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Cumulative normalized reactions')

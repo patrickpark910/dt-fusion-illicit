@@ -21,7 +21,7 @@ def main():
     current_sp.plot_pu()
     current_sp.plot_pu_per_mtu()
     
-    current_sp.plot_rxn_rates()
+    #current_sp.plot_rxn_rates()
     current_sp.plot_pu_vs_energy()
     current_sp.plot_pu_per_yr()
     current_sp.plot_rel_pu_vs_energy()
@@ -150,7 +150,8 @@ class PlotStatepointPbLi:
         plt.figure()
         plt.errorbar(self.u_list, self.tbr_list, yerr=self.tbr_err_list, fmt='o-', markersize=2, capsize=0, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
 
-        plt.xlim(-1.5,501.5)
+        plt.xlim(-1.5,51.5)
+        plt.ylim(1.32,1.358)
         
         plt.title(f'Tritium breeding ratio (PbLi, {self.e}wt% Li-6)')
         plt.xlabel('Uranium loaded [metric tons]')
@@ -201,14 +202,14 @@ class PlotStatepointPbLi:
         print(f"\nPlotting U-238 (n,gamma) reaction rate per MTU vs. uranium loading...")
 
         Pu_per_mtu_list = []
-        for i, m in enumerate(self.u_list[1:]):
+        for i, m in enumerate(self.u_list[1:11]):
             Pu_per_mtu_list.append(self.U238_ng_list[i+1]/m) 
 
         plt.figure()
-        plt.plot(self.u_list[1:], Pu_per_mtu_list, markersize=2, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
+        plt.plot(self.u_list[1:11], Pu_per_mtu_list, markersize=2, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
 
         plt.xlim(-1.5,51.5)
-        # plt.ylim(-0.005,0.105)
+        plt.ylim(0.0005,0.0007)
         plt.title(f'Pu-239 production per MTU (PbLi, {self.e}wt% Li-6)')
         plt.xlabel('Uranium loaded [metric tons]')
         plt.ylabel(r'Pu-239 produced per MTU [atoms$/$source neutron$/$MTU]')
@@ -258,9 +259,9 @@ class PlotStatepointPbLi:
         ax = plt.gca()
         box_props = dict(boxstyle="round,pad=0.5", facecolor="white", edgecolor="black", alpha=0.85)
         box_positions = {
-            50: (30, max(self.Pu_per_yr_list) * 0.6),
-            5: (15, max(self.Pu_per_yr_list) * 0.5),
-            2.65: (0.01, max(self.Pu_per_yr_list) * 0.2),
+            50: (30, min(self.Pu_per_yr_list) * 2500),
+            5: (15, min(self.Pu_per_yr_list) * 2900),
+            2.65: (0.01, min(self.Pu_per_yr_list) * 1200),
         }
 
         # Create one box for each MTU value showing all three fuels' Pu production
@@ -271,7 +272,7 @@ class PlotStatepointPbLi:
             ax.text(x, y, text, fontsize=9, bbox=box_props)
 
         plt.xlim(-1.5,51.5)
-        # plt.ylim(-0.005,0.105)
+        plt.ylim(-0.005,75)
         plt.title(f'Pu-239 production per year (PbLi, {self.e}wt% Li-6, {P_FUS_MW} MW = {NPS_FUS:.2e} n/s)')
         plt.xlabel('Uranium loaded [metric tons]')
         plt.ylabel(r'Pu-239 produced [kg$/$yr]')
@@ -438,7 +439,7 @@ class PlotStatepointPbLi:
         plt.ylabel('Factor change relative to rxn rate in 1 MTU')
         plt.title(f'Relative U-238 (n,gamma) rxn rate w.r.t. 1 MTU (PbLi, {self.e}wt% Li-6)')
         plt.xscale('log'), plt.yscale('linear')
-        plt.xlim(1e2,1e4), plt.ylim(0,100)
+        plt.xlim(1e3,1e5), plt.ylim(0,100)
 
         # Reposition legend
         leg = plt.legend(loc='upper left', ncols=1, frameon=True, fancybox=False, edgecolor='black', framealpha=.75,) # fontsize='small', ncols=1, 
@@ -449,7 +450,7 @@ class PlotStatepointPbLi:
             plt.savefig(f'./Figures/pdf/{self.name}/fig_U238ng_rel.pdf', bbox_inches='tight', format='pdf') 
             plt.savefig(f'./Figures/png/{self.name}/fig_U238ng_rel.png', bbox_inches='tight', format='png')
             
-            plt.xlim(1e0,2e7)
+            plt.xlim(1e2,2e7)
 
             plt.savefig(f'./Figures/pdf/{self.name}/fig_U238ng_rel_full.pdf', bbox_inches='tight', format='pdf') 
             plt.savefig(f'./Figures/png/{self.name}/fig_U238ng_rel_full.png', bbox_inches='tight', format='png')
@@ -478,7 +479,7 @@ class PlotStatepointPbLi:
         plt.ylabel('Neutrons $/$ source neutron')
         plt.title(f'Neutron flux (PbLi, {self.e}wt% Li-6)')
         plt.xscale('log'), plt.yscale('log')
-        plt.xlim(1e2,1e4) # , plt.ylim(1e-3,1e0)
+        plt.xlim(1e3,1e5) # , plt.ylim(1e-3,1e0)
 
         # Reposition legend
         leg = plt.legend(loc='upper left', ncols=1, frameon=True, fancybox=False, edgecolor='black', framealpha=.75,) # fontsize='small', ncols=1, 
@@ -489,7 +490,7 @@ class PlotStatepointPbLi:
             plt.savefig(f'./Figures/pdf/{self.name}/fig_flux.pdf', bbox_inches='tight', format='pdf') 
             plt.savefig(f'./Figures/png/{self.name}/fig_flux.png', bbox_inches='tight', format='png') # you want 'log' before 'mtu' so you can flip thru them in File Explorer
             
-            plt.xlim(1e0,2e7), plt.ylim(1e-2,1e2)
+            plt.xlim(1e3,2e7), plt.ylim(1e-2,1e2)
 
             plt.savefig(f'./Figures/pdf/{self.name}/fig_flux_full.pdf', bbox_inches='tight', format='pdf') 
             plt.savefig(f'./Figures/png/{self.name}/fig_flux_full.png', bbox_inches='tight', format='png')
@@ -508,7 +509,7 @@ class PlotStatepointPbLi:
         plt.figure(figsize=(18,4))
 
         for i, cell_id in enumerate(self.cell_ids):
-            if MASS_U_LIST_PBLI[i] in [0, 10, 20, 30, 40, 50]:
+            if self.u_list[i] in [0, 10, 20, 30, 40, 50]:
                 df = self.U238_ng_Ebin_df[self.U238_ng_Ebin_df['cell'] == cell_id]
                 x = df['energy mid [eV]']
                 y = df['mean']
@@ -519,11 +520,11 @@ class PlotStatepointPbLi:
                 # Normalize cumulative sum to max value
                 cum_y_norm = cum_y / cum_y.iloc[-1] if cum_y.iloc[-1] != 0 else cum_y
 
-                plt.plot(x, cum_y_norm, linewidth=0.75, label=f'{MASS_U_LIST[i]} MTU')
+                plt.plot(x, cum_y_norm, linewidth=0.75, label=f'{self.u_list[i]} MTU')
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Cumulative normalized reactions')
-        plt.title(f'Cumulative normalized PbLi U-238 (n,gamma) rxn rate (Li-6 {self.e}wt%, {self.temp} K)')
+        plt.title(f'Cumulative normalized U-238 (n,gamma) rxn rate (Li-6 {self.e}wt%, {self.temp} K)')
         plt.xscale('log'), plt.yscale('linear')
         plt.xlim(1e1,1e3), plt.ylim(0,1.05)
 
@@ -545,7 +546,6 @@ class PlotStatepointPbLi:
 
         if self.show:plt.show()
         plt.close('all')
-
 
 
 
