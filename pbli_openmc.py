@@ -27,7 +27,7 @@ class DCLL:
     def __init__(self, enrich_li=90, u_list=MASS_U_LIST_PBLI, run_openmc=False):
 
         self.e = enrich_li
-        self.name = f'DCLL_Li{self.e}_NUO2_900K_2025-07-22'
+        self.name = f'DCLL_Li{self.e:04.1f}_NUO2_900K_2025-07-22'
         self.u_list = u_list
         self.path = f"./OpenMC/{self.name}/"
         self.run = run_openmc
