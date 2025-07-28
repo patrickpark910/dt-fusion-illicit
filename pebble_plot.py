@@ -36,6 +36,15 @@ class PlotStatepointPebble:
         self.temp = 900
         self.save, self.show, self.to_csv = save, show, to_csv
         self.name = f'HCPB_FW4cm_Li{self.e}_NUO2_900K_2025-07-22'
+        plt.rcParams.update({
+            'axes.titlesize': 16,       # Title font size
+            'axes.labelsize': 14,       # Axis label font size
+            'xtick.labelsize': 12,      # X-axis tick label size
+            'ytick.labelsize': 12,      # Y-axis tick label size
+            'legend.fontsize': 12,      # Legend font size
+            'figure.titlesize': 16,     # Figure title font size (if using suptitle)
+        })
+
 
         """ Load tallies """
         sp_path = f'./OpenMC/{self.name}/statepoint.100.h5'
@@ -372,7 +381,7 @@ class PlotStatepointPebble:
         plt.figure(figsize=(18,4))
 
         for i, cell_id in enumerate(self.cell_ids):
-            if self.u_list[i] in [0, 10, 20, 30, 40, 50]:
+            if self.u_list[i] in [10, 20, 30, 40, 50]:
                 x = self.U238_ng_Ebin_df[(self.U238_ng_Ebin_df['cell'] == cell_id)]['energy mid [eV]']
                 y  = self.U238_ng_Ebin_df[self.U238_ng_Ebin_df['cell'] == cell_id]['mean']
                 plt.plot(x, y,   linewidth=0.75, label=f'{self.u_list[i]} MTU') # green color='#00cd6c',
@@ -458,7 +467,7 @@ class PlotStatepointPebble:
 
         plt.figure(figsize=(18,4))
         for i, cell_id in enumerate(self.cell_ids):
-            if self.u_list[i] in [0, 10, 20, 30, 40, 50]:
+            if self.u_list[i] in [10, 20, 30, 40, 50]:
                 x = self.flux_df[(self.flux_df['cell'] == cell_id)]['energy mid [eV]']
                 y = self.flux_df[self.flux_df['cell'] == cell_id]['mean']
                 plt.plot(x, y, linewidth=0.75, label=f'{self.u_list[i]} MTU') # green color='#00cd6c',
@@ -497,7 +506,7 @@ class PlotStatepointPebble:
         plt.figure(figsize=(18,4))
 
         for i, cell_id in enumerate(self.cell_ids):
-            if self.u_list[i] in [0, 10, 20, 30, 40, 50]:
+            if self.u_list[i] in [10, 20, 30, 40, 50]:
                 df = self.U238_ng_Ebin_df[self.U238_ng_Ebin_df['cell'] == cell_id]
                 x = df['energy mid [eV]']
                 y = df['mean']

@@ -16,14 +16,15 @@ from pebble_plot import PlotStatepointPebble
 
 def main():
     # Read CSV data into pandas DataFrames
-    flibe = pd.read_csv('./Figures/data/FLiBe_Li07.5_7_22_tot_rxn_rates.csv')
-    flibeTh = pd.read_csv('./Figures/data/FLiBe_Th_Li07.5_7_22_tot_rxn_rates.csv')
-    pbli = pd.read_csv('./Figures/data/PbLi_Li90_7_22_tot_rxn_rates.csv')
-    pebble = pd.read_csv('./Figures/data/Pebble_Li60_7_22_tot_rxn_rates.csv')
+    flibe = pd.read_csv('./Figures/data/FLiBe_FW4cm_Li07.5_900K_2025-07-22_tot_rxn_rates.csv')
+    flibeTh = pd.read_csv('./Figures/data/FLiBe_Th_Li07.5_2025-07-22_tot_rxn_rates.csv')
+    pbli = pd.read_csv('./Figures/data/DCLL_FW4cm_Li90_NUO2_900K_2025-07-22_tot_rxn_rates.csv')
+    pebble = pd.read_csv('./Figures/data/HCPB_FW4cm_Li60_NUO2_900K_2025-07-22_tot_rxn_rates.csv')
     
     combined_plot = PlotStatepointALL(flibe, flibeTh, pbli, pebble, save=True, show=False, to_csv=True)
     
     combined_plot.plot_tbr()
+    combined_plot.plot_pu1()
     combined_plot.plot_pu()
     combined_plot.plot_pu_per_yr()
     combined_plot.plot_pu_per_mtu()
@@ -44,6 +45,15 @@ class PlotStatepointALL:
         self.show = show
         self.to_csv = to_csv
         self.name = 'All_Fuels'
+        plt.rcParams.update({
+            'axes.titlesize': 16,       # Title font size
+            'axes.labelsize': 14,       # Axis label font size
+            'xtick.labelsize': 12,      # X-axis tick label size
+            'ytick.labelsize': 12,      # Y-axis tick label size
+            'legend.fontsize': 12,      # Legend font size
+            'figure.titlesize': 16,     # Figure title font size (if using suptitle)
+        })
+
 
         for sd in ['pdf','png','gif','data']:
             if sd == 'data': sd_path = f'./Figures/{sd}/'
@@ -74,7 +84,7 @@ class PlotStatepointALL:
                  'o-', markersize=2, linewidth=0.75, color='#00FFFF', label='FLiBe UF4')
         plt.plot(self.flibeTh['MTU'], self.flibeTh['Li-6(n,t)'],
                  'o-', markersize=2, linewidth=0.75, color='#FF8000', label='FLiBe ThF4')
-        plt.plot(self.pbli['MTU'], self.pbli['Li-6(n,t)'],
+        plt.plot(self.pbli['MTU'][:-3], self.pbli['Li-6(n,t)'][:-3],
                  'o-', markersize=2, linewidth=0.75, color='#FF00FF', label='PbLi')
         plt.plot(self.pebble['MTU'], self.pebble['Li-6(n,t)'],
                  'o-', markersize=2, linewidth=0.75, color='#FFA500', label='Pebble')
@@ -95,6 +105,40 @@ class PlotStatepointALL:
         if self.show: plt.show()
         plt.close('all')
 
+    def plot_pu1(self):
+        """ Plot U-238 (n,gamma) reaction rate for all fuels on one plot """
+
+        print(f"\nPlotting U-238/Th-232 (n,gamma) reaction rate vs. uranium loading for all fuels...")
+
+        plt.figure()
+
+        plt.plot(self.flibe['MTU'], self.flibe['U-238(n,gamma)'],
+                 'o-', markersize=2.5, linewidth=1.5, color='#F28B82', label='FLiBe UF4')
+        plt.plot(self.flibeTh['MTU'], self.flibeTh['Th-232(n,gamma)'],
+                 'o-', markersize=2.5, linewidth=1.5, color='#81C995', label='FLiBe ThF4')
+
+        plt.plot(self.pbli['MTU'][:-3], self.pbli['U-238(n,gamma)'][:-3],
+                 'o-', markersize=2.5, linewidth=1.5, color='#AECBFA', label='PbLi')
+        
+
+        plt.title('Plutonium production vs. Uranium Loading')
+        plt.xlabel('Uranium loaded [metric tons]')
+        plt.ylabel(r'U-238(n,$\gamma$) reaction rate')
+        plt.legend()
+        plt.tight_layout()
+
+        if self.save:
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238_ng.pdf', bbox_inches='tight', format='pdf')
+            plt.savefig(f'./Figures/png/{self.name}/fig_U238_ng.png', bbox_inches='tight', format='png')
+            print("Exported U-238 (n,gamma) reaction rate plot for all fuels.")
+        else:
+            print("Did not export U-238 (n,gamma) reaction rate plot due to user setting.")
+
+        if self.show:
+            plt.show()
+
+        plt.close('all')
+
     def plot_pu(self):
         """ Plot U-238 (n,gamma) reaction rate for all fuels on one plot """
 
@@ -106,7 +150,7 @@ class PlotStatepointALL:
                  'o-', markersize=2, linewidth=0.75, color='#00FFFF', label='FLiBe UF4')
         plt.plot(self.flibeTh['MTU'], self.flibeTh['Th-232(n,gamma)'],
                  'o-', markersize=2, linewidth=0.75, color='#FF8000', label='FLiBe ThF4')
-        plt.plot(self.pbli['MTU'], self.pbli['U-238(n,gamma)'],
+        plt.plot(self.pbli['MTU'][:-3], self.pbli['U-238(n,gamma)'][:-3],
                  'o-', markersize=2, linewidth=0.75, color='#FF00FF', label='PbLi')
         plt.plot(self.pebble['MTU'], self.pebble['U-238(n,gamma)'],
                  'o-', markersize=2, linewidth=0.75, color='#FFA500', label='Pebble')
@@ -140,7 +184,7 @@ class PlotStatepointALL:
                  'o-', markersize=2, linewidth=0.75, color='#00FFFF', label='FLiBe UF4')
         plt.plot(self.flibeTh['MTU'], self.flibeTh['Th-232(n,fis)'],
                  'o-', markersize=2, linewidth=0.75, color='#FF8000', label='FLiBe ThF4')
-        plt.plot(self.pbli['MTU'], self.pbli['U-238(n,fis)'],
+        plt.plot(self.pbli['MTU'][:-3], self.pbli['U-238(n,fis)'][:-3],
                  'o-', markersize=2, linewidth=0.75, color='#FF00FF', label='PbLi')
         plt.plot(self.pebble['MTU'], self.pebble['U-238(n,fis)'],
                  'o-', markersize=2, linewidth=0.75, color='#FFA500', label='Pebble')
@@ -177,7 +221,7 @@ class PlotStatepointALL:
         plt.plot(self.flibeTh['MTU'], flibe_u_per_mtu,
                  'o-', markersize=2, linewidth=0.75, color='#FF8000', label='FLiBe ThF4')
         pbli_pu_per_mtu = self.pbli['U-238(n,gamma)'] / self.pbli['MTU']
-        plt.plot(self.pbli['MTU'], pbli_pu_per_mtu,
+        plt.plot(self.pbli['MTU'][:-3], pbli_pu_per_mtu[:-3],
                  'o-', markersize=2, linewidth=0.75, color='#FF00FF', label='PbLi')
         pebble_pu_per_mtu = self.pebble['U-238(n,gamma)'] / self.pebble['MTU']
         plt.plot(self.pebble['MTU'], pebble_pu_per_mtu,
@@ -208,7 +252,7 @@ class PlotStatepointALL:
                 'o-', markersize=2, linewidth=0.75, color='#00FFFF', label='FLiBe UF4')
         plt.plot(self.flibeTh['MTU'], self.flibeU_per_yr_list,
                 'o-', markersize=2, linewidth=0.75, color='#FF8000', label='FLiBe ThF4')
-        plt.plot(self.pbli['MTU'], self.pbliPu_per_yr_list,
+        plt.plot(self.pbli['MTU'][:-3], self.pbliPu_per_yr_list[:-3],
                 'o-', markersize=2, linewidth=0.75, color='#FF00FF', label='PbLi')
         plt.plot(self.pebble['MTU'], self.pebblePu_per_yr_list,
                 'o-', markersize=2, linewidth=0.75, color='#FFA500', label='Pebble')
@@ -247,8 +291,6 @@ class PlotStatepointALL:
             textstr += f"  {mtu:.4f} MTU: {val:.4e} kg/yr\n"
 
         # Add the single annotation box on the side of the plot
-        ax.text(1.05, 0.5, textstr, transform=ax.transAxes, fontsize=8,
-                verticalalignment='center', bbox=box_props, fontfamily='monospace')
 
         plt.title(f'Pu-239 / U-233 production per year (All Fuels)')
         plt.xlabel('Uranium / Thorium loaded [metric tons]')

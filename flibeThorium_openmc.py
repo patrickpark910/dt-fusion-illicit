@@ -33,6 +33,7 @@ class FLIBE_Th:
         self.u_list = u_list
         self.name = f"FLiBe-Th_Li{self.lie:04.1f}_7_22"
         self.path = f"./OpenMC/{self.name}/"
+        
 
         flibe = openmc.Material()
         flibe.add_elements_from_formula('F4Li2Be', 'ao', enrichment_target='Li6', enrichment_type='wo', enrichment=self.lie)
