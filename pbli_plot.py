@@ -49,7 +49,16 @@ class PlotStatepointPbLi:
         self.u_list = u_list
         self.temp = 900
         self.save, self.show, self.to_csv = save, show, to_csv
-        self.name = f'DCLL_Li{self.e}_NUO2_900K_2025-07-22'
+        self.name = f'DCLL_FW4cm_Li{self.e}_NUO2_900K_2025-07-22'
+        plt.rcParams.update({
+            'axes.titlesize': 16,       # Title font size
+            'axes.labelsize': 14,       # Axis label font size
+            'xtick.labelsize': 12,      # X-axis tick label size
+            'ytick.labelsize': 12,      # Y-axis tick label size
+            'legend.fontsize': 12,      # Legend font size
+            'figure.titlesize': 16,     # Figure title font size (if using suptitle)
+        })
+
 
         """ Load tallies """
         sp_path = f'./OpenMC/{self.name}/statepoint.100.h5'
@@ -240,7 +249,7 @@ class PlotStatepointPbLi:
 
         plt.figure()
         plt.plot(self.u_list, self.Pu_per_yr_list, markersize=2, linewidth=0.75, color='#000000', label=f'OpenMC') # turn capsize > 0 to show error bars, but they're super smol
-        plt.plot(self.u_list, y, 'r--', linewidth=0.75, label=f'200 wppm U')
+        #plt.plot(self.u_list, y, 'r--', linewidth=0.75, label=f'200 wppm U')
 
         mtu_points = [2.65, 5, 50]
         def get_closest_value(mtu_val, mtu_list, pu_list):
@@ -260,8 +269,8 @@ class PlotStatepointPbLi:
         box_props = dict(boxstyle="round,pad=0.5", facecolor="white", edgecolor="black", alpha=0.85)
         box_positions = {
             50: (30, min(self.Pu_per_yr_list) * 2500),
-            5: (15, min(self.Pu_per_yr_list) * 2900),
-            2.65: (0.01, min(self.Pu_per_yr_list) * 1200),
+            5: (15, min(self.Pu_per_yr_list) * 3100),
+            2.65: (0.01, min(self.Pu_per_yr_list) * 1600),
         }
 
         # Create one box for each MTU value showing all three fuels' Pu production
@@ -269,11 +278,11 @@ class PlotStatepointPbLi:
             x, y = box_positions[mtu]
             text = (f"MTU: {mtu}\n"
                     f"PbLi: {pbli_val:.3f} kg/yr")
-            ax.text(x, y, text, fontsize=9, bbox=box_props)
+            ax.text(x, y, text, fontsize=12, bbox=box_props)
 
         plt.xlim(-1.5,51.5)
         plt.ylim(-0.005,75)
-        plt.title(f'Pu-239 production per year (PbLi, {self.e}wt% Li-6, {P_FUS_MW} MW = {NPS_FUS:.2e} n/s)')
+        plt.title(f'PbLi Pu-239 production per year vs. U-238 Loading')
         plt.xlabel('Uranium loaded [metric tons]')
         plt.ylabel(r'Pu-239 produced [kg$/$yr]')
         plt.tight_layout()
@@ -384,7 +393,7 @@ class PlotStatepointPbLi:
         plt.figure(figsize=(18,4))
 
         for i, cell_id in enumerate(self.cell_ids):
-            if self.u_list[i] in [0, 10, 20, 30, 40, 50]:
+            if self.u_list[i] in [10, 20, 30, 40, 50]:
                 x = self.U238_ng_Ebin_df[(self.U238_ng_Ebin_df['cell'] == cell_id)]['energy mid [eV]']
                 y  = self.U238_ng_Ebin_df[self.U238_ng_Ebin_df['cell'] == cell_id]['mean']
                 plt.plot(x, y,   linewidth=0.75, label=f'{self.u_list[i]} MTU') # green color='#00cd6c',
@@ -468,18 +477,18 @@ class PlotStatepointPbLi:
         """
         print(f"\nPlotting flux vs. energy with MTU contours...")
 
-        plt.figure(figsize=(18,4))
+        plt.figure(figsize=(14,3))
         for i, cell_id in enumerate(self.cell_ids):
-            if self.u_list[i] in [0, 10, 20, 30, 40, 50]:
+            if self.u_list[i] in [10, 20, 30, 40, 50]:
                 x = self.flux_df[(self.flux_df['cell'] == cell_id)]['energy mid [eV]']
                 y = self.flux_df[self.flux_df['cell'] == cell_id]['mean']
                 plt.plot(x, y, linewidth=0.75, label=f'{self.u_list[i]} MTU') # green color='#00cd6c',
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Neutrons $/$ source neutron')
-        plt.title(f'Neutron flux (PbLi, {self.e}wt% Li-6)')
+        plt.title(f'PbLi Neutron flux')
         plt.xscale('log'), plt.yscale('log')
-        plt.xlim(1e3,1e5) # , plt.ylim(1e-3,1e0)
+        plt.xlim(1e1,1e5) # , plt.ylim(1e-3,1e0)
 
         # Reposition legend
         leg = plt.legend(loc='upper left', ncols=1, frameon=True, fancybox=False, edgecolor='black', framealpha=.75,) # fontsize='small', ncols=1, 
@@ -490,7 +499,7 @@ class PlotStatepointPbLi:
             plt.savefig(f'./Figures/pdf/{self.name}/fig_flux.pdf', bbox_inches='tight', format='pdf') 
             plt.savefig(f'./Figures/png/{self.name}/fig_flux.png', bbox_inches='tight', format='png') # you want 'log' before 'mtu' so you can flip thru them in File Explorer
             
-            plt.xlim(1e3,2e7), plt.ylim(1e-2,1e2)
+            plt.xlim(1e1,2e7), plt.ylim(1e-2,1e2)
 
             plt.savefig(f'./Figures/pdf/{self.name}/fig_flux_full.pdf', bbox_inches='tight', format='pdf') 
             plt.savefig(f'./Figures/png/{self.name}/fig_flux_full.png', bbox_inches='tight', format='png')
@@ -506,10 +515,10 @@ class PlotStatepointPbLi:
         """
         print(f"\nPlotting cumulative, normalized Pu production vs. energy with MTU contours ...")
 
-        plt.figure(figsize=(18,4))
+        plt.figure(figsize=(9,6))
 
         for i, cell_id in enumerate(self.cell_ids):
-            if self.u_list[i] in [0, 10, 20, 30, 40, 50]:
+            if self.u_list[i] in [10, 20, 30, 40, 50]:
                 df = self.U238_ng_Ebin_df[self.U238_ng_Ebin_df['cell'] == cell_id]
                 x = df['energy mid [eV]']
                 y = df['mean']
@@ -524,7 +533,7 @@ class PlotStatepointPbLi:
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Cumulative normalized reactions')
-        plt.title(f'Cumulative normalized U-238 (n,gamma) rxn rate (Li-6 {self.e}wt%, {self.temp} K)')
+        plt.title(f'PbLi Cumulative normalized U-238 (n,gamma) rxn rate')
         plt.xscale('log'), plt.yscale('linear')
         plt.xlim(1e1,1e3), plt.ylim(0,1.05)
 
@@ -543,6 +552,44 @@ class PlotStatepointPbLi:
 
             plt.savefig(f'./Figures/pdf/{self.name}/fig_U238ng_cum_norm_full.pdf', bbox_inches='tight', format='pdf') 
             plt.savefig(f'./Figures/png/{self.name}/fig_U238ng_cum_norm_full.png', bbox_inches='tight', format='png')
+
+        if self.show:plt.show()
+        plt.close('all')
+
+        plt.figure(figsize=(9,6))
+
+        for i, cell_id in enumerate(self.cell_ids):
+            if self.u_list[i] in [10, 20, 30, 40, 50]:
+                df = self.U238_ng_Ebin_df[self.U238_ng_Ebin_df['cell'] == cell_id]
+                x = df['energy mid [eV]']
+                y = df['mean']
+
+                # Compute cumulative sum
+                cum_y = np.cumsum(y)
+    
+
+                plt.plot(x, cum_y, linewidth=0.75, label=f'{self.u_list[i]} MTU')
+
+        plt.xlabel('Energy [eV]')
+        plt.ylabel('Cumulative normalized reactions')
+        plt.title(f'PbLi Cumulative U-238 (n,gamma) rxn rate')
+        plt.xscale('log'), plt.yscale('linear')
+        plt.xlim(1e1,1e3)
+        # Reposition legend
+        leg = plt.legend(loc='lower right', ncols=1, frameon=True, fancybox=False, edgecolor='black', framealpha=.75,)
+        leg.get_frame().set_linewidth(1)
+
+        # Export figure
+        if self.save:
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238ng_cum.pdf', bbox_inches='tight', format='pdf') 
+            plt.savefig(f'./Figures/png/{self.name}/fig_U238ng_cum.png', bbox_inches='tight', format='png')
+            print(f"   Exported cumulative normalized Pu production vs. energy with MTU contours plot.")
+
+            plt.xlim(1e0,2e7)
+
+
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238ng_cum_full.pdf', bbox_inches='tight', format='pdf') 
+            plt.savefig(f'./Figures/png/{self.name}/fig_U238ng_cum_full.png', bbox_inches='tight', format='png')
 
         if self.show:plt.show()
         plt.close('all')
