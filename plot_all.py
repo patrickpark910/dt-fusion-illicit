@@ -7,28 +7,24 @@ import imageio.v2 as iio # use v2 to avoid deprecation warnings --ppark
 
 
 """ import helper functions """
-sys.path.insert(0, f"{os.getcwd()}/Python")
-from parameters import *
-from utilities import *
-from flibe_plot import PlotStatepoint
-from pbli_plot import PlotStatepointPbLi
-from pebble_plot import PlotStatepointPebble
+from Python.utilities import *
+
 
 def main():
     # Read CSV data into pandas DataFrames
-    flibe = pd.read_csv('./Figures/data/FLiBe_FW4cm_Li07.5_900K_2025-07-22_tot_rxn_rates.csv')
-    flibeTh = pd.read_csv('./Figures/data/FLiBe_Th_Li07.5_2025-07-22_tot_rxn_rates.csv')
-    pbli = pd.read_csv('./Figures/data/DCLL_FW4cm_Li90_NUO2_900K_2025-07-22_tot_rxn_rates.csv')
-    pebble = pd.read_csv('./Figures/data/HCPB_FW4cm_Li60_NUO2_900K_2025-07-22_tot_rxn_rates.csv')
+    flibe_u_df  = pd.read_csv('./Figures/data/FLiBe_FW4cm_Li07.5_900K_2025-07-22_tot_rxn_rates.csv')
+    flibe_th_df = pd.read_csv('./Figures/data/FLiBe_Th_Li07.5_2025-07-22_tot_rxn_rates.csv')
+    pbli_u_df   = pd.read_csv('./Figures/data/DCLL_FW4cm_Li90_NUO2_900K_2025-07-22_tot_rxn_rates.csv')
+    pebble_df   = pd.read_csv('./Figures/data/HCPB_FW4cm_Li60_NUO2_900K_2025-07-22_tot_rxn_rates.csv')
     
-    combined_plot = PlotStatepointALL(flibe, flibeTh, pbli, pebble, save=True, show=False, to_csv=True)
+    combined_plot = Plot(flibe, flibeTh, pbli, pebble, save=True, show=False, to_csv=True)
     
     combined_plot.plot_tbr()
-    combined_plot.plot_pu1()
-    combined_plot.plot_pu()
+    # combined_plot.plot_pu1()
+    # combined_plot.plot_pu()
     combined_plot.plot_pu_per_yr()
-    combined_plot.plot_pu_per_mtu()
-    combined_plot. plot_fis()
+    # combined_plot.plot_pu_per_mtu()
+    combined_plot.plot_fis()
 
     print("All plots completed and saved.")
 

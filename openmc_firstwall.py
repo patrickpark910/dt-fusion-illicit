@@ -1,11 +1,9 @@
 import openmc
-import os, sys
-import numpy as np
+from datetime import date
 
 # Import helper functions
-sys.path.insert(0, f"{os.getcwd()}/Python/")
-from parameters import *
-from utilities import *
+from Python.parameters import *
+from Python.utilities import *
 
 
 def main():
@@ -19,7 +17,6 @@ def main():
     if current_run.run:
         if os.path.isdir(f"./OpenMC/{current_run.name}/"):
             print(f"Warning. Directory {f"./OpenMC/{current_run.name}/"} already exists, so running OpenMC will fail. Skipping...")
-
         else:
             current_run.run_openmc()
 
@@ -27,7 +24,8 @@ def main():
 class FirstWall:
 
     def __init__(self, run_openmc=False):
-        self.name = 'FirstWall_50'
+        today = date.today().strftime("%Y-%m-%d")
+        self.name = f'FirstWall_V4cm_900K_{today}'
         self.run  = run_openmc
 
         """ MATERIALS """
@@ -108,7 +106,6 @@ class FirstWall:
         # Filters
         E_bin_edges = logspace_per_decade(1e-5, 20e6, 100) # './helpers/utilities.py'
         energy_filter = openmc.EnergyFilter(E_bin_edges)
-
         surface_filter = openmc.SurfaceFilter(r2)
 
         # Current tally to measure outgoing neutron spectrum
