@@ -12,15 +12,14 @@ from Python.utilities import *
 
 def main():
     # Read CSV data into pandas DataFrames
-    flibe_u_df  = pd.read_csv('./Figures/data/FLiBe_FW4cm_Li07.5_900K_2025-07-22_tot_rxn_rates.csv')
-    flibe_th_df = pd.read_csv('./Figures/data/FLiBe_Th_Li07.5_2025-07-22_tot_rxn_rates.csv')
-    pbli_u_df   = pd.read_csv('./Figures/data/DCLL_FW4cm_Li90_NUO2_900K_2025-07-22_tot_rxn_rates.csv')
+    flibe_u_df  = pd.read_csv('./Figures/data/FLiBe_U_FW4cm_Li07.5_900K_2025-07-22_tot_rxn_rates.csv')
+    flibe_th_df = pd.read_csv('./Figures/data/FLiBe_Th_FW4cm_Li07.5_900K_2025-07-22_tot_rxn_rates.csv')
+    pbli_u_df   = pd.read_csv('./Figures/data/DCLL_U_FW4cm_Li90_NUO2_900K_2025-07-22_tot_rxn_rates.csv')
     pebble_df   = pd.read_csv('./Figures/data/HCPB_FW4cm_Li60_NUO2_900K_2025-07-22_tot_rxn_rates.csv')
     
-    combined_plot = Plot(flibe, flibeTh, pbli, pebble, save=True, show=False, to_csv=True)
+    combined_plot = Plot(flibe_u_df, flibe_th_df, pbli_u_df, pebble_df, save=True, show=False, to_csv=True)
     
     combined_plot.plot_tbr()
-    # combined_plot.plot_pu1()
     # combined_plot.plot_pu()
     combined_plot.plot_pu_per_yr()
     # combined_plot.plot_pu_per_mtu()
@@ -29,33 +28,23 @@ def main():
     print("All plots completed and saved.")
 
 
-class PlotStatepointALL:
+class Plot:
 
-    def __init__(self, flibe, flibeTh, pbli, pebble, save=False, show=True, to_csv=False):
-        self.flibe = flibe
-        self.flibeTh = flibeTh
-        self.pbli = pbli
-        self.pebble = pebble
+    def __init__(self, flibe_u_df, flibe_th_df, pbli_u_df, pebble_df, save=False, show=True, to_csv=False):
+        self.flibe_u_df  = flibe_u_df
+        self.flibe_th_df = flibe_th_df
+        self.pbli_u_df   = pbli_u_df
+        self.pebble_df   = pebble_df
 
-        self.save = save
-        self.show = show
-        self.to_csv = to_csv
-        self.name = 'All_Fuels'
-        plt.rcParams.update({
-            'axes.titlesize': 16,       # Title font size
-            'axes.labelsize': 14,       # Axis label font size
-            'xtick.labelsize': 12,      # X-axis tick label size
-            'ytick.labelsize': 12,      # Y-axis tick label size
-            'legend.fontsize': 12,      # Legend font size
-            'figure.titlesize': 16,     # Figure title font size (if using suptitle)
-        })
+        self.save, self.show, self.to_csv = save, show, to_csv
+        self.name = 'All_Blankets'
 
-
-        for sd in ['pdf','png','gif','data']:
+        for sd in ['pdf','png',]:
             if sd == 'data': sd_path = f'./Figures/{sd}/'
             else: sd_path = f'./Figures/{sd}/{self.name}/'
             print(f"Ensuring directory exists: {sd_path}")
             os.makedirs(sd_path, exist_ok=True)
+
         self.flibePu_per_yr_list = []
         for FPu_per_srcn in self.flibe['U-238(n,gamma)']:
             self.flibePu_per_yr_list.append( FPu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3 )
