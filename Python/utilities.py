@@ -39,12 +39,12 @@ NPS_FUS  = P_FUS_MW * N_PER_MJ # n/s
 Font settings for matplotlib
 """
 try:
-    font_path = './Python/arial.ttf'
+    font_path = './Python/DIN-Regular.ttf' # './Python/arial.ttf'
     fm.fontManager.addfont(font_path)
     prop = fm.FontProperties(fname=font_path)
     plt.rcParams['font.family'] = prop.get_name()
 except:
-    font_path = './arial.ttf'
+    font_path = './DIN-Regular.ttf' # './arial.ttf'
     fm.fontManager.addfont(font_path)
     prop = fm.FontProperties(fname=font_path)
     plt.rcParams['font.family'] = prop.get_name()
