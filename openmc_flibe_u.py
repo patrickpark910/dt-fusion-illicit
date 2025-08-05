@@ -1,6 +1,7 @@
 import openmc
 import sys
 import numpy as np
+from datetime import date
 
 # Import helper functions
 from Python.parameters import *
@@ -8,12 +9,13 @@ from Python.utilities import *
 
 
 def main():
-    for e in [7.5]:
+
+    for e in [7.5]: # [5, 7.5, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
         print("\n\n")
         print("="*42)
-        print(f"Running FLiBe OpenMC model for Li-6 enrichment: {e} wt%")
+        print(f"Running FLiBe OpenMC model for {e} wt% Li-6 enrichment at 900 K")
 
-        current_run = FLIBE(enrich_li=e, temp_k=900, run_openmc=True)
+        current_run = FLIBE(enrich_li=e, run_openmc=True)
 
         print(f"Check if '{current_run.path}' exists: {os.path.isdir(current_run.path)}")
 
@@ -32,7 +34,9 @@ class FLIBE:
         self.lie = enrich_li
         self.temp = temp_k
         self.u_list = u_list
-        self.name = f"FLiBe_FW_Li{self.lie:04.1f}_{self.temp}K_2025-07-22"
+        today = date.today().strftime("%Y-%m-%d")
+
+        self.name = f"FLiBe_FW4cm_Li{self.lie:04.1f}_{self.temp}K_{today}"
         self.path = f"./OpenMC/{self.name}/"
         self.run = run_openmc
 
@@ -126,7 +130,7 @@ class FLIBE:
         """ SETTINGS """
         self.settings = openmc.Settings()
 
-        """Source from First Wall Effects"""
+        """ Source from First Wall Effects """
         # Determine a flux spectrum from the neutrons leaving the surface of a two layer first wall model './Python/FirstWall.py'
         # The neutrons added to each MTU box in our model reflect the outgoing current spectrum of out vanadium shell
         sp = openmc.StatePoint(f'./OpenMC/FirstWall_V4cm_900K_2025-07-22/statepoint.100.h5')
