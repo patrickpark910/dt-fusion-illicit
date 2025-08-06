@@ -8,7 +8,6 @@ import imageio.v2 as iio # use v2 to avoid deprecation warnings --ppark
 # Import helper functions
 from Python.parameters import *
 from Python.utilities import *
-from Python.flibe_plots_extra import *
 
 
 def main():
@@ -17,17 +16,17 @@ def main():
             # Read and plot tallies for each Li enrich case
             current_sp = PlotStatepoint(enrich_li=e, temp_k=t, save=True, show=False, to_csv=True)
 
-            current_sp.print_rxn_rates()
-            current_sp.plot_tbr()
-            current_sp.plot_pu()
-            current_sp.plot_pu_per_mtu()
+            current_sp.print_tallies()
+            # current_sp.plot_tbr()
+            # current_sp.plot_pu()
+            # current_sp.plot_pu_per_mtu()
             
             #current_sp.plot_rxn_rates()
-            current_sp.plot_pu_vs_energy()
-            current_sp.plot_pu_per_yr()
-            current_sp.plot_rel_pu_vs_energy()
-            current_sp.plot_flux_vs_energy()
-            current_sp.plot_cum_norm_u_vs_energy()
+            # current_sp.plot_pu_vs_energy()
+            # current_sp.plot_pu_per_yr()
+            # current_sp.plot_rel_pu_vs_energy()
+            # current_sp.plot_flux_vs_energy()
+            # current_sp.plot_cum_norm_u_vs_energy()
 
 
 
@@ -36,9 +35,9 @@ class PlotStatepoint:
     def __init__(self, enrich_li=7.5, temp_k=900, save=False, show=True, to_csv=False):
         self.e = enrich_li
         self.temp = temp_k
-        self.name = f"FLiBe_FW4cm_Li{self.e:04.1f}_{self.temp}K_2025-07-22"
+        self.name = f"FLiBe_U_FW4cm_Li{self.e:04.1f}_{self.temp}K_2025-07-22"
         self.save, self.show, self.to_csv = save, show, to_csv
-        self.u_list = MASS_U_LIST
+        self.fertile_mt_list = MASS_U_LIST
         plt.rcParams.update({
             'axes.titlesize': 16,       # Title font size
             'axes.labelsize': 14,       # Axis label font size
@@ -91,6 +90,10 @@ class PlotStatepoint:
         self.Li6_nt_Ebin_df   = Li_df[(Li_df['nuclide'] == 'Li6') & (Li_df['score'] == '(n,Xt)')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
         self.Li7_nt_Ebin_df   = Li_df[(Li_df['nuclide'] == 'Li7') & (Li_df['score'] == '(n,Xt)')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
 
+        # In each of those Ebin_df, add a new column translating the cell # into the metric tons of fertile mass loaded """
+        for df in [self.U238_ng_Ebin_df, self.U238_fis_Ebin_df, self.Li6_nt_Ebin_df, self.Li7_nt_Ebin_df]:
+            df['fertile_MT'] = df['cell'].apply(lambda c: self.fertile_mt_list[c - 1])
+
         """ Reaction rate for every mtu loading summed over all energy bins"""
         Li6_rr  = Li.summation(filter_type=openmc.EnergyFilter, nuclides=['Li6'], remove_filter=True)
         Li7_rr  = Li.summation(filter_type=openmc.EnergyFilter, nuclides=['Li7'], remove_filter=True)
@@ -124,7 +127,7 @@ class PlotStatepoint:
         self.cell_ids = U_df['cell'].unique().tolist()
 
 
-    def print_rxn_rates(self):
+    def print_tallies(self):
         """
         Prints and exports as CSV total reaction rates in each mtu loading summed over energies
         """
@@ -138,9 +141,14 @@ class PlotStatepoint:
         print(f"{df.to_string(index=False)}\n") # ensures the whole df gets printed
 
         if self.to_csv:
-            path = f"./Figures/data/{self.name}_tot_rxn_rates.csv"
-            df.to_csv(path, index=False) # keep as 'self.pu_path'!
-            print(f"Exported total reaction rates CSV to: {path}")
+
+            csv1 = f"./Figures/data/{self.name}_tot_rxn_rates.csv"
+            csv2 = f"./Figures/data/{self.name}_U238_n-gamma_Ebins.csv"
+            df.to_csv(csv1, index=False) 
+            self.U238_ng_Ebin_df.to_csv(csv2, index=False) 
+
+            print(f"Exported total reaction rates CSV to:\n  {csv1}")
+            print(f"Exported U-238 (n,gamma) tallies per energy bin CSV to:\n  {csv2}")
 
 
     def plot_tbr(self):
@@ -255,7 +263,7 @@ class PlotStatepoint:
         # Gather Pu production values for all fuels at each MTU point
         annotations = []
         for mtu in mtu_points:
-            pbli_val = get_closest_value(mtu, np.array(self.u_list), self.Pu_per_yr_list)
+            pbli_val = get_closest_value(mtu, np.array(self.fertile_mt_list), self.Pu_per_yr_list)
             annotations.append((mtu, pbli_val))
         ax = plt.gca()
         box_props = dict(boxstyle="round,pad=0.5", facecolor="white", edgecolor="black", alpha=0.85)
@@ -514,7 +522,7 @@ class PlotStatepoint:
         plt.figure(figsize=(9,6))
 
         for i, cell_id in enumerate(self.cell_ids):
-            if self.u_list[i] in [10, 20, 30, 40, 50]:
+            if self.fertile_mt_list[i] in [10, 20, 30, 40, 50]:
                 df = self.U238_ng_Ebin_df[self.U238_ng_Ebin_df['cell'] == cell_id]
                 x = df['energy mid [eV]']
                 y = df['mean']
@@ -525,7 +533,7 @@ class PlotStatepoint:
                 # Normalize cumulative sum to max value
                 cum_y_norm = cum_y / cum_y.iloc[-1] if cum_y.iloc[-1] != 0 else cum_y
 
-                plt.plot(x, cum_y_norm, linewidth=0.75, label=f'{self.u_list[i]} MTU')
+                plt.plot(x, cum_y_norm, linewidth=0.75, label=f'{self.fertile_mt_list[i]} MTU')
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Cumulative normalized reactions')
@@ -555,7 +563,7 @@ class PlotStatepoint:
         plt.figure(figsize=(9,6))
 
         for i, cell_id in enumerate(self.cell_ids):
-            if self.u_list[i] in [10, 20, 30, 40, 50]:
+            if self.fertile_mt_list[i] in [10, 20, 30, 40, 50]:
                 df = self.U238_ng_Ebin_df[self.U238_ng_Ebin_df['cell'] == cell_id]
                 x = df['energy mid [eV]']
                 y = df['mean']
@@ -563,7 +571,7 @@ class PlotStatepoint:
                 # Compute cumulative sum
                 cum_y = np.cumsum(y)
 
-                plt.plot(x, cum_y, linewidth=0.75, label=f'{self.u_list[i]} MTU')
+                plt.plot(x, cum_y, linewidth=0.75, label=f'{self.fertile_mt_list[i]} MTU')
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Cumulative normalized reactions')

@@ -6,7 +6,6 @@ from scipy.interpolate import Akima1DInterpolator
 from scipy.interpolate import PchipInterpolator
 
 
-
 """ import helper functions """
 from Python.utilities import *
 from Python.parameters import *
@@ -14,23 +13,30 @@ from Python.parameters import *
 
 
 def main():
-    # Read CSV data into pandas DataFrames
-    flibe_u_df  = pd.read_csv('./Figures/data/FLiBe_U_FW4cm_Li07.5_900K_2025-07-22_tot_rxn_rates.csv')
-    flibe_th_df = pd.read_csv('./Figures/data/FLiBe_Th_FW4cm_Li07.5_900K_2025-07-22_tot_rxn_rates.csv')
-    pbli_u_df   = pd.read_csv('./Figures/data/DCLL_U_FW4cm_Li90_900K_2025-07-22_tot_rxn_rates.csv')
-    pebble_df   = pd.read_csv('./Figures/data/HCPB_U_FW4cm_Li60_900K_2025-07-22_tot_rxn_rates.csv')
+    """ Read CSV data into pandas DataFrames """
+    # Total reaction rates
+     flibe_u_rr_df = pd.read_csv('./Figures/data/FLiBe_U_FW4cm_Li07.5_900K_2025-07-22_tot_rxn_rates.csv')
+    flibe_th_rr_df = pd.read_csv('./Figures/data/FLiBe_Th_FW4cm_Li07.5_900K_2025-07-22_tot_rxn_rates.csv')
+        pbli_rr_df = pd.read_csv('./Figures/data/DCLL_U_FW4cm_Li90_900K_2025-07-22_tot_rxn_rates.csv')
+      pebble_rr_df = pd.read_csv('./Figures/data/HCPB_U_FW4cm_Li60_900K_2025-07-22_tot_rxn_rates.csv')
 
-    for df in [flibe_u_df, flibe_th_df, pbli_u_df, pebble_df]: 
+    # Fertile (n,gamma) per energy bin
+     flibe_u_eb_df = pd.read_csv('./Figures/data/FLiBe_U_FW4cm_Li07.5_900K_2025-07-22_U238_n-gamma_Ebins.csv')
+    flibe_th_eb_df = pd.read_csv('./Figures/data/FLiBe_Th_FW4cm_Li07.5_900K_2025-07-22_Th232_n-gamma_Ebins.csv')
+        pbli_eb_df = pd.read_csv('./Figures/data/DCLL_U_FW4cm_Li90_900K_2025-07-22_U238_n-gamma_Ebins.csv')
+      pebble_eb_df = pd.read_csv('./Figures/data/HCPB_U_FW4cm_Li60_900K_2025-07-22_U238_n-gamma_Ebins.csv') 
+
+    df_list = [flibe_u_rr_df, flibe_th_rr_df, pbli_u_rr_df, pebble_rr_df, flibe_u_eb_df, flibe_th_eb_df, pbli_u_eb_df, pebble_eb_df]
+
+    for df in df_list: 
         df['fertile_kg/m3'] = (df['MTU']*1e3) / (VOL_CC/1e6)
  
     
-    combined_plot = Plot([flibe_u_df, flibe_th_df, pbli_u_df, pebble_df], save=True, show=True)
+    combined_plot = Plot(df_list, save=True, show=True)
     
     combined_plot.plot_tbr()
-    # combined_plot.plot_pu()
     # combined_plot.plot_pu_per_yr()
-    # combined_plot.plot_pu_per_mtu()
-    # combined_plot.plot_fis()
+    combined_plot.plot_histograms()
 
     print("All plots completed and saved.")
 
@@ -38,10 +44,15 @@ def main():
 class Plot:
 
     def __init__(self, df_list, save=False, show=True):
-        self.flibe_u_df  = df_list[0]
-        self.flibe_th_df = df_list[1]
-        self.pbli_u_df   = df_list[2]
-        self.pebble_df   = df_list[3]
+        self.flibe_u_rr_df  = df_list[0]
+        self.flibe_th_rr_df = df_list[1]
+        self.pbli_u_rr_df   = df_list[2]
+        self.pebble_rr_df   = df_list[3]
+
+        self.flibe_u_eb_df  = df_list[4]
+        self.flibe_th_eb_df = df_list[5]
+        self.pbli_u_eb_df   = df_list[6]
+        self.pebble_eb_df   = df_list[7]
 
         self.save, self.show = save, show
         self.name = 'All_Blankets'
@@ -59,11 +70,11 @@ class Plot:
         print(f"\nPlotting tritium breeding ratio vs. fertile density...")
 
         # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
-        x1, y1 =  self.flibe_u_df['fertile_kg/m3'],  self.flibe_u_df['Li-6(n,t)'] +  self.flibe_u_df['Li-7(n,Xt)']
-        x2, y2 = self.flibe_th_df['fertile_kg/m3'], self.flibe_th_df['Li-6(n,t)'] + self.flibe_th_df['Li-7(n,Xt)']
-        x3, y3 =   self.pbli_u_df['fertile_kg/m3'],   self.pbli_u_df['Li-6(n,t)'] +   self.pbli_u_df['Li-7(n,Xt)']
-        # x4, y4 =  self.pbli_th_df['fertile_kg/m3'],  self.pbli_th_df['Li-6(n,t)'] +  self.pbli_th_df['Li-7(n,Xt)']
-        x5, y5 =   self.pebble_df['fertile_kg/m3'],   self.pebble_df['Li-6(n,t)'] +   self.pebble_df['Li-7(n,Xt)']
+        x1, y1 =  self.flibe_u_rr_df['fertile_kg/m3'],  self.flibe_u_rr_df['Li-6(n,t)'] +  self.flibe_u_rr_df['Li-7(n,Xt)']
+        x2, y2 = self.flibe_th_rr_df['fertile_kg/m3'], self.flibe_th_rr_df['Li-6(n,t)'] + self.flibe_th_rr_df['Li-7(n,Xt)']
+        x3, y3 =   self.pbli_u_rr_df['fertile_kg/m3'],   self.pbli_u_rr_df['Li-6(n,t)'] +   self.pbli_u_rr_df['Li-7(n,Xt)']
+        # x4, y4 =  self.pbli_th_rr_df['fertile_kg/m3'],  self.pbli_th_rr_df['Li-6(n,t)'] +  self.pbli_th_rr_df['Li-7(n,Xt)']
+        x5, y5 =   self.pebble_rr_df['fertile_kg/m3'],   self.pebble_rr_df['Li-6(n,t)'] +   self.pebble_rr_df['Li-7(n,Xt)']
 
         # AkimaInterpolation ripped from my ELWR paper --ppark 2025-08-06
         x_fine = np.linspace(x1.min(), x1.max(), 300) # Evaluate on a fine grid
@@ -73,16 +84,10 @@ class Plot:
         # y_akima4 = akima4(x_fine)
         y_akima5 = Akima1DInterpolator(x5, y5)(x_fine)
 
-        y_mono1 = np.copy(y_akima1) # enforce monotonic decreasing post-processing
-        y_mono2 = np.copy(y_akima2)
-        y_mono3 = np.copy(y_akima3)
-        # y_mono4 = np.copy(y_akima4)
-        y_mono5 = np.copy(y_akima5)
-
-        for y_mono in [y_mono1,y_mono2,y_mono3,y_mono5]: # y_mono4,
-            for i in range(1, len(y_mono)):
-                if y_mono[i] > y_mono[i-1]:
-                    y_mono[i] = y_mono[i-1] # adjust the current point to ensure it's not greater than the previous point
+        for y in [y_akima1,y_akima2,y_akima3,y_akima5]: # y_akima4,
+            for i in range(1, len(y)):
+                if y[i] > y[i-1]:
+                    y[i] = y[i-1] # adjust the current point to ensure it's not greater than the previous point
 
 
         plt.figure(figsize=(7.5,5))
@@ -92,10 +97,10 @@ class Plot:
         plt.scatter(x1, y1, marker='s', s=40, color='black') # ZR clean
         plt.scatter(x2, y2, marker='x', s=60, color='#66b420') # ZR clean
 
-        plt.plot(x_fine, y_mono5, linewidth=1, color='#b41f24',)   # 'o-', markersize=4,  label=r'Pebble-BISO'
-        plt.plot(x_fine, y_mono3, linewidth=1, color='#0047ba', )     # '^-', markersize=5, label=r'PbLi-BISO'
-        plt.plot(x_fine, y_mono1, linewidth=1, color='black', )    # 's-', markersize=4, label=r'FLiBe-UF$_4$'
-        plt.plot(x_fine, y_mono2, linewidth=1, color='#66b420', ) # 'x-', markersize=6, label=r'FLiBe-ThF$_4$'
+        plt.plot(x_fine, y_akima5, linewidth=1, color='#b41f24',)   # 'o-', markersize=4,  label=r'Pebble-BISO'
+        plt.plot(x_fine, y_akima3, linewidth=1, color='#0047ba', )     # '^-', markersize=5, label=r'PbLi-BISO'
+        plt.plot(x_fine, y_akima1, linewidth=1, color='black', )    # 's-', markersize=4, label=r'FLiBe-UF$_4$'
+        plt.plot(x_fine, y_akima2, linewidth=1, color='#66b420', ) # 'x-', markersize=6, label=r'FLiBe-ThF$_4$'
 
         # Dummy plots for legend -- bit of a hack lmao
         plt.plot([998,999], [998,999], 'o-', markersize=4, linewidth=1, color='#b41f24', label=r'Pebble-BISO')   # 
@@ -143,23 +148,10 @@ class Plot:
       
         print(f"\nPlotting Pu-239 production per year for all fuels...")
 
-        self.flibePu_per_yr_list = []
+        """ Create new column for fissile rates """
 
-        for FPu_per_srcn in self.flibe['U-238(n,gamma)']:
-            self.flibePu_per_yr_list.append( FPu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3 )
 
-        self.flibeU_per_yr_list = []
-
-        for U_per_srcn in self.flibeTh['Th-232(n,gamma)']:
-            self.flibeU_per_yr_list.append( U_per_srcn * NPS_FUS * SEC_PER_YR * AMU_U233 / AVO / 1e3 )
-
-        self.pbliPu_per_yr_list = []
-        for PBPu_per_srcn in self.pbli['U-238(n,gamma)']:
-            self.pbliPu_per_yr_list.append( PBPu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3 )
-        self.pebblePu_per_yr_list = []
-        for PPu_per_srcn in self.pebble['U-238(n,gamma)']:
-            self.pebblePu_per_yr_list.append( PPu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3 )
-
+        """ Initialize figure """
         plt.figure()
         plt.plot(self.flibe['MTU'], self.flibePu_per_yr_list,
                 'o-', markersize=2, linewidth=0.75, color='#00FFFF', label='FLiBe UF4')
@@ -220,6 +212,94 @@ class Plot:
 
         if self.show: plt.show()
         plt.close('all')
+
+
+
+    def plot_cum_norm_u_vs_energy(self):
+        """
+        Plots cumulative, normalized Pu production vs. energy for contours of MTU.
+        """
+        print(f"\nPlotting cumulative, normalized Pu production vs. energy with MTU contours ...")
+
+        plt.figure(figsize=(9,6))
+
+        for i, cell_id in enumerate(self.cell_ids):
+            if self.u_list[i] in [10, 20, 30, 40, 50]:
+                df = self.U238_ng_Ebin_rr_df[self.U238_ng_Ebin_rr_df['cell'] == cell_id]
+                x = df['energy mid [eV]']
+                y = df['mean']
+
+                # Compute cumulative sum
+                cum_y = np.cumsum(y)
+
+                # Normalize cumulative sum to max value
+                cum_y_norm = cum_y / cum_y.iloc[-1] if cum_y.iloc[-1] != 0 else cum_y
+
+                plt.plot(x, cum_y_norm, linewidth=0.75, label=f'{self.u_list[i]} MTU')
+
+        plt.xlabel('Energy [eV]')
+        plt.ylabel('Cumulative normalized reactions')
+        plt.title(f'FLiBe Cumulative normalized U-238 (n,gamma) rxn rate')
+        plt.xscale('log'), plt.yscale('linear')
+        plt.xlim(1e1,1e3), plt.ylim(0,1.05)
+
+        # Reposition legend
+        leg = plt.legend(loc='lower right', ncols=1, frameon=True, fancybox=False, edgecolor='black', framealpha=.75,)
+        leg.get_frame().set_linewidth(1)
+
+        # Export figure
+        if self.save:
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238ng_cum_norm.pdf', bbox_inches='tight', format='pdf') 
+            plt.savefig(f'./Figures/png/{self.name}/fig_U238ng_cum_norm.png', bbox_inches='tight', format='png')
+            print(f"   Exported cumulative normalized Pu production vs. energy with MTU contours plot.")
+
+            plt.xlim(1e0,2e7), plt.ylim(0,1.05)
+
+
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238ng_cum_norm_full.pdf', bbox_inches='tight', format='pdf') 
+            plt.savefig(f'./Figures/png/{self.name}/fig_U238ng_cum_norm_full.png', bbox_inches='tight', format='png')
+
+        if self.show:plt.show()
+        plt.close('all')
+
+        plt.figure(figsize=(9,6))
+
+        for i, cell_id in enumerate(self.cell_ids):
+            if self.u_list[i] in [10, 20, 30, 40, 50]:
+                df = self.U238_ng_Ebin_rr_df[self.U238_ng_Ebin_rr_df['cell'] == cell_id]
+                x = df['energy mid [eV]']
+                y = df['mean']
+
+                # Compute cumulative sum
+                cum_y = np.cumsum(y)
+
+                plt.plot(x, cum_y, linewidth=0.75, label=f'{self.u_list[i]} MTU')
+
+        plt.xlabel('Energy [eV]')
+        plt.ylabel('Cumulative normalized reactions')
+        plt.title(f'FLiBe Cumulative U-238 (n,gamma) rxn rate')
+        plt.xscale('log'), plt.yscale('linear')
+        plt.xlim(1e1,1e3)
+
+        # Reposition legend
+        leg = plt.legend(loc='lower right', ncols=1, frameon=True, fancybox=False, edgecolor='black', framealpha=.75,)
+        leg.get_frame().set_linewidth(1)
+
+        # Export figure
+        if self.save:
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_cum_hist.pdf', bbox_inches='tight', format='pdf') 
+            plt.savefig(f'./Figures/png/{self.name}/fig_cum_hist.png', bbox_inches='tight', format='png')
+            print(f"   Exported cumulative normalized Pu production vs. energy with MTU contours plot.")
+
+            plt.xlim(1e0,2e7)
+
+
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238ng_cum_full.pdf', bbox_inches='tight', format='pdf') 
+            plt.savefig(f'./Figures/png/{self.name}/fig_U238ng_cum_full.png', bbox_inches='tight', format='png')
+
+        if self.show:plt.show()
+        plt.close('all')
+
 
 
     
