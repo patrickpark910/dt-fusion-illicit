@@ -15,15 +15,15 @@ def main():
     # Read and plot tallies for each Li enrich case
     current_sp = PlotStatepointPebble(enrich_li=60, u_list=MASS_U_LIST_HCPB, save=True, show=False, to_csv=True)
 
-    current_sp.print_rxn_rates()
-    current_sp.plot_tbr()
-    current_sp.plot_pu()
-    current_sp.plot_pu_per_yr()
-    current_sp.plot_pu_vs_energy()
-    current_sp.plot_rel_pu_vs_energy()
-    current_sp.plot_flux_vs_energy()
-    current_sp.plot_pu_per_mtu()
-    current_sp.plot_cum_norm_u_vs_energy()
+    current_sp.print_tallies()
+    # current_sp.plot_tbr()
+    # current_sp.plot_pu()
+    # current_sp.plot_pu_per_yr()
+    # current_sp.plot_pu_vs_energy()
+    # current_sp.plot_rel_pu_vs_energy()
+    # current_sp.plot_flux_vs_energy()
+    # current_sp.plot_pu_per_mtu()
+    # current_sp.plot_cum_norm_u_vs_energy()
 
 
 
@@ -32,18 +32,10 @@ class PlotStatepointPebble:
     def __init__(self, enrich_li=60, u_list=MASS_U_LIST_HCPB, save=False, show=True, to_csv=False):
 
         self.e = enrich_li
-        self.u_list = u_list
+        self.fertile_mt_list = u_list
         self.temp = 900
         self.save, self.show, self.to_csv = save, show, to_csv
-        self.name = f'HCPB_FW4cm_Li{self.e}_NUO2_900K_2025-07-22'
-        plt.rcParams.update({
-            'axes.titlesize': 16,       # Title font size
-            'axes.labelsize': 14,       # Axis label font size
-            'xtick.labelsize': 12,      # X-axis tick label size
-            'ytick.labelsize': 12,      # Y-axis tick label size
-            'legend.fontsize': 12,      # Legend font size
-            'figure.titlesize': 16,     # Figure title font size (if using suptitle)
-        })
+        self.name = f'HCPB_FW4cm_Li{self.e}_900K_2025-07-22'
 
 
         """ Load tallies """
@@ -88,6 +80,10 @@ class PlotStatepointPebble:
         self.Li6_nt_Ebin_df   = Li_df[(Li_df['nuclide'] == 'Li6') & (Li_df['score'] == '(n,Xt)')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
         self.Li7_nt_Ebin_df   = Li_df[(Li_df['nuclide'] == 'Li7') & (Li_df['score'] == '(n,Xt)')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
 
+        # In each of those Ebin_df, add a new column translating the cell # into the metric tons of fertile mass loaded """
+        for df in [self.U238_ng_Ebin_df, self.U238_fis_Ebin_df, self.Li6_nt_Ebin_df, self.Li7_nt_Ebin_df]:
+            df['fertile_MT'] = df['cell'].apply(lambda c: self.fertile_mt_list[c - 1])
+
         """ Reaction rate for every mtu loading summed over all energy bins"""
         Li6_rr  = Li.summation(filter_type=openmc.EnergyFilter, nuclides=['Li6'], remove_filter=True)
         Li7_rr  = Li.summation(filter_type=openmc.EnergyFilter, nuclides=['Li7'], remove_filter=True)
@@ -119,23 +115,28 @@ class PlotStatepointPebble:
         self.cell_ids = U_df['cell'].unique().tolist()
 
 
-    def print_rxn_rates(self):
+    def print_tallies(self):
         """
         Prints and exports as CSV total reaction rates in each mtu loading summed over energies
         """
-        df = pd.DataFrame({'MTU':self.u_list,
+        df = pd.DataFrame({'MTU':MASS_U_LIST_HCPB,
                            'Li-6(n,t)':self.Li6_nt_list,
                            'Li-7(n,Xt)':self.Li7_nt_list,
                            'U-238(n,gamma)':self.U238_ng_list,
                            'U-238(n,fis)':self.U238_fis_list,})
 
-        print(f"\nTotal reaction rates in Pebble with {self.e}wt% Li-6 are:")
+        print(f"\nTotal reaction rates in PbLi with {self.e}wt% Li-6 are:")
         print(f"{df.to_string(index=False)}\n") # ensures the whole df gets printed
 
         if self.to_csv:
-            path = f"./Figures/data/{self.name}_tot_rxn_rates.csv"
-            df.to_csv(path, index=False) # keep as 'self.pu_path'!
-            print(f"Exported total reaction rates CSV to: {path}")
+
+            csv1 = f"./Figures/data/{self.name}_tot_rxn_rates.csv"
+            csv2 = f"./Figures/data/{self.name}_U238_n-gamma_Ebins.csv"
+            df.to_csv(csv1, index=False) 
+            self.U238_ng_Ebin_df.to_csv(csv2, index=False) 
+
+            print(f"Exported total reaction rates CSV to:\n  {csv1}")
+            print(f"Exported U-238 (n,gamma) tallies per energy bin CSV to:\n  {csv2}")
 
 
     def plot_tbr(self):
@@ -143,7 +144,7 @@ class PlotStatepointPebble:
         print(f"\nPlotting tritium breeding ratio vs. uranium loading...")
 
         plt.figure()
-        plt.errorbar(self.u_list, self.tbr_list, yerr=self.tbr_err_list, fmt='o-', markersize=2, capsize=0, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
+        plt.errorbar(self.fertile_mt_list, self.tbr_list, yerr=self.tbr_err_list, fmt='o-', markersize=2, capsize=0, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
 
         plt.xlim(-1.5,51.5)
         
@@ -169,7 +170,7 @@ class PlotStatepointPebble:
         print(f"\nPlotting U-238 (n,gamma) reaction rate vs. uranium loading...")
 
         plt.figure()
-        plt.errorbar(self.u_list, self.U238_ng_list, yerr=self.U238_ng_err_list, fmt='o-', markersize=2, capsize=0, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
+        plt.errorbar(self.fertile_mt_list, self.U238_ng_list, yerr=self.U238_ng_err_list, fmt='o-', markersize=2, capsize=0, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
         plt.xlim(-1.5,51.5)
         plt.ylim(-0.005,0.105)
 
@@ -196,11 +197,11 @@ class PlotStatepointPebble:
         print(f"\nPlotting U-238 (n,gamma) reaction rate per MTU vs. uranium loading...")
 
         Pu_per_mtu_list = []
-        for i, m in enumerate(self.u_list[1:]):
+        for i, m in enumerate(self.fertile_mt_list[1:]):
             Pu_per_mtu_list.append(self.U238_ng_list[i+1]/m) # fixed to [i+1] -ezoccoli 2025-07-11
 
         plt.figure()
-        plt.plot(self.u_list[1:], Pu_per_mtu_list, markersize=2, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
+        plt.plot(self.fertile_mt_list[1:], Pu_per_mtu_list, markersize=2, linewidth=0.75, color='#000000',) # turn capsize > 0 to show error bars, but they're super smol
 
         plt.xlim(-1.5,51.5)
         # plt.ylim(-0.005,0.105)
@@ -226,20 +227,20 @@ class PlotStatepointPebble:
         """
         print(f"\nPlotting kg of Pu produced per year...")
 
-        try: i = self.u_list.index(0.076)
+        try: i = self.fertile_mt_list.index(0.076)
         except Exception as e:
             print(f"\n{e}\n")
             print(f"Fatal: This function requires you to have '0.076' in your `MASS_U_LIST_HCPB`.")
 
-        print(self.u_list)
+        print(self.fertile_mt_list)
         Pu_rate_per_mtu = self.Pu_per_yr_list[i] / 0.076 # = Pu kg/yr/mtu  # 0.3 / 0.0096 #
-        y = [m * Pu_rate_per_mtu for m in self.u_list]
+        y = [m * Pu_rate_per_mtu for m in self.fertile_mt_list]
         print(f'\nPu-239 production per year per 12.1 kg U: {Pu_rate_per_mtu*0.01209475} | {NPS_FUS} nps')
         print(y)
 
         plt.figure()
-        plt.plot(self.u_list, self.Pu_per_yr_list, markersize=2, linewidth=0.75, color='#000000', label=f'OpenMC') # turn capsize > 0 to show error bars, but they're super smol
-        plt.plot(self.u_list, y, 'r--', linewidth=0.75, label=f'200 wppm U')
+        plt.plot(self.fertile_mt_list, self.Pu_per_yr_list, markersize=2, linewidth=0.75, color='#000000', label=f'OpenMC') # turn capsize > 0 to show error bars, but they're super smol
+        plt.plot(self.fertile_mt_list, y, 'r--', linewidth=0.75, label=f'200 wppm U')
 
         mtu_points = [0.076, 5, 30]
         def get_closest_value(mtu_val, mtu_list, pu_list):
@@ -249,7 +250,7 @@ class PlotStatepointPebble:
         # Gather Pu production values for all fuels at each MTU point
         annotations = []
         for mtu in mtu_points:
-            pebble_val = get_closest_value(mtu, np.array(self.u_list), self.Pu_per_yr_list)
+            pebble_val = get_closest_value(mtu, np.array(self.fertile_mt_list), self.Pu_per_yr_list)
             annotations.append((mtu, pebble_val))
         ax = plt.gca()
         box_props = dict(boxstyle="round,pad=0.5", facecolor="white", edgecolor="black", alpha=0.85)
@@ -295,7 +296,7 @@ class PlotStatepointPebble:
 
         for i, cell_id in enumerate(self.cell_ids):
 
-            print(f"...for {self.u_list[i]} MTU")
+            print(f"...for {self.fertile_mt_list[i]} MTU")
             x = self.flux_df[(self.flux_df['cell'] == cell_id)]['energy mid [eV]']
             y_flux     = self.flux_df[self.flux_df['cell'] == cell_id]['mean']
             y_U238_ng  = self.U238_ng_Ebin_df[self.U238_ng_Ebin_df['cell'] == cell_id]['mean']
@@ -313,7 +314,7 @@ class PlotStatepointPebble:
             plt.ylabel('Counts $/$ source neutron')
 
             """ Export figure in log-log scale """
-            plt.title(f'Reaction rates, {self.u_list[i]} MTU (Pebble, {self.e}wt% Li-6, log-log)')
+            plt.title(f'Reaction rates, {self.fertile_mt_list[i]} MTU (Pebble, {self.e}wt% Li-6, log-log)')
             plt.xscale('log'), plt.yscale('log')
             plt.xlim(1e0,2e7), plt.ylim(1e-14,1e2)
 
@@ -323,8 +324,8 @@ class PlotStatepointPebble:
 
             # Export figure
             if self.save:
-                plt.savefig(f'./Figures/pdf/{self.name}/fig_rxnrates_log_{self.u_list[i]}mtu.pdf', bbox_inches='tight', format='pdf')
-                plt.savefig(f'./Figures/png/{self.name}/fig_rxnrates_log_{self.u_list[i]}mtu.png', bbox_inches='tight', format='png') # you want 'log' before 'mtu' so you can flip thru them in File Explorer
+                plt.savefig(f'./Figures/pdf/{self.name}/fig_rxnrates_log_{self.fertile_mt_list[i]}mtu.pdf', bbox_inches='tight', format='pdf')
+                plt.savefig(f'./Figures/png/{self.name}/fig_rxnrates_log_{self.fertile_mt_list[i]}mtu.png', bbox_inches='tight', format='png') # you want 'log' before 'mtu' so you can flip thru them in File Explorer
                 print(f"   Exported LOG-LOG reaction rates plots.")
             if self.show: plt.show()
 
@@ -333,7 +334,7 @@ class PlotStatepointPebble:
 
             flux_line.remove() # remove flux plot in lin scale bc it doesn't fit
 
-            plt.title(f'Reaction rates, {self.u_list[i]} MTU (Pebble, {self.e}wt% Li-6, lin-log)')
+            plt.title(f'Reaction rates, {self.fertile_mt_list[i]} MTU (Pebble, {self.e}wt% Li-6, lin-log)')
             plt.xscale('log'), plt.yscale('linear')
             plt.xlim(1e0,2e7), plt.ylim(0,0.03)
 
@@ -347,8 +348,8 @@ class PlotStatepointPebble:
             leg.get_frame().set_linewidth(1)
 
             if self.save:
-                plt.savefig(f'./Figures/pdf/{self.name}/fig_rxnrates_lin_{self.u_list[i]}mtu.pdf', bbox_inches='tight', format='pdf')
-                plt.savefig(f'./Figures/png/{self.name}/fig_rxnrates_lin_{self.u_list[i]}mtu.png', bbox_inches='tight', format='png')
+                plt.savefig(f'./Figures/pdf/{self.name}/fig_rxnrates_lin_{self.fertile_mt_list[i]}mtu.pdf', bbox_inches='tight', format='pdf')
+                plt.savefig(f'./Figures/png/{self.name}/fig_rxnrates_lin_{self.fertile_mt_list[i]}mtu.png', bbox_inches='tight', format='png')
                 print(f"   Exported LIN-LOG reaction rates plots.")
             if self.show: plt.show()
 
@@ -357,7 +358,7 @@ class PlotStatepointPebble:
 
         if self.save:
             filepaths_lin, filepaths_log = [], []
-            for i in self.u_list:
+            for i in self.fertile_mt_list:
                 filepaths_log.append(f"./Figures/png/{self.name}/fig_rxnrates_log_{i}mtu.png")
                 filepaths_lin.append(f"./Figures/png/{self.name}/fig_rxnrates_lin_{i}mtu.png")
 
@@ -381,10 +382,10 @@ class PlotStatepointPebble:
         plt.figure(figsize=(18,4))
 
         for i, cell_id in enumerate(self.cell_ids):
-            if self.u_list[i] in [10, 20, 30, 40, 50]:
+            if self.fertile_mt_list[i] in [10, 20, 30, 40, 50]:
                 x = self.U238_ng_Ebin_df[(self.U238_ng_Ebin_df['cell'] == cell_id)]['energy mid [eV]']
                 y  = self.U238_ng_Ebin_df[self.U238_ng_Ebin_df['cell'] == cell_id]['mean']
-                plt.plot(x, y,   linewidth=0.75, label=f'{self.u_list[i]} MTU') # green color='#00cd6c',
+                plt.plot(x, y,   linewidth=0.75, label=f'{self.fertile_mt_list[i]} MTU') # green color='#00cd6c',
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Reactions $/$ source neutron')
@@ -423,14 +424,14 @@ class PlotStatepointPebble:
         plt.figure(figsize=(18,4))
 
         for i, cell_id in enumerate(self.cell_ids):
-            if self.u_list[i] in [1]:
+            if self.fertile_mt_list[i] in [1]:
                 ref_U238_ng = self.U238_ng_Ebin_df[self.U238_ng_Ebin_df['cell'] == cell_id]['mean']
 
-            elif self.u_list[i] in [10, 20, 30, 40, 50]:
+            elif self.fertile_mt_list[i] in [10, 20, 30, 40, 50]:
                 x     = self.U238_ng_Ebin_df[(self.U238_ng_Ebin_df['cell'] == cell_id)]['energy mid [eV]']
                 y     = self.U238_ng_Ebin_df[self.U238_ng_Ebin_df['cell'] == cell_id]['mean']
                 y_rel = [a / b if b != 0.0 else 0.0 for a, b in zip(y, ref_U238_ng)]
-                plt.plot(x, y_rel,   linewidth=0.75, label=f'{self.u_list[i]} MTU') # green color='#00cd6c',
+                plt.plot(x, y_rel,   linewidth=0.75, label=f'{self.fertile_mt_list[i]} MTU') # green color='#00cd6c',
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Factor change relative to rxn rate in 1 MTU')
@@ -467,10 +468,10 @@ class PlotStatepointPebble:
 
         plt.figure(figsize=(18,4))
         for i, cell_id in enumerate(self.cell_ids):
-            if self.u_list[i] in [10, 20, 30, 40, 50]:
+            if self.fertile_mt_list[i] in [10, 20, 30, 40, 50]:
                 x = self.flux_df[(self.flux_df['cell'] == cell_id)]['energy mid [eV]']
                 y = self.flux_df[self.flux_df['cell'] == cell_id]['mean']
-                plt.plot(x, y, linewidth=0.75, label=f'{self.u_list[i]} MTU') # green color='#00cd6c',
+                plt.plot(x, y, linewidth=0.75, label=f'{self.fertile_mt_list[i]} MTU') # green color='#00cd6c',
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Neutrons $/$ source neutron')
@@ -506,7 +507,7 @@ class PlotStatepointPebble:
         plt.figure(figsize=(18,4))
 
         for i, cell_id in enumerate(self.cell_ids):
-            if self.u_list[i] in [10, 20, 30, 40, 50]:
+            if self.fertile_mt_list[i] in [10, 20, 30, 40, 50]:
                 df = self.U238_ng_Ebin_df[self.U238_ng_Ebin_df['cell'] == cell_id]
                 x = df['energy mid [eV]']
                 y = df['mean']
@@ -517,7 +518,7 @@ class PlotStatepointPebble:
                 # Normalize cumulative sum to max value
                 cum_y_norm = cum_y / cum_y.iloc[-1] if cum_y.iloc[-1] != 0 else cum_y
 
-                plt.plot(x, cum_y_norm, linewidth=0.75, label=f'{self.u_list[i]} MTU')
+                plt.plot(x, cum_y_norm, linewidth=0.75, label=f'{self.fertile_mt_list[i]} MTU')
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Cumulative normalized reactions')

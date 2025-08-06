@@ -8,36 +8,22 @@ import imageio.v2 as iio # use v2 to avoid deprecation warnings --ppark
 # Import helper functions
 from Python.parameters import *
 from Python.utilities import *
-from Python.flibe_plots_extra import *
 
 
 def main():
     current_sp = PlotStatepoint(enrich_li=7.5, temp_k=900, save=True, show=False, to_csv=True)
 
-    current_sp.print_rxn_rates()
-    current_sp.plot_tbr()
-    current_sp.plot_u()
-    current_sp.plot_u_per_mtu()
+    current_sp.print_tallies()
+    # current_sp.plot_tbr()
+    # current_sp.plot_u()
+    # current_sp.plot_u_per_mtu()
     
-    #current_sp.plot_rxn_rates()
-    current_sp.plot_u_vs_energy()
-    current_sp.plot_rel_u_vs_energy()
-    current_sp.plot_flux_vs_energy()
-    current_sp.plot_u_per_yr()
-    current_sp.plot_cum_norm_th_vs_energy()
-
-    '''
-    
-    current_sp.print_rxn_rates()
-    current_sp.plot_tbr()
-    current_sp.plot_pu()
-    current_sp.plot_pu_per_mtu()
-    
-    current_sp.plot_rxn_rates()
-    current_sp.plot_pu_vs_energy()
-    current_sp.plot_rel_pu_vs_energy()
-    current_sp.plot_flux_vs_energy()
-    '''
+    # current_sp.plot_rxn_rates()
+    # current_sp.plot_u_vs_energy()
+    # current_sp.plot_rel_u_vs_energy()
+    # current_sp.plot_flux_vs_energy()
+    # current_sp.plot_u_per_yr()
+    # current_sp.plot_cum_norm_th_vs_energy()
 
 
 class PlotStatepoint:
@@ -45,17 +31,9 @@ class PlotStatepoint:
     def __init__(self, enrich_li=7.5, temp_k=900, save=False, show=True, to_csv=False):
         self.e = enrich_li
         self.temp = temp_k
-        self.name = f"FLiBe_Th_Li{self.e:04.1f}_2025-07-22"
+        self.name = f"FLiBe_Th_FW4cm_Li{self.e:04.1f}_{self.temp}K_2025-07-22"
         self.save, self.show, self.to_csv = save, show, to_csv
-        self.u_list = MASS_U_LIST
-        plt.rcParams.update({
-            'axes.titlesize': 16,       # Title font size
-            'axes.labelsize': 14,       # Axis label font size
-            'xtick.labelsize': 12,      # X-axis tick label size
-            'ytick.labelsize': 12,      # Y-axis tick label size
-            'legend.fontsize': 12,      # Legend font size
-            'figure.titlesize': 16,     # Figure title font size (if using suptitle)
-        })
+        self.fertile_mt_list = MASS_U_LIST
 
 
         """ Load tallies """
@@ -77,64 +55,71 @@ class PlotStatepoint:
             print(f"Ensuring directory exists: {sd_path}")
             os.makedirs(sd_path, exist_ok=True)
 
+
         """ Convert tallies into usable forms """
         # Read tallies
         print(f"\nReading tallies...")
         flux = sp.get_tally(name='flux')
-        Th    = sp.get_tally(name='thorium rxn rates')
+        Th   = sp.get_tally(name='thorium rxn rates')
         Li   = sp.get_tally(name='lithium rxn rates')
         F    = sp.get_tally(name='fluorine rxn rates') # unused
         # Be   = sp.get(name='beryllium rxn rates')
 
         # Convert Tally objects into pandas dataframes
         self.flux_df = flux.get_pandas_dataframe() # Convert Tally object! Not 'XXX_rr'! --ppark
-        Th_df  = Th.get_pandas_dataframe()
+        Th_df = Th.get_pandas_dataframe()
         Li_df = Li.get_pandas_dataframe()
-        # F_df = F.get_pandas_dataframe() # unused
 
         # Add new column for energy bin midpoint (for plotting)
         for df in [self.flux_df, Th_df, Li_df]: # , F_df]:
             df['energy mid [eV]'] = (df['energy low [eV]'] + df['energy high [eV]'])/ 2
 
-        """ Reaction rates for every mtu loading and for every energy bin """
-        self.Th232_ng_Ebin_df = Th_df[(Th_df['nuclide'] == 'Th232') & (Th_df['score'] == '(n,gamma)')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        self.Th232_fis_Ebin_df = Th_df[(Th_df['nuclide'] == 'Th232') & (Th_df['score'] == 'fission')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        self.Li6_nt_Ebin_df   = Li_df[(Li_df['nuclide'] == 'Li6') & (Li_df['score'] == '(n,Xt)')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        self.Li7_nt_Ebin_df   = Li_df[(Li_df['nuclide'] == 'Li7') & (Li_df['score'] == '(n,Xt)')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
 
-        """ Reaction rate for every mtu loading summed over all energy bins"""
-        Li6_rr  = Li.summation(filter_type=openmc.EnergyFilter, nuclides=['Li6'], remove_filter=True)
-        Li7_rr  = Li.summation(filter_type=openmc.EnergyFilter, nuclides=['Li7'], remove_filter=True)
-        F19_rr  = F.summation(filter_type=openmc.EnergyFilter, nuclides=['F19'], remove_filter=True)
+        """ Reaction rates for every metric-tons loading and for every energy bin """
+        self.Th232_ng_Ebin_df  = Th_df[(Th_df['nuclide'] == 'Th232') & (Th_df['score'] == '(n,gamma)')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+        self.Th232_fis_Ebin_df = Th_df[(Th_df['nuclide'] == 'Th232') & (Th_df['score'] == 'fission')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+        self.Li6_nt_Ebin_df    = Li_df[(Li_df['nuclide'] == 'Li6') & (Li_df['score'] == '(n,Xt)')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+        self.Li7_nt_Ebin_df    = Li_df[(Li_df['nuclide'] == 'Li7') & (Li_df['score'] == '(n,Xt)')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+
+        # In each of those Ebin_df, add a new column translating the cell # into the metric tons of fertile mass loaded """
+        for df in [self.Th232_ng_Ebin_df, self.Th232_fis_Ebin_df, self.Li6_nt_Ebin_df, self.Li7_nt_Ebin_df]:
+            df['fertile_MT'] = df['cell'].apply(lambda c: self.fertile_mt_list[c - 1])
+
+
+        """ Reaction rate for every metric-tons loading summed over all energy bins"""
+        Li6_rr   = Li.summation(filter_type=openmc.EnergyFilter, nuclides=['Li6'], remove_filter=True)
+        Li7_rr   = Li.summation(filter_type=openmc.EnergyFilter, nuclides=['Li7'], remove_filter=True)
+        F19_rr   =  F.summation(filter_type=openmc.EnergyFilter, nuclides=['F19'], remove_filter=True)
         Th232_rr = Th.summation(filter_type=openmc.EnergyFilter, nuclides=['Th232'], remove_filter=True)
 
         # Lithium reaction rates for each mtu loading summed over all energies
         Li6_df = Li6_rr.get_pandas_dataframe()
         Li7_df = Li7_rr.get_pandas_dataframe()
-        self.Li6_nt_list = Li6_df[Li6_df['score'] == '(n,Xt)'][['cell', 'mean', 'std. dev.']]['mean'].tolist()
+        self.Li6_nt_list     = Li6_df[Li6_df['score'] == '(n,Xt)'][['cell', 'mean', 'std. dev.']]['mean'].tolist()
         self.Li6_nt_err_list = Li6_df[Li6_df['score'] == '(n,Xt)'][['cell', 'mean', 'std. dev.']]['std. dev.'].tolist()
-        self.Li7_nt_list = Li7_df[Li7_df['score'] == '(n,Xt)'][['cell', 'mean', 'std. dev.']]['mean'].tolist()
+        self.Li7_nt_list     = Li7_df[Li7_df['score'] == '(n,Xt)'][['cell', 'mean', 'std. dev.']]['mean'].tolist()
         self.Li7_nt_err_list = Li7_df[Li7_df['score'] == '(n,Xt)'][['cell', 'mean', 'std. dev.']]['std. dev.'].tolist()
-        self.tbr_list = [x + y for x, y in zip(self.Li6_nt_list, self.Li7_nt_list)]
-        self.tbr_err_list = [x + y for x, y in zip(self.Li6_nt_err_list, self.Li7_nt_err_list)]
+        self.tbr_list        = [x + y for x, y in zip(self.Li6_nt_list, self.Li7_nt_list)]
+        self.tbr_err_list    = [x + y for x, y in zip(self.Li6_nt_err_list, self.Li7_nt_err_list)]
 
         # Th232 reaction rates for each mtu loading summed over all energies
         Th232_df = Th232_rr.get_pandas_dataframe()
         self.Th232_fis_list     = Th232_df[Th232_df['score'] == 'fission'][['cell', 'mean', 'std. dev.']]['mean'].tolist()
         self.Th232_fis_err_list = Th232_df[Th232_df['score'] == 'fission'][['cell', 'mean', 'std. dev.']]['std. dev.'].tolist()
-        self.Th232_ng_list     = Th232_df[Th232_df['score'] == '(n,gamma)'][['cell', 'mean', 'std. dev.']]['mean'].tolist()
-        self.Th232_ng_err_list = Th232_df[Th232_df['score'] == '(n,gamma)'][['cell', 'mean', 'std. dev.']]['std. dev.'].tolist()
+        self.Th232_ng_list      = Th232_df[Th232_df['score'] == '(n,gamma)'][['cell', 'mean', 'std. dev.']]['mean'].tolist()
+        self.Th232_ng_err_list  = Th232_df[Th232_df['score'] == '(n,gamma)'][['cell', 'mean', 'std. dev.']]['std. dev.'].tolist()
 
         # Uranium kg per year
         self.U_per_yr_list = []
         for U_per_srcn in self.Th232_ng_list:
             self.U_per_yr_list.append( U_per_srcn * NPS_FUS * SEC_PER_YR * AMU_U233 / AVO / 1e3 )
 
+
         """Create list of cell IDs randomly assigned by OpenMC to match mtu loading to cell ID"""
         self.cell_ids = Th_df['cell'].unique().tolist()
 
 
-    def print_rxn_rates(self):
+    def print_tallies(self):
         """
         Prints and exports as CSV total reaction rates in each mtu loading summed over energies
         """
@@ -148,9 +133,15 @@ class PlotStatepoint:
         print(f"{df.to_string(index=False)}\n") # ensures the whole df gets printed
 
         if self.to_csv:
-            path = f"./Figures/data/{self.name}_tot_rxn_rates.csv"
-            df.to_csv(path, index=False) # keep as 'self.pu_path'!
-            print(f"Exported total reaction rates CSV to: {path}")
+
+            csv1 = f"./Figures/data/{self.name}_tot_rxn_rates.csv"
+            csv2 = f"./Figures/data/{self.name}_Th232_n-gamma_Ebins.csv"
+            df.to_csv(csv1, index=False) 
+            self.Th232_ng_Ebin_df.to_csv(csv2, index=False) 
+
+            print(f"Exported total reaction rates CSV to:\n  {csv1}")
+            print(f"Exported Th-232 (n,gamma) tallies per energy bin CSV to:\n  {csv2}")
+
 
 
     def plot_tbr(self):
@@ -263,7 +254,7 @@ class PlotStatepoint:
         # Gather Pu production values for all fuels at each MTU point
         annotations = []
         for mtu in mtu_points:
-            pbli_val = get_closest_value(mtu, np.array(self.u_list), self.U_per_yr_list)
+            pbli_val = get_closest_value(mtu, np.array(self.fertile_mt_list), self.U_per_yr_list)
             annotations.append((mtu, pbli_val))
         ax = plt.gca()
         box_props = dict(boxstyle="round,pad=0.5", facecolor="white", edgecolor="black", alpha=0.85)
@@ -521,19 +512,7 @@ class PlotStatepoint:
 
         plt.figure(figsize=(9,6))
 
-        for i, cell_id in enumerate(self.cell_ids):
-            if self.u_list[i] in [10, 20, 30, 40, 50]:
-                df = self.Th232_ng_Ebin_df[self.Th232_ng_Ebin_df['cell'] == cell_id]
-                x = df['energy mid [eV]']
-                y = df['mean']
 
-                # Compute cumulative sum
-                cum_y = np.cumsum(y)
-
-                # Normalize cumulative sum to max value
-                cum_y_norm = cum_y / cum_y.iloc[-1] if cum_y.iloc[-1] != 0 else cum_y
-
-                plt.plot(x, cum_y_norm, linewidth=0.75, label=f'{self.u_list[i]} MTU')
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Cumulative normalized reactions')
@@ -563,7 +542,7 @@ class PlotStatepoint:
         plt.figure(figsize=(9,6))
 
         for i, cell_id in enumerate(self.cell_ids):
-            if self.u_list[i] in [10, 20, 30, 40, 50]:
+            if self.fertile_mt_list[i] in [10, 20, 30, 40, 50]:
                 df = self.Th232_ng_Ebin_df[self.Th232_ng_Ebin_df['cell'] == cell_id]
                 x = df['energy mid [eV]']
                 y = df['mean']
@@ -572,7 +551,7 @@ class PlotStatepoint:
                 cum_y = np.cumsum(y)
 
 
-                plt.plot(x, cum_y, linewidth=0.75, label=f'{self.u_list[i]} MTU')
+                plt.plot(x, cum_y, linewidth=0.75, label=f'{self.fertile_mt_list[i]} MTU')
 
         plt.xlabel('Energy [eV]')
         plt.ylabel('Cumulative normalized reactions')
