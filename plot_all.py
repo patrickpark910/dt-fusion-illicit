@@ -14,25 +14,8 @@ from Python.parameters import *
 
 def main():
     """ Read CSV data into pandas DataFrames """
-    # Total reaction rates
-     flibe_u_rr_df = pd.read_csv('./Figures/data/FLiBe_U_FW4cm_Li07.5_900K_2025-07-22_tot_rxn_rates.csv')
-    flibe_th_rr_df = pd.read_csv('./Figures/data/FLiBe_Th_FW4cm_Li07.5_900K_2025-07-22_tot_rxn_rates.csv')
-        pbli_rr_df = pd.read_csv('./Figures/data/DCLL_U_FW4cm_Li90_900K_2025-07-22_tot_rxn_rates.csv')
-      pebble_rr_df = pd.read_csv('./Figures/data/HCPB_U_FW4cm_Li60_900K_2025-07-22_tot_rxn_rates.csv')
 
-    # Fertile (n,gamma) per energy bin
-     flibe_u_eb_df = pd.read_csv('./Figures/data/FLiBe_U_FW4cm_Li07.5_900K_2025-07-22_U238_n-gamma_Ebins.csv')
-    flibe_th_eb_df = pd.read_csv('./Figures/data/FLiBe_Th_FW4cm_Li07.5_900K_2025-07-22_Th232_n-gamma_Ebins.csv')
-        pbli_eb_df = pd.read_csv('./Figures/data/DCLL_U_FW4cm_Li90_900K_2025-07-22_U238_n-gamma_Ebins.csv')
-      pebble_eb_df = pd.read_csv('./Figures/data/HCPB_U_FW4cm_Li60_900K_2025-07-22_U238_n-gamma_Ebins.csv') 
-
-    df_list = [flibe_u_rr_df, flibe_th_rr_df, pbli_u_rr_df, pebble_rr_df, flibe_u_eb_df, flibe_th_eb_df, pbli_u_eb_df, pebble_eb_df]
-
-    for df in df_list: 
-        df['fertile_kg/m3'] = (df['MTU']*1e3) / (VOL_CC/1e6)
- 
-    
-    combined_plot = Plot(df_list, save=True, show=True)
+    combined_plot = Plot(save=True, show=True)
     
     combined_plot.plot_tbr()
     # combined_plot.plot_pu_per_yr()
@@ -43,16 +26,20 @@ def main():
 
 class Plot:
 
-    def __init__(self, df_list, save=False, show=True):
-        self.flibe_u_rr_df  = df_list[0]
-        self.flibe_th_rr_df = df_list[1]
-        self.pbli_u_rr_df   = df_list[2]
-        self.pebble_rr_df   = df_list[3]
+    def __init__(self, save=False, show=True):
+        self.flibe_u_rr_df  = pd.read_csv('./Figures/data/FLiBe_U_FW4cm_Li07.5_900K_2025-07-22_tot_rxn_rates.csv')
+        self.flibe_th_rr_df = pd.read_csv('./Figures/data/FLiBe_Th_FW4cm_Li07.5_900K_2025-07-22_tot_rxn_rates.csv')
+        self.pbli_u_rr_df   = pd.read_csv('./Figures/data/DCLL_U_FW4cm_Li90_900K_2025-07-22_tot_rxn_rates.csv')
+        self.pebble_rr_df   = pd.read_csv('./Figures/data/HCPB_U_FW4cm_Li60_900K_2025-07-22_tot_rxn_rates.csv')
 
-        self.flibe_u_eb_df  = df_list[4]
-        self.flibe_th_eb_df = df_list[5]
-        self.pbli_u_eb_df   = df_list[6]
-        self.pebble_eb_df   = df_list[7]
+        self.flibe_u_eb_df  = pd.read_csv('./Figures/data/FLiBe_U_FW4cm_Li07.5_900K_2025-07-22_U238_n-gamma_Ebins.csv')
+        self.flibe_th_eb_df = pd.read_csv('./Figures/data/FLiBe_Th_FW4cm_Li07.5_900K_2025-07-22_Th232_n-gamma_Ebins.csv')
+        self.pbli_u_eb_df   = pd.read_csv('./Figures/data/DCLL_U_FW4cm_Li90_900K_2025-07-22_U238_n-gamma_Ebins.csv')
+        self.pebble_eb_df   = pd.read_csv('./Figures/data/HCPB_U_FW4cm_Li60_900K_2025-07-22_U238_n-gamma_Ebins.csv') 
+
+        df_list = [flibe_u_rr_df, flibe_th_rr_df, pbli_u_rr_df, pebble_rr_df, flibe_u_eb_df, flibe_th_eb_df, pbli_u_eb_df, pebble_eb_df]
+        for df in df_list: 
+            df['fertile_kg/m3'] = (df['fertile_mt']*1e3) / (VOL_CC/1e6)
 
         self.save, self.show = save, show
         self.name = 'All_Blankets'
