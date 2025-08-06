@@ -27,3 +27,42 @@ MASS_U_LIST_PBLI = [0.0096, 0.1, 0.5, 2.65, 5, 10, 20, 30, 40, 50,132.9,265.8,53
 MASS_U_LIST_HCPB = [0.076, 0.1, 0.5, 1, 5, 10, 20, 30, 40, 50]
 N_TRISO_PBLI = [1, 50, 100, 200, 300, 400]
 ENRICH_LI_LIST = [7.5,10.0,12.5,15.0,17.5,20.0] # weight percent
+
+
+"""
+MATPLOTLIB SETTINGS
+"""
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+
+# Fonts
+try:
+    font_path = './Python/DIN-Regular.ttf' # DIN-Regular.ttf' # './Python/arial.ttf'
+    fm.fontManager.addfont(font_path)
+    prop = fm.FontProperties(fname=font_path)
+    plt.rcParams['font.family'] = prop.get_name()
+except:
+    font_path = './Python/arial.ttf' # './arial.ttf'
+    fm.fontManager.addfont(font_path)
+    prop = fm.FontProperties(fname=font_path)
+    plt.rcParams['font.family'] = prop.get_name()
+
+# Ticks
+plt.rcParams['xtick.direction'] = 'in'
+plt.rcParams['ytick.direction'] = 'in'
+plt.rcParams['xtick.major.width'] = 0.5   # major x‐tick line width
+plt.rcParams['ytick.major.width'] = 0.5   # major y‐tick line width
+plt.rcParams['xtick.major.size'] = 6      # major x‐tick line length
+plt.rcParams['ytick.major.size'] = 6      # major y‐tick line length
+plt.rcParams['xtick.minor.size'] = 3      # minor x‐tick line length
+plt.rcParams['ytick.minor.size'] = 3      # minor y‐tick line length
+plt.rcParams['axes.linewidth']    = 0.5   # axes spines linewidth (use this instead of messing with spine.set_linewidth(1) )
+
+# Font sizes
+plt.rcParams['font.size']          = 14   # default text size for labels, legends, etc.
+plt.rcParams['axes.titlesize']     = 14   # axes title
+plt.rcParams['axes.labelsize']     = 14   # x- and y-axis labels
+plt.rcParams['xtick.labelsize']    = 14   # x-tick labels
+plt.rcParams['ytick.labelsize']    = 14   # y-tick labels
+plt.rcParams['legend.fontsize']    = 12   # legend text
+plt.rcParams['figure.titlesize']   = 14   # figure title

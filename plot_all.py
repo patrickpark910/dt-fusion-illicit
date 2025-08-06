@@ -1,84 +1,132 @@
-import openmc
 import os, sys
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, ScalarFormatter
-import imageio.v2 as iio # use v2 to avoid deprecation warnings --ppark
+from scipy.interpolate import Akima1DInterpolator
+from scipy.interpolate import PchipInterpolator
+
 
 
 """ import helper functions """
 from Python.utilities import *
+from Python.parameters import *
+
 
 
 def main():
     # Read CSV data into pandas DataFrames
     flibe_u_df  = pd.read_csv('./Figures/data/FLiBe_U_FW4cm_Li07.5_900K_2025-07-22_tot_rxn_rates.csv')
     flibe_th_df = pd.read_csv('./Figures/data/FLiBe_Th_FW4cm_Li07.5_900K_2025-07-22_tot_rxn_rates.csv')
-    pbli_u_df   = pd.read_csv('./Figures/data/DCLL_U_FW4cm_Li90_NUO2_900K_2025-07-22_tot_rxn_rates.csv')
-    pebble_df   = pd.read_csv('./Figures/data/HCPB_FW4cm_Li60_NUO2_900K_2025-07-22_tot_rxn_rates.csv')
+    pbli_u_df   = pd.read_csv('./Figures/data/DCLL_U_FW4cm_Li90_900K_2025-07-22_tot_rxn_rates.csv')
+    pebble_df   = pd.read_csv('./Figures/data/HCPB_U_FW4cm_Li60_900K_2025-07-22_tot_rxn_rates.csv')
+
+    for df in [flibe_u_df, flibe_th_df, pbli_u_df, pebble_df]: 
+        df['fertile_kg/m3'] = (df['MTU']*1e3) / (VOL_CC/1e6)
+ 
     
-    combined_plot = Plot(flibe_u_df, flibe_th_df, pbli_u_df, pebble_df, save=True, show=False, to_csv=True)
+    combined_plot = Plot([flibe_u_df, flibe_th_df, pbli_u_df, pebble_df], save=True, show=True)
     
     combined_plot.plot_tbr()
     # combined_plot.plot_pu()
-    combined_plot.plot_pu_per_yr()
+    # combined_plot.plot_pu_per_yr()
     # combined_plot.plot_pu_per_mtu()
-    combined_plot.plot_fis()
+    # combined_plot.plot_fis()
 
     print("All plots completed and saved.")
 
 
 class Plot:
 
-    def __init__(self, flibe_u_df, flibe_th_df, pbli_u_df, pebble_df, save=False, show=True, to_csv=False):
-        self.flibe_u_df  = flibe_u_df
-        self.flibe_th_df = flibe_th_df
-        self.pbli_u_df   = pbli_u_df
-        self.pebble_df   = pebble_df
+    def __init__(self, df_list, save=False, show=True):
+        self.flibe_u_df  = df_list[0]
+        self.flibe_th_df = df_list[1]
+        self.pbli_u_df   = df_list[2]
+        self.pebble_df   = df_list[3]
 
-        self.save, self.show, self.to_csv = save, show, to_csv
+        self.save, self.show = save, show
         self.name = 'All_Blankets'
 
         for sd in ['pdf','png',]:
-            if sd == 'data': sd_path = f'./Figures/{sd}/'
-            else: sd_path = f'./Figures/{sd}/{self.name}/'
+            if sd == 'data': 
+                sd_path = f'./Figures/{sd}/'
+            else: 
+                sd_path = f'./Figures/{sd}/{self.name}/'
             print(f"Ensuring directory exists: {sd_path}")
             os.makedirs(sd_path, exist_ok=True)
 
-        self.flibePu_per_yr_list = []
-        for FPu_per_srcn in self.flibe['U-238(n,gamma)']:
-            self.flibePu_per_yr_list.append( FPu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3 )
-        self.flibeU_per_yr_list = []
-        for U_per_srcn in self.flibeTh['Th-232(n,gamma)']:
-            self.flibeU_per_yr_list.append( U_per_srcn * NPS_FUS * SEC_PER_YR * AMU_U233 / AVO / 1e3 )
-        self.pbliPu_per_yr_list = []
-        for PBPu_per_srcn in self.pbli['U-238(n,gamma)']:
-            self.pbliPu_per_yr_list.append( PBPu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3 )
-        self.pebblePu_per_yr_list = []
-        for PPu_per_srcn in self.pebble['U-238(n,gamma)']:
-            self.pebblePu_per_yr_list.append( PPu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3 )
-
-
 
     def plot_tbr(self):
-        print(f"\nPlotting tritium breeding ratio vs. uranium loading...")
+        print(f"\nPlotting tritium breeding ratio vs. fertile density...")
 
-        plt.figure()
+        # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
+        x1, y1 =  self.flibe_u_df['fertile_kg/m3'],  self.flibe_u_df['Li-6(n,t)'] +  self.flibe_u_df['Li-7(n,Xt)']
+        x2, y2 = self.flibe_th_df['fertile_kg/m3'], self.flibe_th_df['Li-6(n,t)'] + self.flibe_th_df['Li-7(n,Xt)']
+        x3, y3 =   self.pbli_u_df['fertile_kg/m3'],   self.pbli_u_df['Li-6(n,t)'] +   self.pbli_u_df['Li-7(n,Xt)']
+        # x4, y4 =  self.pbli_th_df['fertile_kg/m3'],  self.pbli_th_df['Li-6(n,t)'] +  self.pbli_th_df['Li-7(n,Xt)']
+        x5, y5 =   self.pebble_df['fertile_kg/m3'],   self.pebble_df['Li-6(n,t)'] +   self.pebble_df['Li-7(n,Xt)']
 
-        plt.plot(self.flibe['MTU'], self.flibe['Li-6(n,t)'],
-                 'o-', markersize=2, linewidth=0.75, color='#00FFFF', label='FLiBe UF4')
-        plt.plot(self.flibeTh['MTU'], self.flibeTh['Li-6(n,t)'],
-                 'o-', markersize=2, linewidth=0.75, color='#FF8000', label='FLiBe ThF4')
-        plt.plot(self.pbli['MTU'][:-3], self.pbli['Li-6(n,t)'][:-3],
-                 'o-', markersize=2, linewidth=0.75, color='#FF00FF', label='PbLi')
-        plt.plot(self.pebble['MTU'], self.pebble['Li-6(n,t)'],
-                 'o-', markersize=2, linewidth=0.75, color='#FFA500', label='Pebble')
+        # AkimaInterpolation ripped from my ELWR paper --ppark 2025-08-06
+        x_fine = np.linspace(x1.min(), x1.max(), 300) # Evaluate on a fine grid
+        y_akima1 = Akima1DInterpolator(x1, y1)(x_fine)
+        y_akima2 = Akima1DInterpolator(x2, y2)(x_fine)
+        y_akima3 = Akima1DInterpolator(x3, y3)(x_fine)
+        # y_akima4 = akima4(x_fine)
+        y_akima5 = Akima1DInterpolator(x5, y5)(x_fine)
 
-        plt.title(f'Tritium breeding ratio (All)')
-        plt.xlabel('Uranium/Thorium loaded [metric tons]')
+        y_mono1 = np.copy(y_akima1) # enforce monotonic decreasing post-processing
+        y_mono2 = np.copy(y_akima2)
+        y_mono3 = np.copy(y_akima3)
+        # y_mono4 = np.copy(y_akima4)
+        y_mono5 = np.copy(y_akima5)
+
+        for y_mono in [y_mono1,y_mono2,y_mono3,y_mono5]: # y_mono4,
+            for i in range(1, len(y_mono)):
+                if y_mono[i] > y_mono[i-1]:
+                    y_mono[i] = y_mono[i-1] # adjust the current point to ensure it's not greater than the previous point
+
+
+        plt.figure(figsize=(7.5,5))
+
+        plt.scatter(x5, y5, marker='o', s=40, color='#b41f24') # ZR clean
+        plt.scatter(x3, y3, marker='^', s=50, color='#0047ba') # ZR clean
+        plt.scatter(x1, y1, marker='s', s=40, color='black') # ZR clean
+        plt.scatter(x2, y2, marker='x', s=60, color='#66b420') # ZR clean
+
+        plt.plot(x_fine, y_mono5, linewidth=1, color='#b41f24',)   # 'o-', markersize=4,  label=r'Pebble-BISO'
+        plt.plot(x_fine, y_mono3, linewidth=1, color='#0047ba', )     # '^-', markersize=5, label=r'PbLi-BISO'
+        plt.plot(x_fine, y_mono1, linewidth=1, color='black', )    # 's-', markersize=4, label=r'FLiBe-UF$_4$'
+        plt.plot(x_fine, y_mono2, linewidth=1, color='#66b420', ) # 'x-', markersize=6, label=r'FLiBe-ThF$_4$'
+
+        # Dummy plots for legend -- bit of a hack lmao
+        plt.plot([998,999], [998,999], 'o-', markersize=4, linewidth=1, color='#b41f24', label=r'Pebble-BISO')   # 
+        plt.plot([998,999], [998,999], '^-', markersize=5, linewidth=1, color='#0047ba', label=r'PbLi-BISO')     # 
+        plt.plot([998,999], [998,999], 's-', markersize=4, linewidth=1, color='black', label=r'FLiBe-UF$_4$')    # 
+        plt.plot([998,999], [998,999], 'x-', markersize=6, linewidth=1, color='#66b420', label=r'FLiBe-ThF$_4$') # 
+        
+        
+        # plt.title(f'Tritium breeding ratio (All)') # Exclude title for production figs --ppark 2025-08-06
+        plt.xlabel(r'Fertile isotope density in blanket [kg$/$m$^3$]')
         plt.ylabel('Tritium breeding ratio')
+
+        plt.xlim(-5,165)
+        plt.ylim(1.03,1.42) # plt.ylim(0.98,1.42)
+        
+        # Tick grid
+        ax = plt.gca()
+        ax.xaxis.set_ticks_position('both')
+        ax.yaxis.set_ticks_position('both')
+        ax.yaxis.set_minor_locator(MultipleLocator(0.01))
+        ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
+        ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
+        # ax.axhspan(.9,1, color='#e0ded8') # color='#e0ded8', # alpha=0.3)
+        ax.axhspan(1,1.05, color='#e0ded8') # color='#f7f7f6' # , alpha=0.3)
+
         plt.tight_layout()
-        plt.legend()
+
+
+
+        leg = plt.legend(fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1)
+        leg.get_frame().set_linewidth(0.5) 
 
         if self.save:
             plt.savefig(f'./Figures/pdf/{self.name}/fig_tbr.pdf', bbox_inches='tight', format='pdf')
@@ -90,147 +138,27 @@ class Plot:
         if self.show: plt.show()
         plt.close('all')
 
-    def plot_pu1(self):
-        """ Plot U-238 (n,gamma) reaction rate for all fuels on one plot """
-
-        print(f"\nPlotting U-238/Th-232 (n,gamma) reaction rate vs. uranium loading for all fuels...")
-
-        plt.figure()
-
-        plt.plot(self.flibe['MTU'], self.flibe['U-238(n,gamma)'],
-                 'o-', markersize=2.5, linewidth=1.5, color='#F28B82', label='FLiBe UF4')
-        plt.plot(self.flibeTh['MTU'], self.flibeTh['Th-232(n,gamma)'],
-                 'o-', markersize=2.5, linewidth=1.5, color='#81C995', label='FLiBe ThF4')
-
-        plt.plot(self.pbli['MTU'][:-3], self.pbli['U-238(n,gamma)'][:-3],
-                 'o-', markersize=2.5, linewidth=1.5, color='#AECBFA', label='PbLi')
-        
-
-        plt.title('Plutonium production vs. Uranium Loading')
-        plt.xlabel('Uranium loaded [metric tons]')
-        plt.ylabel(r'U-238(n,$\gamma$) reaction rate')
-        plt.legend()
-        plt.tight_layout()
-
-        if self.save:
-            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238_ng.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/png/{self.name}/fig_U238_ng.png', bbox_inches='tight', format='png')
-            print("Exported U-238 (n,gamma) reaction rate plot for all fuels.")
-        else:
-            print("Did not export U-238 (n,gamma) reaction rate plot due to user setting.")
-
-        if self.show:
-            plt.show()
-
-        plt.close('all')
-
-    def plot_pu(self):
-        """ Plot U-238 (n,gamma) reaction rate for all fuels on one plot """
-
-        print(f"\nPlotting U-238/Th-232 (n,gamma) reaction rate vs. uranium loading for all fuels...")
-
-        plt.figure()
-
-        plt.plot(self.flibe['MTU'], self.flibe['U-238(n,gamma)'],
-                 'o-', markersize=2, linewidth=0.75, color='#00FFFF', label='FLiBe UF4')
-        plt.plot(self.flibeTh['MTU'], self.flibeTh['Th-232(n,gamma)'],
-                 'o-', markersize=2, linewidth=0.75, color='#FF8000', label='FLiBe ThF4')
-        plt.plot(self.pbli['MTU'][:-3], self.pbli['U-238(n,gamma)'][:-3],
-                 'o-', markersize=2, linewidth=0.75, color='#FF00FF', label='PbLi')
-        plt.plot(self.pebble['MTU'], self.pebble['U-238(n,gamma)'],
-                 'o-', markersize=2, linewidth=0.75, color='#FFA500', label='Pebble')
-
-        plt.title('U-238/Th-232 (n,gamma) reaction rate (All Fuels)')
-        plt.xlabel('Uranium/Thorium loaded [metric tons]')
-        plt.ylabel(r'U-238/Th-232 (n,$\gamma$) reaction rate')
-        plt.legend()
-        plt.tight_layout()
-
-        if self.save:
-            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238_ng_all.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/png/{self.name}/fig_U238_ng_all.png', bbox_inches='tight', format='png')
-            print("Exported U-238 (n,gamma) reaction rate plot for all fuels.")
-        else:
-            print("Did not export U-238 (n,gamma) reaction rate plot due to user setting.")
-
-        if self.show:
-            plt.show()
-
-        plt.close('all')
-
-    def plot_fis(self):
-        """ Plot U-238 (n,fis) reaction rate for all fuels on one plot """
-
-        print(f"\nPlotting U-238 (n,fis) reaction rate vs. uranium loading for all fuels...")
-
-        plt.figure()
-
-        plt.plot(self.flibe['MTU'], self.flibe['U-238(n,fis)'],
-                 'o-', markersize=2, linewidth=0.75, color='#00FFFF', label='FLiBe UF4')
-        plt.plot(self.flibeTh['MTU'], self.flibeTh['Th-232(n,fis)'],
-                 'o-', markersize=2, linewidth=0.75, color='#FF8000', label='FLiBe ThF4')
-        plt.plot(self.pbli['MTU'][:-3], self.pbli['U-238(n,fis)'][:-3],
-                 'o-', markersize=2, linewidth=0.75, color='#FF00FF', label='PbLi')
-        plt.plot(self.pebble['MTU'], self.pebble['U-238(n,fis)'],
-                 'o-', markersize=2, linewidth=0.75, color='#FFA500', label='Pebble')
-
-        plt.title('U-238/Th-232 (n,fis) reaction rate (All Fuels)')
-        plt.xlabel('Uranium/Thorium loaded [metric tons]')
-        plt.ylabel(r'U-238/Th-232 (n,fis) reaction rate')
-        plt.legend()
-        plt.tight_layout()
-
-        if self.save:
-            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238_fis_all.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/png/{self.name}/fig_U238_fis_all.png', bbox_inches='tight', format='png')
-            print("Exported U-238 (n,fis) reaction rate plot for all fuels.")
-        else:
-            print("Did not export U-238 (n,fis) reaction rate plot due to user setting.")
-
-        if self.show:
-            plt.show()
-
-        plt.close('all')
-
-
-    def plot_pu_per_mtu(self):
-        
-        print(f"\nPlotting U-238 (n,gamma) reaction rate per MTU vs. uranium loading for all fuels...")
-
-        plt.figure()
-
-        flibe_pu_per_mtu = self.flibe['U-238(n,gamma)'] / self.flibe['MTU']
-        plt.plot(self.flibe['MTU'], flibe_pu_per_mtu,
-                 'o-', markersize=2, linewidth=0.75, color='#00FFFF', label='FLiBe UF4')
-        flibe_u_per_mtu = self.flibeTh['Th-232(n,gamma)'] / self.flibeTh['MTU']
-        plt.plot(self.flibeTh['MTU'], flibe_u_per_mtu,
-                 'o-', markersize=2, linewidth=0.75, color='#FF8000', label='FLiBe ThF4')
-        pbli_pu_per_mtu = self.pbli['U-238(n,gamma)'] / self.pbli['MTU']
-        plt.plot(self.pbli['MTU'][:-3], pbli_pu_per_mtu[:-3],
-                 'o-', markersize=2, linewidth=0.75, color='#FF00FF', label='PbLi')
-        pebble_pu_per_mtu = self.pebble['U-238(n,gamma)'] / self.pebble['MTU']
-        plt.plot(self.pebble['MTU'], pebble_pu_per_mtu,
-                 'o-', markersize=2, linewidth=0.75, color='#FFA500', label='Pebble')
-
-        plt.title(f'U-238/Th-232 (n,gamma) reaction rate per MTU (All Fuels)')
-        plt.xlabel('Uranium/Thorium loaded [metric tons]')
-        plt.ylabel(r'U-238/Th-232 (n,$\gamma$) reaction rate per MTU')
-        plt.tight_layout()
-        plt.legend()
-
-        if self.save:
-            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238_ng_per_MTU_all.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/png/{self.name}/fig_U238_ng_per_MTU_all.png', bbox_inches='tight', format='png')
-            print("Exported U-238 (n,gamma) reaction rate per MTU plot for all fuels.")
-        else:
-            print("Did not export U-238 (n,gamma) reaction rate per MTU plot due to user setting.")
-
-        if self.show: plt.show()
-        plt.close('all')
 
     def plot_pu_per_yr(self):
       
         print(f"\nPlotting Pu-239 production per year for all fuels...")
+
+        self.flibePu_per_yr_list = []
+
+        for FPu_per_srcn in self.flibe['U-238(n,gamma)']:
+            self.flibePu_per_yr_list.append( FPu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3 )
+
+        self.flibeU_per_yr_list = []
+
+        for U_per_srcn in self.flibeTh['Th-232(n,gamma)']:
+            self.flibeU_per_yr_list.append( U_per_srcn * NPS_FUS * SEC_PER_YR * AMU_U233 / AVO / 1e3 )
+
+        self.pbliPu_per_yr_list = []
+        for PBPu_per_srcn in self.pbli['U-238(n,gamma)']:
+            self.pbliPu_per_yr_list.append( PBPu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3 )
+        self.pebblePu_per_yr_list = []
+        for PPu_per_srcn in self.pebble['U-238(n,gamma)']:
+            self.pebblePu_per_yr_list.append( PPu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3 )
 
         plt.figure()
         plt.plot(self.flibe['MTU'], self.flibePu_per_yr_list,
