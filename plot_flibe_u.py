@@ -85,14 +85,15 @@ class PlotStatepoint:
             df['energy mid [eV]'] = (df['energy low [eV]'] + df['energy high [eV]'])/ 2
 
         """ Reaction rates for every mtu loading and for every energy bin """
-        self.U238_ng_Ebin_df = U_df[(U_df['nuclide'] == 'U238') & (U_df['score'] == '(n,gamma)')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        self.U238_fis_Ebin_df = U_df[(U_df['nuclide'] == 'U238') & (U_df['score'] == 'fission')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        self.Li6_nt_Ebin_df   = Li_df[(Li_df['nuclide'] == 'Li6') & (Li_df['score'] == '(n,Xt)')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        self.Li7_nt_Ebin_df   = Li_df[(Li_df['nuclide'] == 'Li7') & (Li_df['score'] == '(n,Xt)')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+        self.U238_ng_Ebin_df = U_df[(U_df['nuclide'] == 'U238') & (U_df['score'] == '(n,gamma)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+        self.U238_fis_Ebin_df = U_df[(U_df['nuclide'] == 'U238') & (U_df['score'] == 'fission')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+        self.Li6_nt_Ebin_df   = Li_df[(Li_df['nuclide'] == 'Li6') & (Li_df['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+        self.Li7_nt_Ebin_df   = Li_df[(Li_df['nuclide'] == 'Li7') & (Li_df['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
 
         # In each of those Ebin_df, add a new column translating the cell # into the metric tons of fertile mass loaded """
         for df in [self.U238_ng_Ebin_df, self.U238_fis_Ebin_df, self.Li6_nt_Ebin_df, self.Li7_nt_Ebin_df]:
-            df['fertile_MT'] = df['cell'].apply(lambda c: self.fertile_mt_list[c - 1])
+            df['MT_fertile'] = df['cell'].apply(lambda c: self.fertile_mt_list[c - 1])
+            df['kg/m3_fertile'] = (df['MT_fertile']*1e3) / (VOL_CC/1e6)
 
         """ Reaction rate for every mtu loading summed over all energy bins"""
         Li6_rr  = Li.summation(filter_type=openmc.EnergyFilter, nuclides=['Li6'], remove_filter=True)
@@ -131,11 +132,13 @@ class PlotStatepoint:
         """
         Prints and exports as CSV total reaction rates in each mtu loading summed over energies
         """
-        df = pd.DataFrame({'MTU':MASS_U_LIST,
+        df = pd.DataFrame({'MT_fertile':MASS_U_LIST,
                            'Li-6(n,t)':self.Li6_nt_list,
                            'Li-7(n,Xt)':self.Li7_nt_list,
                            'U-238(n,gamma)':self.U238_ng_list,
                            'U-238(n,fis)':self.U238_fis_list,})
+
+        df['kg/m3_fertile'] = (df['MT_fertile']*1e3) / (VOL_CC/1e6)
 
         print(f"\nTotal reaction rates in FLiBe with {self.e}wt% Li-6 are:")
         print(f"{df.to_string(index=False)}\n") # ensures the whole df gets printed

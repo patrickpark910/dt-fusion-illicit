@@ -76,14 +76,15 @@ class PlotStatepoint:
 
 
         """ Reaction rates for every metric-tons loading and for every energy bin """
-        self.Th232_ng_Ebin_df  = Th_df[(Th_df['nuclide'] == 'Th232') & (Th_df['score'] == '(n,gamma)')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        self.Th232_fis_Ebin_df = Th_df[(Th_df['nuclide'] == 'Th232') & (Th_df['score'] == 'fission')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        self.Li6_nt_Ebin_df    = Li_df[(Li_df['nuclide'] == 'Li6') & (Li_df['score'] == '(n,Xt)')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        self.Li7_nt_Ebin_df    = Li_df[(Li_df['nuclide'] == 'Li7') & (Li_df['score'] == '(n,Xt)')][['energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+        self.Th232_ng_Ebin_df  = Th_df[(Th_df['nuclide'] == 'Th232') & (Th_df['score'] == '(n,gamma)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+        self.Th232_fis_Ebin_df = Th_df[(Th_df['nuclide'] == 'Th232') & (Th_df['score'] == 'fission')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+        self.Li6_nt_Ebin_df    = Li_df[(Li_df['nuclide'] == 'Li6') & (Li_df['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+        self.Li7_nt_Ebin_df    = Li_df[(Li_df['nuclide'] == 'Li7') & (Li_df['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
 
         # In each of those Ebin_df, add a new column translating the cell # into the metric tons of fertile mass loaded """
         for df in [self.Th232_ng_Ebin_df, self.Th232_fis_Ebin_df, self.Li6_nt_Ebin_df, self.Li7_nt_Ebin_df]:
-            df['fertile_MT'] = df['cell'].apply(lambda c: self.fertile_mt_list[c - 1])
+            df['MT_fertile'] = df['cell'].apply(lambda c: self.fertile_mt_list[c - 1])
+            df['kg/m3_fertile'] = (df['MT_fertile']*1e3) / (VOL_CC/1e6)
 
 
         """ Reaction rate for every metric-tons loading summed over all energy bins"""
@@ -123,11 +124,13 @@ class PlotStatepoint:
         """
         Prints and exports as CSV total reaction rates in each mtu loading summed over energies
         """
-        df = pd.DataFrame({'MTU':MASS_U_LIST,
+        df = pd.DataFrame({'MT_fertile':MASS_U_LIST,
                            'Li-6(n,t)':self.Li6_nt_list,
                            'Li-7(n,Xt)':self.Li7_nt_list,
                            'Th-232(n,gamma)':self.Th232_ng_list,
                            'Th-232(n,fis)':self.Th232_fis_list,})
+
+        df['kg/m3_fertile'] = (df['MT_fertile']*1e3) / (VOL_CC/1e6)
 
         print(f"\nTotal reaction rates in FLiBe with {self.e}wt% Li-6 are:")
         print(f"{df.to_string(index=False)}\n") # ensures the whole df gets printed
