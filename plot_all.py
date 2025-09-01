@@ -182,7 +182,7 @@ class Plot:
         plt.ylabel('Fissile production rate [kg$/$yr]')
 
         plt.xlim(-5,165)
-        plt.ylim(-10,260) 
+        plt.ylim(-7.5,225+7.5) 
 
         # Tick grid
         ax = plt.gca()
@@ -191,7 +191,8 @@ class Plot:
         ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
 
         ax.yaxis.set_ticks_position('both')
-        ax.yaxis.set_minor_locator(MultipleLocator(25))
+        ax.yaxis.set_major_locator(MultipleLocator(25))
+        ax.yaxis.set_minor_locator(MultipleLocator(12.5))
         ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
 
         plt.tight_layout()
@@ -294,86 +295,6 @@ class Plot:
         if self.show: plt.show()
         plt.close('all')
 
-            # print((grouped["normalized_mean"]))
-        
-
-            # ax.step(energy_cum.index, energy_cum.values, where="post")
-
-
-                
-
-        """
-        # Compute cumulative sum
-        cum_y = np.cumsum(y)
-
-        # Normalize cumulative sum to max value
-        cum_y_norm = cum_y / cum_y.iloc[-1] if cum_y.iloc[-1] != 0 else cum_y
-
-        plt.plot(x, cum_y_norm, linewidth=0.75, label=f'{self.u_list[i]} MTU')
-
-        plt.xlabel('Energy [eV]')
-        plt.ylabel('Cumulative normalized reactions')
-        plt.title(f'FLiBe Cumulative normalized U-238 (n,gamma) rxn rate')
-        plt.xscale('log'), plt.yscale('linear')
-        plt.xlim(1e1,1e3), plt.ylim(0,1.05)
-
-        # Reposition legend
-        leg = plt.legend(loc='lower right', ncols=1, frameon=True, fancybox=False, edgecolor='black', framealpha=.75,)
-        leg.get_frame().set_linewidth(1)
-
-        # Export figure
-        if self.save:
-            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238ng_cum_norm.pdf', bbox_inches='tight', format='pdf') 
-            plt.savefig(f'./Figures/png/{self.name}/fig_U238ng_cum_norm.png', bbox_inches='tight', format='png')
-            print(f"   Exported cumulative normalized Pu production vs. energy with MTU contours plot.")
-
-            plt.xlim(1e0,2e7), plt.ylim(0,1.05)
-
-
-            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238ng_cum_norm_full.pdf', bbox_inches='tight', format='pdf') 
-            plt.savefig(f'./Figures/png/{self.name}/fig_U238ng_cum_norm_full.png', bbox_inches='tight', format='png')
-
-        if self.show:plt.show()
-        plt.close('all')
-
-        plt.figure(figsize=(9,6))
-
-        for i, cell_id in enumerate(self.cell_ids):
-            if self.u_list[i] in [10, 20, 30, 40, 50]:
-                df = self.U238_ng_Ebin_rr_df[self.U238_ng_Ebin_rr_df['cell'] == cell_id]
-                x = df['energy mid [eV]']
-                y = df['mean']
-
-                # Compute cumulative sum
-                cum_y = np.cumsum(y)
-
-                plt.plot(x, cum_y, linewidth=0.75, label=f'{self.u_list[i]} MTU')
-
-        plt.xlabel('Energy [eV]')
-        plt.ylabel('Cumulative normalized reactions')
-        plt.title(f'FLiBe Cumulative U-238 (n,gamma) rxn rate')
-        plt.xscale('log'), plt.yscale('linear')
-        plt.xlim(1e1,1e3)
-
-        # Reposition legend
-        leg = plt.legend(loc='lower right', ncols=1, frameon=True, fancybox=False, edgecolor='black', framealpha=.75,)
-        leg.get_frame().set_linewidth(1)
-
-        # Export figure
-        if self.save:
-            plt.savefig(f'./Figures/pdf/{self.name}/fig_cum_hist.pdf', bbox_inches='tight', format='pdf') 
-            plt.savefig(f'./Figures/png/{self.name}/fig_cum_hist.png', bbox_inches='tight', format='png')
-            print(f"   Exported cumulative normalized Pu production vs. energy with MTU contours plot.")
-
-            plt.xlim(1e0,2e7)
-
-
-            plt.savefig(f'./Figures/pdf/{self.name}/fig_U238ng_cum_full.pdf', bbox_inches='tight', format='pdf') 
-            plt.savefig(f'./Figures/png/{self.name}/fig_U238ng_cum_full.png', bbox_inches='tight', format='png')
-
-        if self.show:plt.show()
-        plt.close('all')
-        """
 
 
 
