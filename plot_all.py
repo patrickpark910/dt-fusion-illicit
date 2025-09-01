@@ -18,9 +18,10 @@ def main():
 
     combined_plot = Plot(save=True, show=True)
     
+    """ Pick which one to plot by uncommenting """
     # combined_plot.plot_tbr()
-    # combined_plot.plot_pu_per_yr()
-    combined_plot.plot_cum_norm_histogram()
+    combined_plot.plot_pu_per_yr()
+    # combined_plot.plot_cum_norm_histogram()
 
     print("All plots completed and saved.")
 
@@ -87,11 +88,11 @@ class Plot:
         plt.plot(x_fine, y_akima1, linewidth=1, color='black', )    # 's-', markersize=4, label=r'FLiBe-UF$_4$'
         plt.plot(x_fine, y_akima2, linewidth=1, color='#66b420', ) # 'x-', markersize=6, label=r'FLiBe-ThF$_4$'
 
-        # Dummy plots for legend -- bit of a hack lmao
-        plt.plot([998,999], [998,999], 'o-', markersize=4, linewidth=1, color='#b41f24', label=r'Pebble-BISO')   # 
-        plt.plot([998,999], [998,999], '^-', markersize=5, linewidth=1, color='#0047ba', label=r'PbLi-BISO')     # 
-        plt.plot([998,999], [998,999], 's-', markersize=4, linewidth=1, color='black',   label=r'FLiBe-UF$_4$')    # 
-        plt.plot([998,999], [998,999], 'x-', markersize=6, linewidth=1, color='#66b420', label=r'FLiBe-ThF$_4$') # 
+        # Dummy plots for legend -- bit of a hack lmao -- ppark
+        plt.plot([9e98,9e99], [9e98,9e99], 'o-', markersize=4, linewidth=1, color='#b41f24', label=r'Pebble-BISO')   # 
+        plt.plot([9e98,9e99], [9e98,9e99], '^-', markersize=5, linewidth=1, color='#0047ba', label=r'PbLi-BISO')     # 
+        plt.plot([9e98,9e99], [9e98,9e99], 's-', markersize=4, linewidth=1, color='black',   label=r'FLiBe-UF$_4$')    # 
+        plt.plot([9e98,9e99], [9e98,9e99], 'x-', markersize=6, linewidth=1, color='#66b420', label=r'FLiBe-ThF$_4$') # 
         
         
         # plt.title(f'Tritium breeding ratio (All)') # Exclude title for production figs --ppark 2025-08-06
@@ -113,8 +114,6 @@ class Plot:
 
         plt.tight_layout()
 
-
-
         leg = plt.legend(fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1)
         leg.get_frame().set_linewidth(0.5) 
 
@@ -133,64 +132,76 @@ class Plot:
       
         print(f"\nPlotting Pu-239 production per year for all fuels...")
 
-        """ Create new column for fissile rates """
+        # <utilities.py> Default NPS_FUS = 500 MJ/s * 3.546e17 n/MJ = 1.773e+20 n/s
+        # seconds in a year = 3.156e+7 s/yr
+
+        tot_n_per_yr = NPS_FUS * 3.156e+7
+
+        # Gotta then convert fissile atoms/yr to kg/yr
+        pu239_at_to_kg_per_yr = tot_n_per_yr / AVO * AMU_PU239 / 1e3
+        u233_at_to_kg_per_yr  = tot_n_per_yr / AVO * AMU_U233  / 1e3
+        
+        # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
+        x1, y1 =  self.flibe_u_rr_df['kg/m3_fertile'], pu239_at_to_kg_per_yr *  self.flibe_u_rr_df['U-238(n,gamma)'] 
+        x2, y2 = self.flibe_th_rr_df['kg/m3_fertile'], u233_at_to_kg_per_yr * self.flibe_th_rr_df['Th-232(n,gamma)']
+        x3, y3 =   self.pbli_u_rr_df['kg/m3_fertile'], pu239_at_to_kg_per_yr *   self.pbli_u_rr_df['U-238(n,gamma)'] 
+        # x4, y4 =  self.pbli_th_rr_df['kg/m3_fertile'], pu239_at_to_kg_per_yr * self.pbli_th_rr_df['U-238(n,gamma)']
+        x5, y5 =   self.pebble_rr_df['kg/m3_fertile'], pu239_at_to_kg_per_yr *   self.pebble_rr_df['U-238(n,gamma)']
+
+        # AkimaInterpolation ripped from my ELWR paper --ppark 2025-08-06
+        x_fine = np.linspace(x1.min(), x1.max(), 300) # Evaluate on a fine grid
+        y_akima1 = Akima1DInterpolator(x1, y1)(x_fine)
+        y_akima2 = Akima1DInterpolator(x2, y2)(x_fine)
+        y_akima3 = Akima1DInterpolator(x3, y3)(x_fine)
+        # y_akima4 = akima4(x_fine)
+        y_akima5 = Akima1DInterpolator(x5, y5)(x_fine)
 
 
-        """ Initialize figure """
-        plt.figure()
-        plt.plot(self.flibe['MTU'], self.flibePu_per_yr_list,
-                'o-', markersize=2, linewidth=0.75, color='#00FFFF', label='FLiBe UF4')
-        plt.plot(self.flibeTh['MTU'], self.flibeU_per_yr_list,
-                'o-', markersize=2, linewidth=0.75, color='#FF8000', label='FLiBe ThF4')
-        plt.plot(self.pbli['MTU'][:-3], self.pbliPu_per_yr_list[:-3],
-                'o-', markersize=2, linewidth=0.75, color='#FF00FF', label='PbLi')
-        plt.plot(self.pebble['MTU'], self.pebblePu_per_yr_list,
-                'o-', markersize=2, linewidth=0.75, color='#FFA500', label='Pebble')
-        # The three MTU points for FLiBe annotation boxes
-        mtu_fpoints = [0.0096, 5, 30]
-        mtu_pbpoints = [2.65, 5, 50]
-        mtu_ppoints = [0.076, 5, 30]
 
-        # Function to get Pu value closest to given MTU for each fuel
-        def get_closest_value(mtu_val, mtu_list, pu_list):
-            idx = (abs(mtu_list - mtu_val)).idxmin()
-            return pu_list[idx]
+        plt.figure(figsize=(7.5,5))
 
-        # Gather Pu production values for all fuels at each MTU point
-        # Annotation for FLiBe points
-        textstr = '--- Pu-239 production summary ---\n'
+        plt.scatter(x5, y5, marker='o', s=40, color='#b41f24') # ZR clean
+        plt.scatter(x3, y3, marker='^', s=50, color='#0047ba') # ZR clean
+        plt.scatter(x1, y1, marker='s', s=40, color='black') # ZR clean
+        plt.scatter(x2, y2, marker='x', s=60, color='#66b420') # ZR clean
 
-        textstr += 'FLiBe UF4:\n'
-        for mtu in mtu_fpoints:
-            val = get_closest_value(mtu, self.flibe['MTU'], self.flibePu_per_yr_list)
-            textstr += f"  {mtu:.4f} MTU: {val:.4e} kg/yr\n"
+        plt.plot(x_fine, y_akima5, linewidth=1, color='#b41f24',)   # 'o-', markersize=4,  label=r'Pebble-BISO'
+        plt.plot(x_fine, y_akima3, linewidth=1, color='#0047ba', )     # '^-', markersize=5, label=r'PbLi-BISO'
+        plt.plot(x_fine, y_akima1, linewidth=1, color='black', )    # 's-', markersize=4, label=r'FLiBe-UF$_4$'
+        plt.plot(x_fine, y_akima2, linewidth=1, color='#66b420', ) # 'x-', markersize=6, label=r'FLiBe-ThF$_4$'
 
-        textstr += 'FLiBe ThF4:\n'
-        for mtu in mtu_fpoints:
-            val = get_closest_value(mtu, self.flibeTh['MTU'], self.flibeU_per_yr_list)
-            textstr += f"  {mtu:.4f} MTU: {val:.4e} kg/yr\n"
+        # Dummy plots for legend -- bit of a hack lmao -- ppark
+        plt.plot([9e98,9e99], [9e98,9e99], 'o-', markersize=4, linewidth=1, color='#b41f24', label=r'Pebble-BISO')   # 
+        plt.plot([9e98,9e99], [9e98,9e99], '^-', markersize=5, linewidth=1, color='#0047ba', label=r'PbLi-BISO')     # 
+        plt.plot([9e98,9e99], [9e98,9e99], 's-', markersize=4, linewidth=1, color='black',   label=r'FLiBe-UF$_4$')  # 
+        plt.plot([9e98,9e99], [9e98,9e99], 'x-', markersize=6, linewidth=1, color='#66b420', label=r'FLiBe-ThF$_4$') # 
+        
+        
+        # plt.title(f'Tritium breeding ratio (All)') # Exclude title for production figs --ppark 2025-08-06
+        plt.xlabel(r'Fertile isotope density in blanket [kg$/$m$^3$]')
+        plt.ylabel('Fissile production rate [kg$/$yr]')
 
-        textstr += 'PbLi:\n'
-        for mtu in mtu_pbpoints:
-            val = get_closest_value(mtu, self.pbli['MTU'], self.pbliPu_per_yr_list)
-            textstr += f"  {mtu:.4f} MTU: {val:.4e} kg/yr\n"
+        plt.xlim(-5,165)
+        plt.ylim(-10,260) 
 
-        textstr += 'Pebble:\n'
-        for mtu in mtu_ppoints:
-            val = get_closest_value(mtu, self.pebble['MTU'], self.pebblePu_per_yr_list)
-            textstr += f"  {mtu:.4f} MTU: {val:.4e} kg/yr\n"
+        # Tick grid
+        ax = plt.gca()
+        ax.xaxis.set_ticks_position('both')
+        ax.xaxis.set_minor_locator(MultipleLocator(10))
+        ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
 
-        # Add the single annotation box on the side of the plot
+        ax.yaxis.set_ticks_position('both')
+        ax.yaxis.set_minor_locator(MultipleLocator(25))
+        ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
 
-        plt.title(f'Pu-239 / U-233 production per year (All Fuels)')
-        plt.xlabel('Uranium / Thorium loaded [metric tons]')
-        plt.ylabel(r'Pu-239 / U-233 produced [kg$/$yr]')
         plt.tight_layout()
-        plt.legend()
+
+        leg = plt.legend(fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1)
+        leg.get_frame().set_linewidth(0.5) 
     
         if self.save:
-            plt.savefig(f'./Figures/pdf/{self.name}/fig_Pu_per_yr_all.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/png/{self.name}/fig_Pu_per_yr_all.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/pdf/{self.name}/fig_fissile_per_yr.pdf', bbox_inches='tight', format='pdf')
+            plt.savefig(f'./Figures/png/{self.name}/fig_fissile_per_yr.png', bbox_inches='tight', format='png')
             print("Exported Pu-239 production per year plot for all fuels.")
         else:
             print("Did not export Pu-239 production per year plot due to user setting.")
