@@ -273,12 +273,64 @@ def set_xs_path():
         return xs_path
 
 
+def miller_points(R0_m: float, a_m: float, delta: float, kappa: float, n: int = 400) -> np.ndarray:
+    """Return Nx2 array of (r,z) points [cm] for a Miller D-shape.
+    R0_m : major radius [m]
+    a_m  : minor radius [m]
+    delta: triangularity delta
+    kappa: elongation kappa
+    n    : number of points around the boundary
+    """
+    theta = np.linspace(0, 2*np.pi, n, endpoint=False)
+    R = R0_m + a_m*np.cos(theta + delta*np.sin(theta))
+    Z = kappa*a_m*np.sin(theta)
+    pts_m = np.column_stack([R, Z])
+    pts_cm = 100.0*pts_m
+    # Close the loop (Polygon expects a closed path)
+    return np.vstack([pts_cm, pts_cm[0]])
 
 
-if __name__ == '__main__':
-    for mtu in [0, 0.1, 1, 2.5, 5, 10, 20 ,30 ,40, 50]:
-        mf_flibe, mf_uf4 = calc_uf4_flibe_mass_fracs(mtu, volume=342e6, density_flibe=1.94)
-        # print(mf_flibe, mf_uf4, mf_uf4/(mf_uf4+mf_flibe))
-        # print(mass_to_molar_fracs({'flibe':mf_flibe,'uf4':mf_uf4}, {'flibe':AMU_FLIBE,'uf4':AMU_UF4}))
+def polygon_area_centroid_cm(pts_cm: np.ndarray):
+    """Compute signed area [cm^2] and centroid (Cx,Cy) [cm] of a polygon.
+    Accepts Nx2 with optional repeated first point at the end.
+    """
+    if pts_cm.shape[1] != 2:
+        raise ValueError("pts_cm must be of shape (N, 2) for (R,Z).")
+    # Drop duplicated closing point if present
+    if np.allclose(pts_cm[0], pts_cm[-1]):
+        pts_cm = pts_cm[:-1]
+    x = pts_cm[:, 0]
+    y = pts_cm[:, 1]
+    x2 = np.roll(x, -1)
+    y2 = np.roll(y, -1)
+    cross = x*y2 - x2*y
+    A = 0.5*np.sum(cross)                    # signed area [cm^2]
+    if abs(A) < 1e-20:
+        raise ValueError("Degenerate polygon (area ~ 0).")
+    Cx = (1.0/(6.0*A)) * np.sum((x + x2) * cross)  # centroid x [cm]
+    Cy = (1.0/(6.0*A)) * np.sum((y + y2) * cross)  # centroid y [cm]
+    return A, Cx, Cy
+
+def torus_volume(R0_m: float, a_m: float, delta: float, kappa: float, n: int = 2048) -> float:
+    """Return volume [m^3] of a Miller D-shaped torus via Pappus–Guldinus: V = 2π R̄ A.
+    Uses `miller_points` (cm) → polygon area & centroid (cm) → convert cm^3 → m^3.
+    Raises if the cross-section touches the axis (min R ≤ 0 cm).
+    """
+    pts_cm = miller_points(R0_m, a_m, delta, kappa, n=n)
+    R_cm = pts_cm[:, 0]
+    if np.min(R_cm) <= 0.0:
+        raise ValueError("Cross-section intersects the rotation axis (min R ≤ 0).")
+    A_cm2, Rbar_cm, _ = polygon_area_centroid_cm(pts_cm)
+    A_cm2 = abs(A_cm2)
+    V_cm3 = 2.0 * np.pi * Rbar_cm * A_cm2
+    V_m3  = V_cm3 * 1e-6  # (cm^3 → m^3)
+    return float(V_m3)
+
+# ---------- Example ----------
+if __name__ == "__main__":
+    # Example: R0=6.2 m, a=2.0 m, δ=0.4, κ=1.6
+    V = torus_volume(6.2, 2.0, 0.4, 1.6, n=10000)
+    print(f"Volume ≈ {V:.3f} m^3")
+
 
 

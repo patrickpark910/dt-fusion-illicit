@@ -9,24 +9,28 @@ Nominal values used by Emma and Patrick + reasons
   MASS_U_LIST : list of floats : 0, 0.1, 1, 2.5, 5, 10, 20, 30, 40, 50 [metric tons U]
 """
 
-DENSITY_FLIBE = 1.94 # g/cm3
-DENSITY_UF4 = 6.7 # g/cm3
+from Python.utilities import *
 
-DENSITY_PBLI  = 9.4 # g/cm3
+DENSITY_FLIBE = 1.94 # g/cm3
+DENSITY_UF4   = 6.7 # g/cm3
+ENRICH_FLIBE  = 7.5
+VOLUME_FLIBE  = torus_volume(4, 1, 0.5, 1.6, n=10000) # torus_volume(6.2, 2.0, 0.4, 1.6, n=10000)
+
+DENSITY_LL  =  9.4 # g/cm3
+ENRICH_LL   = 90.0 
+
 DENSITY_TRISO = 7 # g/cm3
 
 ENRICH_U  = 0.7204 # wt% 
 TEMP_K = 900 # K
 VOL_CC = 342 * 1e6 # cm3
-VOL_ROB = 1.06e9
-MASS_U_LIST = [0, 0.0096, 0.1, 0.2, 0.5, 1, 2.5, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50] # [0, 0.1, 1, 5, 10, 20, 30, 40, 50] # metric tons
-MASS_U_LIST_FLIBE = [0, 0.0096, 0.1, 0.2, 0.5, 1, 2.5, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50] # [0, 0.1, 1, 5, 10, 20, 30, 40, 50] # metric tons uranium (MTU) 0.01209475,
-TEMP_LIST = [294,900]
 
-MASS_U_LIST_PBLI = [0.0096, 0.1, 0.5, 2.65, 5, 10, 20, 30, 40, 50,132.9,265.8,531.5]  # 132.9,265.8,531.5 MTU from Glaser & Goldston DCLL
-MASS_U_LIST_HCPB = [0.076, 0.1, 0.5, 1, 5, 10, 20, 30, 40, 50]
-N_TRISO_PBLI = [1, 50, 100, 200, 300, 400]
-ENRICH_LI_LIST = [7.5,10.0,12.5,15.0,17.5,20.0] # weight percent
+FERTILE_BULK_DENSITY_KGM3 = [0, 0.03, 0.3, 0.6, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150]
+
+
+ARC_VOL_CC  = 342 * 1e6 # cm3
+
+
 
 
 """
@@ -37,12 +41,12 @@ import matplotlib.font_manager as fm
 
 # Fonts
 try:
-    font_path = './Python/DIN-Regular.ttf' # DIN-Regular.ttf' # './Python/arial.ttf'
+    font_path = './Python/fonts/DIN-Regular.ttf' # DIN-Regular.ttf' # './Python/arial.ttf'
     fm.fontManager.addfont(font_path)
     prop = fm.FontProperties(fname=font_path)
     plt.rcParams['font.family'] = prop.get_name()
 except:
-    font_path = './Python/arial.ttf' # './arial.ttf'
+    font_path = './Python/fonts/arial.ttf' # './arial.ttf'
     fm.fontManager.addfont(font_path)
     prop = fm.FontProperties(fname=font_path)
     plt.rcParams['font.family'] = prop.get_name()
