@@ -4,6 +4,7 @@ Set of helper functions
 import os, re, sys
 import numpy as np
 
+from Python.parameters import *
 
 """
 Nuclear constants -- from atom.kaeri.re.kr/nuchart/
@@ -21,7 +22,7 @@ AMU_UF4 = AMU_U + 4 * AMU_F19
 AMU_ThF4 = AMU_Th + 4 * AMU_F19
 AMU_FLIBE = 98.89 # g/mol
 DENSITY_UF4 = 6.7 # g/cm3
-DENSITY_ThF4 = 6.3
+DENSITY_ThF4 = 6.3 # g/cm3
 AMU_PU239 = 239.0521634
 AMU_U233 = 233.039635207
 SEC_PER_YR = 3600 * 24 * 365
@@ -35,20 +36,6 @@ NPS_FUS  = P_FUS_MW * N_PER_MJ # n/s
 
 
 
-
-
-def set_xs_path():
-    """
-    Temporary solution for finding xs files between WSL and Ubuntu on Computing Cluster without editing PATH --ppark 2025-06-28
-    """
-    xs_path_ubuntu = '/opt/openmc_data/endfb-viii.0-hdf5/cross_sections.xml'
-    xs_path_wsl   = '/mnt/c/openmc/data/endfb-viii.0-hdf5/cross_sections.xml'
-    if os.path.isfile(xs_path_ubuntu):
-        return xs_path_ubuntu # use this on Zotacs --ppark
-    elif os.path.isfile(xs_path_wsl):
-        return xs_path_wsl
-    else:
-        sys.exit(f"Error finding cross section XML!")
 
 
 def logspace_per_decade(start, stop, pts_per_decade):
@@ -91,144 +78,38 @@ def log_midpoints(points):
     return [float(np.sqrt(points[i] * points[i + 1])) for i in range(len(points) - 1)]
 
 
-def calc_mix_mass_fracs(mtu, volume=342e6, density_flibe=1.94, subtract=False):
+def calc_blanket_mass_fracs(fertile_density_kgm3, fertile_element='U', fertile_enrich=0.71, breeder_density_kgm3=1.94e3):
     """
-    Calculate the mass fractions of FLiBe and UF4. 
-    Assumes UF4 concentration small enough that its addition does NOT change FLiBe volume
+    Calculate the mass fractions of FLiBe and (UF4 or ThF4). 
+    Assumes UF4/ThF4 dissolution does NOT change FLiBe volume
       after conversaion with J.L. Ball --ppark 2025-07-03
 
     Args:
-        mtu : float : metric tons uranium
-        volume : float : cc of system
-        density_flibe : float : g/cm3 of FLiBe
-        subtract: bool : default False, whether to deduct UF4 volume from FLiBe volume (if UF4 is assumed to/not to dissolve in FLiBe)
+        fertile_density_kgm3 : float : desired density of U-238 or Th-232 in kg/m^3
+        fertile_element      : 'U' or 'Th' : identifies U-238 or Th-232 as the fertile isotope
+        fertile_enrich       : float : wt% enrichment of the fertile material
+        breeder_density_kgm3 : float : density of FLiBe in kg/m^3
 
     Returns:
         (mass_frac_flibe, mass_frac_uf4) : 2-ple of floats : mass fractions
     """
-    # Convert inputs to SI units
-    mass_U_kg = mtu * 1e3
-    density_flibe_kg_m3 = density_flibe * 1e3
-    density_uf4_kg_m3 = DENSITY_UF4 * 1e3
-    volume_m3 = float(volume) / 1e6
 
-    # Compute UF4 mass from U mass
-    mass_uf4_kg = mass_U_kg * (AMU_UF4 / AMU_U)
-    vol_uf4_m3 = mass_uf4_kg / density_uf4_kg_m3
-    
-    if subtract:
-        vol_flibe_m3 = volume_m3 - vol_uf4_m3
-    else:
-        vol_flibe_m3 = volume_m3
+    if fertile_element == 'U':
+        uf4_density_kgm3   = fertile_density_kgm3 / (1-fertile_enrich) * AMU_UF4 / AMU_U
+        blanket_mass_in_m3 = breeder_density_kgm3*1 + uf4_density_kgm3*1 # adding *1 for clarity that density = mass for 1 m^3
+        # ^ this heavily assumes uf4 "solute" doesn't bigly change volume of molten salt "solvent"
+        breeder_mass_frac  = breeder_density_kgm3/blanket_mass_in_m3 
+        uf4_mass_frac      = uf4_density_kgm3/blanket_mass_in_m3
+        return breeder_mass_frac, uf4_mass_frac
 
-    # Compute FLiBe mass from density and volume
-    mass_flibe_kg = density_flibe_kg_m3 * vol_flibe_m3
+    if fertile_element == 'Th':
+        thf4_density_kgm3  = fertile_density_kgm3 / (1-fertile_enrich) * AMU_ThF4 / AMU_Th
+        blanket_mass_in_m3 = breeder_density_kgm3*1 + thf4_density_kgm3*1 # adding *1 for clarity that density = mass for 1 m^3
+        # ^ this heavily assumes thf4 "solute" doesn't bigly change volume of molten salt "solvent"
+        breeder_mass_frac  = breeder_density_kgm3/blanket_mass_in_m3 
+        thf4_mass_frac     = thf4_density_kgm3/blanket_mass_in_m3
+        return breeder_mass_frac, thf4_mass_frac
 
-    # Total mass and fractions
-    mass_total = mass_flibe_kg + mass_uf4_kg
-    frac_flibe = mass_flibe_kg / mass_total
-    frac_uf4   = mass_uf4_kg   / mass_total
-
-    # print(f"volumes: total {volume_m3} m3, flibe {vol_flibe_m3} m3, uf4 {vol_uf4_m3:.4f} m3 | deduct UF4 from FLiBe volume: {subtract}") # For debug
-
-    return frac_flibe, frac_uf4
-
-
-def calc_mix_vol_fracs(mtu, volume=342e6, density_flibe=1.94, displace=False):
-    """
-    Calculate the volume fractions of FLiBe and UF4. 
-    Assumes UF4 concentration small enough that its addition does NOT change FLiBe volume
-    after conversaion with J. L. Ball --ppark 2025-07-03
-
-    Args:
-        mtu : float : metric tons uranium
-        volume : float : cc of system
-        density_flibe : float : g/cm3 of FLiBe
-        displace : bool : default False, whether to deduct UF4 volume from FLiBe volume (if UF4 is assumed to/not to dissolve in FLiBe)
-
-    Returns:
-        (vf_flibe, vf_uf4) : 2-ple of floats : volume fractions
-    """
-    # Convert inputs to SI units
-    mass_u = mtu * 1e3
-    density_flibe = density_flibe * 1e3 # kg/m3
-    density_uf4   = DENSITY_UF4 * 1e3   # kg/m3  
-    volume = float(volume) / 1e6
-
-    # Compute volumes
-    mass_uf4 = mass_u * (AMU_UF4 / AMU_U)
-    vol_uf4 = mass_uf4 / density_uf4
-    
-    if displace:
-        vol_flibe = volume - vol_uf4
-    if not displace:
-        vol_flibe = volume
-
-    # Compute volume fractions
-    vf_flibe = vol_flibe/(vol_flibe+vol_uf4)
-    vf_uf4   = vol_uf4/(vol_flibe+vol_uf4)
-
-    return vf_flibe, vf_uf4
-def calc_mix_vol_fracs_th(mtu, volume=342e6, density_flibe=1.94, displace=False):
-    """
-    Calculate the volume fractions of FLiBe and ThF4. 
-    Assumes ThF4 concentration small enough that its addition does NOT change FLiBe volume
-    after conversaion with J. L. Ball --ppark 2025-07-03
-
-    Args:
-        mtu : float : metric tons uranium
-        volume : float : cc of system
-        density_flibe : float : g/cm3 of FLiBe
-        displace : bool : default False, whether to deduct UF4 volume from FLiBe volume (if UF4 is assumed to/not to dissolve in FLiBe)
-
-    Returns:
-        (vf_flibe, vf_uf4) : 2-ple of floats : volume fractions
-    """
-    # Convert inputs to SI units
-    mass_u = mtu * 1e3
-    density_flibe = density_flibe * 1e3 # kg/m3
-    density_thf4   = DENSITY_ThF4 * 1e3   # kg/m3  
-    volume = float(volume) / 1e6
-
-    # Compute volumes
-    mass_thf4 = mass_th * (AMU_ThF4 / AMU_Th)
-    vol_thf4 = mass_thf4 / density_thf4
-    
-    if displace:
-        vol_flibe = volume - vol_thf4
-    if not displace:
-        vol_flibe = volume
-
-    # Compute volume fractions
-    vf_flibe = vol_flibe/(vol_flibe+vol_thf4)
-    vf_thf4   = vol_thf4/(vol_flibe+vol_thf4)
-
-    return vf_flibe, vf_thf4
-
-
-def mass_to_molar_fracs(mass_fracs, molar_masses):
-    """
-    Convert mass fractions to molar fractions.
-
-    Args:
-        mass_fracs (dict): component mass fractions, ex. {'flibe': 0.75, 'uf4': 0.25}.
-        molar_masses (dict): component molar masses in g/mol, ex. {'flibe': 98.89, 'uf4': 318.02}.
-
-    Returns:
-        dict: component molar fractions.
-    """
-    # Compute "moles per unit mass" for each component
-    moles_per_g = {
-        comp: mass_fracs[comp] / molar_masses[comp]
-        for comp in mass_fracs
-    }
-    total = sum(moles_per_g.values())
-
-    # Normalize to get molar fractions
-    return {
-        comp: moles_per_g[comp] / total
-        for comp in moles_per_g
-    }
 
 
 def extract_lie(path: str) -> float:
