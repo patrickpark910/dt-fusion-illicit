@@ -11,24 +11,37 @@ Nominal values used by Emma and Patrick + reasons
 
 from Python.utilities import *
 
+
+""" Parameters for tokamak with FLiBe Breeder """
 DENSITY_FLIBE = 1.94 # g/cm3
-DENSITY_UF4   = 6.7 # g/cm3
 ENRICH_FLIBE  = 7.5
 VOLUME_FLIBE  = torus_volume(4, 1, 0.5, 1.6, n=10000) # torus_volume(6.2, 2.0, 0.4, 1.6, n=10000)
+
+DENSITY_UF4   = 6.7 # g/cm3
+# DENSITY_TH4  = 
+ENRICH_U  = 0.71  # wt% 
+TEMP_FLIBE_K = 900 # K
+
+FLIBE_FW_CM  =   0.2  # cm - first wall
+FLIBE_ST1_CM =   1.0  # cm - structural region 1
+FLIBE_BR1_CM =   2.0  # cm -   breeding region 1
+FLIBE_ST2_CM =   3.0  # cm - structural region 2
+FLIBE_BR2_CM = 100.0  # cm -   breeding region 2
+FLIBE_ST3_CM =   3.0  # cm - structural region 3
+
+
+
+""" Parameters for tokamak with LL Breeder """
+
 
 DENSITY_LL  =  9.4 # g/cm3
 ENRICH_LL   = 90.0 
 
 DENSITY_TRISO = 7 # g/cm3
 
-ENRICH_U  = 0.7204 # wt% 
-TEMP_K = 900 # K
-VOL_CC = 342 * 1e6 # cm3
 
 FERTILE_BULK_DENSITY_KGM3 = [0, 0.03, 0.3, 0.6, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150]
 
-
-ARC_VOL_CC  = 342 * 1e6 # cm3
 
 
 
