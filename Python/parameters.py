@@ -12,10 +12,17 @@ Nominal values used by Emma and Patrick + reasons
 from Python.utilities import *
 
 
+""" Parameters for ALL models """
+TOKAMAK_R0    = 600  # cm - major radius
+TOKAMAK_A     = 160  # cm - minor radius
+TOKAMAK_KAPPA = 1.72 #        - elongation
+TOKAMAK_DELTA = 0.45 #        - triangularity
+
+
 """ Parameters for tokamak with FLiBe Breeder """
 DENSITY_FLIBE = 1.94 # g/cm3
 ENRICH_FLIBE  = 7.5
-VOLUME_FLIBE  = torus_volume(4, 1, 0.5, 1.6, n=10000) # torus_volume(6.2, 2.0, 0.4, 1.6, n=10000)
+# VOLUME_FLIBE  = torus_volume(4, 1, 0.5, 1.6, n=10000) # torus_volume(6.2, 2.0, 0.4, 1.6, n=10000)
 
 DENSITY_UF4   = 6.7 # g/cm3
 # DENSITY_TH4  = 
