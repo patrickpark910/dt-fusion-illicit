@@ -3,7 +3,7 @@ import os, sys
 import numpy as np
 
 # Import helper functions
-from Python.device import *
+from Python.reactor import *
 from Python.parameters import *
 from Python.utilities import *
 
