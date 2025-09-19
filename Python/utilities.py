@@ -4,7 +4,10 @@ Set of helper functions
 import os, re, sys, time, functools
 import numpy as np
 
-from Python.parameters import *
+try:
+    from Python.parameters import *
+except:
+    from parameters import *
 
 """
 Nuclear constants -- from atom.kaeri.re.kr/nuchart/

@@ -9,7 +9,10 @@ Nominal values used by Emma and Patrick + reasons
   MASS_U_LIST : list of floats : 0, 0.1, 1, 2.5, 5, 10, 20, 30, 40, 50 [metric tons U]
 """
 
-from Python.utilities import *
+try:
+    from Python.parameters import *
+except:
+    from parameters import *
 
 
 """ Parameters for ALL models """
