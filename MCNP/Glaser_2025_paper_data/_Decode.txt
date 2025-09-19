@@ -1,0 +1,24 @@
+
+---------------------------------------
+FILE     TYPE    BISO    U235   LI6
+---------------------------------------
+
+AxU000   DCLL    CLEAN    --    90%  *
+AxU025   DCLL    25pcc   UNAT   90%  *
+
+BxU000   FLIBE   CLEAN    --    90%  *
+BxU025   FLIBE   25pcc   UNAT   90%  *
+BxU100   FLIBE  100pcc   UNAT   90%  *
+
+BxD025   FLIBE   25pcc   DEPU   90%  *
+
+CxU025   FLIBE   25pcc   UNAT   10%  *
+
+DxU000   FLIBE   CLEAN   UNAT   20%  *
+DxU025   FLIBE   25pcc   UNAT   20%  *
+
+E
+F 25pcc
+G CLEAN
+
+---------------------------------------
