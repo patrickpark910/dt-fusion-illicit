@@ -9,20 +9,21 @@ Nominal values used by Emma and Patrick + reasons
   MASS_U_LIST : list of floats : 0, 0.1, 1, 2.5, 5, 10, 20, 30, 40, 50 [metric tons U]
 """
 
-try:
-    from Python.parameters import *
-except:
-    from parameters import *
 
 
 """ Parameters for ALL models """
-TOKAMAK_R0    = 600  # cm - major radius
-TOKAMAK_A     = 160  # cm - minor radius
-TOKAMAK_KAPPA = 1.72 #        - elongation
-TOKAMAK_DELTA = 0.45 #        - triangularity
+
+
+FERTILE_BULK_DENSITY_KGM3 = [0, 0.03, 0.3, 0.6, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150]
+
 
 
 """ Parameters for tokamak with FLiBe Breeder """
+FLIBE_R0    = 600  # cm - major radius
+FLIBE_A     = 200  # cm - minor radius
+FLIBE_KAPPA = 1.72 #        - elongation
+FLIBE_DELTA = 0.4  #        - triangularity
+
 DENSITY_FLIBE = 1.94 # g/cm3
 ENRICH_FLIBE  = 7.5
 # VOLUME_FLIBE  = torus_volume(4, 1, 0.5, 1.6, n=10000) # torus_volume(6.2, 2.0, 0.4, 1.6, n=10000)
@@ -32,7 +33,7 @@ DENSITY_UF4   = 6.7 # g/cm3
 ENRICH_U  = 0.71  # wt% 
 TEMP_FLIBE_K = 900 # K
 
-FLIBE_FW_CM  =   0.2  # cm - first wall
+FLIBE_FW_CM  =   0.3  # cm - first wall
 FLIBE_ST1_CM =   1.0  # cm - structural region 1
 FLIBE_BR1_CM =   2.0  # cm -   breeding region 1
 FLIBE_ST2_CM =   3.0  # cm - structural region 2
@@ -50,7 +51,6 @@ ENRICH_LL   = 90.0
 DENSITY_TRISO = 7 # g/cm3
 
 
-FERTILE_BULK_DENSITY_KGM3 = [0, 0.03, 0.3, 0.6, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150]
 
 
 

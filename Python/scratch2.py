@@ -54,7 +54,7 @@ def volumes(R0_m, a_m, delta, kappa, t_m, n=1000):
     return V_in_cm3*to_m3, V_out_cm3*to_m3, (V_out_cm3-V_in_cm3)*to_m3
 
 # Example:
-R0, a, kappa, delta, t = 4, 1.2, 1.84, 0.5, 1.01  # meters, -, -, meters
+R0, a, kappa, delta, t = 3.30, 1.13, 1.84, 0.45, 1.02                       # meters, -, -, meters
 V_in, V_out, V_bl = volumes(R0, a, delta, kappa, t, n=1200)
 print("V_plasma [m^3] :", V_in)
 print("V_outer  [m^3] :", V_out)
