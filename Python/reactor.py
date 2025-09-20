@@ -1,6 +1,7 @@
 import openmc
 import os, sys
 import numpy as np
+import pandas as pd
 from datetime import date
 
 
@@ -11,14 +12,15 @@ from Python.utilities import *
 class Reactor:
 
     @timer
-    def __init__(self, breeder='flibe', fertile_element='U', fertile_density_kgm3=0.0, run_openmc=False):
+    def __init__(self, breeder='flibe', fertile_element='U', fertile_density_kgm3=0.0, calc_volumes=False, run_openmc=False):
 
         self.fertile_density_kgm3 = fertile_density_kgm3
         self.fertile_element = fertile_element.capitalize()
-        self.run = run_openmc # i'm calling this self.run bc self.run_openmc() is the function, which main.py will confuse!
+        self.run_openmc   = run_openmc    # i'm calling this self.run bc self.run_openmc() is the function, which main.py will confuse! 
+        self.calc_volumes = calc_volumes
 
         if breeder.lower() == 'flibe':
-            self.temp_k          = TEMP_FLIBE_K
+            self.temp_k               = TEMP_FLIBE_K
             self.breeder_name         = 'FLiBe'
             self.breeder_name_density = DENSITY_FLIBE
             self.breeder_name_enrich  = ENRICH_FLIBE
@@ -42,7 +44,7 @@ class Reactor:
         today = date.today().strftime("%Y-%m-%d")
         self.name = f"{self.breeder_name}_{self.fertile_element}{self.fertile_density_kgm3:.2f}kgm3_Li{self.breeder_name_enrich:04.1f}_{self.temp_k}K" # _{today}
         # should come out to smth like: FLiBe_U010kgm3_Li7.5_900K
-        self.path = f"./OpenMC/{self.name}/"
+        self.path = f"./OpenMC/{self.name}"
         
         # os.makedirs(self.path, exist_ok=True)
 
@@ -166,13 +168,16 @@ class Reactor:
 
         # Tokamak parameters
         if self.breeder_name == 'FLiBe':
-            R0, a, kappa, delta = TOKAMAK_R0, TOKAMAK_A, TOKAMAK_KAPPA, TOKAMAK_DELTA 
+            R0, a, kappa, delta = FLIBE_R0, FLIBE_A, FLIBE_KAPPA, FLIBE_DELTA 
             d_fw  = FLIBE_FW_CM 
             d_st1 = d_fw  + FLIBE_ST1_CM
             d_br1 = d_st1 + FLIBE_BR1_CM
             d_st2 = d_br1 + FLIBE_ST2_CM
             d_br2 = d_st2 + FLIBE_BR2_CM
             d_st3 = d_br2 + FLIBE_ST3_CM
+
+            self.extent_r = (R0 + a + d_st3)*1.1 # 110%
+            self.extent_z = (kappa*a + d_st3)*1.1
 
 
         """ Numerically create points for poloidal cross-section contours """
@@ -207,17 +212,17 @@ class Reactor:
         bottom_plane   = openmc.ZPlane(z0=z_min, boundary_type='vacuum')
 
         """ Create and assign cells """
-        cell_vc   = openmc.Cell(region= -surfaces[0])
+        cell_vc   = openmc.Cell(cell_id=10, region= -surfaces[0])
         cell_vc.importance = {'neutron':1}
-        cell_fw   = openmc.Cell(region= +surfaces[0] & -surfaces[1] , fill=self.firstwall) 
-        cell_st1  = openmc.Cell(region= +surfaces[1] & -surfaces[2] , fill=self.structure)
-        cell_br1  = openmc.Cell(region= +surfaces[2] & -surfaces[3] , fill=self.blanket)
-        cell_st2  = openmc.Cell(region= +surfaces[3] & -surfaces[4] , fill=self.structure)
-        cell_br2  = openmc.Cell(region= +surfaces[4] & -surfaces[5] , fill=self.blanket)
-        cell_st3  = openmc.Cell(region= +surfaces[5] & -surfaces[6] , fill=self.structure) 
+        cell_fw   = openmc.Cell(cell_id=11, region= +surfaces[0] & -surfaces[1] , fill=self.firstwall) 
+        cell_st1  = openmc.Cell(cell_id=21, region= +surfaces[1] & -surfaces[2] , fill=self.structure)
+        cell_br1  = openmc.Cell(cell_id=31, region= +surfaces[2] & -surfaces[3] , fill=self.blanket)
+        cell_st2  = openmc.Cell(cell_id=22, region= +surfaces[3] & -surfaces[4] , fill=self.structure)
+        cell_br2  = openmc.Cell(cell_id=32, region= +surfaces[4] & -surfaces[5] , fill=self.blanket)
+        cell_st3  = openmc.Cell(cell_id=23, region= +surfaces[5] & -surfaces[6] , fill=self.structure) 
 
         # Void cell with proper boundaries (otherwise causes error with just Polygons)
-        cell_void = openmc.Cell(region= +surfaces[6] & -outer_cylinder & +bottom_plane & -top_plane)
+        cell_void = openmc.Cell(cell_id=99, region= +surfaces[6] & -outer_cylinder & +bottom_plane & -top_plane)
         cell_void.importance = {'neutron':0}
 
         self.cells = [cell_vc, cell_fw, cell_st1, cell_br1, cell_st2, cell_br2, cell_st3, cell_void]
@@ -328,9 +333,87 @@ class Reactor:
         self.settings.particles = int(1e6)
         self.settings.batches = 10
 
+
     @timer
-    def run_openmc(self):
+    def openmc(self):
         self.materials.cross_sections = set_xs_path()
         self.model = openmc.model.Model(self.geometry, self.materials, self.settings, self.tallies)
         self.model.export_to_model_xml(f"./OpenMC/{self.name}/")
         self.model.run(cwd=f"./OpenMC/{self.name}/")
+
+
+    @timer
+    def volumes(self, samples=int(1e8)):
+        """
+        Calculate volumes of all cells using OpenMC's stochastic volume calculation.
+        
+        Args:
+            samples : int : number of samples for stochastic volume calculation
+        
+        Returns:
+            dict : dictionary of cell names/IDs and their calculated volumes
+        """
+        
+        # Get all cells that have materials (exclude voids)
+        cells_to_calc = self.cells # [cell for cell in self.cells if cell.fill == self.blanket] #  is not None]
+        
+        # Create volume calculation settings
+        vol_calc = openmc.VolumeCalculation(cells_to_calc, samples,
+                                            [-1*self.extent_r, -1*self.extent_r, -1*self.extent_z], # lower left of bounding box
+                                            [self.extent_r, self.extent_r, self.extent_z]) # upper right of bounding box
+        
+        # vol_calc.set_trigger(1e-02, 'std_dev')
+
+        # Export volume calculation settings
+        settings = openmc.Settings()
+        settings.volume_calculations = [vol_calc]
+        
+        # Export to XML in the reactor's path
+        os.makedirs(self.path, exist_ok=True)
+        settings.export_to_xml(self.path)
+        
+        # Also need to export materials and geometry if not already done
+        self.materials.export_to_xml(self.path)
+        self.geometry.export_to_xml(self.path)
+        
+        # Run the volume calculation
+        print(f"{Colors.BLUE}Running stochastic volume calculation with {samples} samples...{Colors.END}")
+        openmc.calculate_volumes(cwd=self.path)
+        
+        vol_results = openmc.VolumeCalculation.from_hdf5(f"{self.path}/volume_1.h5")
+        
+        print(f"{Colors.GREEN}Stochastic Volume Calculation Results:{Colors.END}")
+        # print(vol_results.volumes)
+        print(type(vol_results))
+
+        """
+        vol_results.volumes is a dictionary that looks like:
+          {2: "909560.9858392784+/-140318.8308700002",
+           3: "5543990.770829888+/-346055.6196989608"}
+        so we will rewrite it to separate the value from the standev, like this:
+          {2: (909560.9858392784, 140318.8308700002),
+           3: (5543990.770829888, 346055.6196989608)}
+
+        But also whoever designed the output of VolueCalculation.volumes() 
+        honestly needs to WRITE in the god damn documentation that the data is 
+        stored/written using the uncertainties package. I was going crazy using
+        all sorts of regex match patterns to try to understand why splitting the
+        vol_results.volumes.items() into k, v was causing issues vs. what v looked like
+        when I was printing it. It was the uncertainties package changing the formatting
+        of v when you go print it.
+        """
+        vol_dict = {}
+        print(vol_results.volumes)
+        for k, v in vol_results.volumes.items():
+            vol_dict[k] = (v.nominal_value/1e6, v.std_dev/1e6)
+        # vol_dict['sum'] = ( sum(v.nominal_value/1e6 for v in vol_results.volumes.values()),
+        #                     sum(v.std_dev/1e6 for v in vol_results.volumes.values())       )
+
+        df = pd.DataFrame.from_dict(vol_dict, orient='index', columns=['volume_m3', 'stdev_m3'])
+        df.reset_index(inplace=True)
+        df.rename(columns={'index': 'cells'}, inplace=True)
+        df.to_csv(f'{self.path}/data.csv',index=False)
+
+        print("CSV file 'data.csv' created successfully")
+        print(df)
+                
