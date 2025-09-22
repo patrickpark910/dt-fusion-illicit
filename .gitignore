@@ -7,5 +7,6 @@ test/
 *.pyc
 *.w
 *.r
+**.DS_Store
 *rssa
 .gitattributes
