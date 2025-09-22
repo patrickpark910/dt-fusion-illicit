@@ -25,9 +25,10 @@ def main():
 
     ARC_Sorbom     = Specs('ARC (Sorbom 15)',     
                            330, 113, 1.84, 0.45, [(0.3,'fw'), (1,'st1'), (2,'br1'), (3,'st2'), (100,'br2'), (3,'st3')])
-    ARC_Ball_code  = Specs('ARC-class (Ball 25)',
+    ARC_Ball_code  = Specs('ARC-class (Ball 25 code)',
+                           400, 120, 1.5 , 0.5 , [(0.3,'fw'), (1,'st1'), (2,'br1'), (3,'st2'), (100,'br2'), (3,'st3')])
+    ARC_Ball_paper = Specs('ARC-class (Ball 25 paper)',
                            400, 100, 1.6 , 0.5 , [(0.3,'fw'), (1,'st1'), (2,'br1'), (3,'st2'), (100,'br2'), (3,'st3')])
-    # ARC_Ball_paper = Specs(400, 100, 1.6 , 0.5 , [(0.3,'fw'), (1,'st1'), (2,'br1'), (3,'st2'), (100,'br2'), (3,'st3')])
     Emma_FLiBe     = Specs('Emma FLiBe',
                            600, 200, 1.72, 0.4 , [(0.3,'fw'), (1,'st1'), (2,'br1'), (3,'st2'), (100,'br2'), (3,'st3')])
     Emma_LL        = Specs('Emma LL/PB',
@@ -37,7 +38,7 @@ def main():
                            907.2, 292.7, 1.59, 0.33, [(0.2,'fw'), (0.4,'st1'), (2,'br1'), (0.4,'st2'), (22.5,'br2'), (3.2,'st3'), (21.0,'br3'), (3.2,'st4'), (21.0,'br4'), (8.0,'st5')]) 
 
     # plot_separate([ARC_Sorbom, ARC_Ball_code, Emma_FLiBe, Emma_LL, EU_DEMO]) # , ITER_LL, EU_DEMO_PB]
-    plot_together([ARC_Sorbom, ARC_Ball_code, Emma_FLiBe, Emma_LL, EU_DEMO]) # , ITER_LL, EU_DEMO_PB]
+    plot_together([ARC_Sorbom, ARC_Ball_code, ARC_Ball_paper, Emma_FLiBe, Emma_LL, EU_DEMO]) # , ITER_LL, EU_DEMO_PB]
 
 
 def plot_separate(reactors_to_plot, n=10000):

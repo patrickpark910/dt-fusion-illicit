@@ -215,8 +215,8 @@ class Reactor:
             d_br2 = d_st2 + FLIBE_BR2_CM
             d_st3 = d_br2 + FLIBE_ST3_CM
 
-            self.extent_r = (R0 + a + d_st3)*1.1 # 110%
-            self.extent_z = (kappa*a + d_st3)*1.1
+            self.extent_r = (self.R0 + self.a + d_st3)*1.1 # 110%
+            self.extent_z = (self.kappa*self.a + d_st3)*1.1
 
         elif self.breeder_name == 'ARC':
             self.R0, self.a, self.kappa, self.delta = ARC_R0, ARC_A, ARC_KAPPA, ARC_DELTA 
