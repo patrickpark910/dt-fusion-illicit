@@ -62,7 +62,7 @@ class Reactor:
         self.settings()
         self.tallies()
 
-
+    @timer
     def materials(self):
         """
         OpenMC Materials
@@ -200,6 +200,7 @@ class Reactor:
         # self.materials.export_to_xml(self.path)
 
 
+    @timer
     def geometry(self):
 
         # ------------------------------------------------------------------
@@ -281,13 +282,16 @@ class Reactor:
         cell_st3  = openmc.Cell(cell_id=23, region= +surfaces[5] & -surfaces[6] , fill=self.structure) 
 
         # Surrounding air cell with proper boundaries (otherwise causes error with just Polygons)
-        cell_air = openmc.Cell(cell_id=99, region= +surfaces[6] & -outer_cylinder & +bottom_plane & -top_plane, fill=self.air)
+        # cell_air = openmc.Cell(cell_id=99, region= +surfaces[6] & -outer_cylinder & +bottom_plane & -top_plane, fill=self.air)
+        cell_void = openmc.Cell(cell_id=99, region= +surfaces[6] & -outer_cylinder & +bottom_plane & -top_plane)
+        cell_void.importance = {'neutron':0}
 
-        self.cells = [cell_vc, cell_fw, cell_st1, cell_br1, cell_st2, cell_br2, cell_st3, cell_air]
+        self.cells = [cell_vc, cell_fw, cell_st1, cell_br1, cell_st2, cell_br2, cell_st3, cell_void]
         self.geometry = openmc.Geometry(openmc.Universe(cells=self.cells))
         # self.geometry.export_to_xml(self.path)
 
 
+    @timer
     def tallies(self):
         """ 
         TALLIES 
