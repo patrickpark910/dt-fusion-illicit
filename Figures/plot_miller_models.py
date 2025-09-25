@@ -102,7 +102,8 @@ def plot_separate(reactors_to_plot, n=10000):
         ax[i].legend(loc='best', fontsize=8)
 
     plt.tight_layout()
-    # plt.show()
+    plt.show()
+    plt.savefig('tokamaks_separate_sym_asym.png', dpi=300, bbox_inches='tight', transparent=False)  
     
 
 
@@ -185,8 +186,8 @@ def plot_together(reactors_to_plot, n=10000):
     ax.grid(True, alpha=0.3)
     ax.legend(loc='best', fontsize=8)
     plt.tight_layout()
-    # plt.show()
-    # plt.savefig('tokamaks_together_lowres.png', dpi=300, bbox_inches='tight', transparent=False)  
+    plt.show()
+    plt.savefig('tokamaks_together_sym_asym.png', dpi=300, bbox_inches='tight', transparent=False)  
 
 
 
