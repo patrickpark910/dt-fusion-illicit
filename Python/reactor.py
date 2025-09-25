@@ -26,10 +26,10 @@ class Reactor:
             self.breeder_enrich  = ENRICH_FLIBE  # wt% 
             self.breeder_volume  = FLIBE_BR_VOL  # m^3
 
-        # elif blanket.lower() == 'll':
-        #     self.blanket         = 'LL'
-        #     self.blanket_density = DENSITY_LL
-        #     self.blanket_enrich  = ENRICH_LL
+        elif breeder.lower() == 'll':
+            self.blanket         = 'LL'
+            self.blanket_density = DENSITY_LL
+            self.blanket_enrich  = ENRICH_LL
 
         # elif blanket.lower() == 'pb':
         #     self.blanket         = 'PB'
@@ -100,6 +100,14 @@ class Reactor:
             self.firstwall.add_element('Fe',5/1e6,percent_type='wo')
             self.firstwall.add_element('W',1-(5+5+5+4+2.5+3+0.5+0.5+0.5+5)/1e6,percent_type='wo')
             self.firstwall.set_density('g/cm3',19.3)
+
+        elif self.breeder_name in ['LL']:
+            self.firstwall.add_nuclide("W180", 0.00007586640, "ao")
+            self.firstwall.add_nuclide("W182", 0.01675383000, "ao")
+            self.firstwall.add_nuclide("W183", 0.00904706820, "ao")
+            self.firstwall.add_nuclide("W184", 0.01937122080, "ao")
+            self.firstwall.add_nuclide("W186", 0.01797401460, "ao")
+            self.firstwall.set_density("g/cm3", """""FIX""""")  # tungsten density
         
 
         # ------------------------------------------------------------------
@@ -132,27 +140,178 @@ class Reactor:
             self.structure.set_density('g/cm3',6.05) 
             # This density value is sus and needs a good source --jlball 
             # This value is from Metals Handbook, 9th ed, vol 2: "Properties and Selection: Nonferrous Alloys and Pure Metals" (1979) --ppark 2025-07-22
+        
+        elif self.breeder_name in ['LL']:
+            # First wall front (F82H steel)
+            self.firstwall_front = openmc.Material(name='firstwall_front', temperature=self.temp_k)
+            self.firstwall_front.depletable = False
+            self.firstwall_front.add_nuclide("C0",    0.00040000000, "ao")
+            self.firstwall_front.add_nuclide("Si28",  0.00015679100, "ao")
+            self.firstwall_front.add_nuclide("Si29",  0.00000795600, "ao")
+            self.firstwall_front.add_nuclide("Si30",  0.00000525300, "ao")
+            self.firstwall_front.add_nuclide("V51",   0.00018400000, "ao")
+            self.firstwall_front.add_nuclide("Cr50",  0.00031327500, "ao")
+            self.firstwall_front.add_nuclide("Cr52",  0.00604119000, "ao")
+            self.firstwall_front.add_nuclide("Cr53",  0.00068502200, "ao")
+            self.firstwall_front.add_nuclide("Cr54",  0.00017051700, "ao")
+            self.firstwall_front.add_nuclide("Mn55",  0.00008600000, "ao")
+            self.firstwall_front.add_nuclide("Fe54",  0.00438860000, "ao")
+            self.firstwall_front.add_nuclide("Fe56",  0.06889170000, "ao")
+            self.firstwall_front.add_nuclide("Fe57",  0.00159101000, "ao")
+            self.firstwall_front.add_nuclide("Fe58",  0.00021173400, "ao")
+            self.firstwall_front.add_nuclide("Ta181", 0.00001000000, "ao")
+            self.firstwall_front.add_nuclide("W182",  0.00013515000, "ao")
+            self.firstwall_front.add_nuclide("W183",  0.00007298100, "ao")
+            self.firstwall_front.add_nuclide("W184",  0.00015626400, "ao")
+            self.firstwall_front.add_nuclide("W186",  0.00014499300, "ao")
+            self.structure.set_density("g/cm3", """""FIX""""")  # steel density (MCNP table 60)
 
+            self.firstwall_cooling = openmc.Material(name="firstwall_cooling", temperature=self.temp_k)
+            self.firstwall_cooling.depletable = False
+            self.firstwall_cooling.add_nuclide("He4", 0.00049800000, "ao")
+            self.firstwall_cooling.add_nuclide("C0",  0.00006800000, "ao")
+            self.firstwall_cooling.add_nuclide("Si28",0.00002665450, "ao")
+            self.firstwall_cooling.add_nuclide("Si29",0.00000135250, "ao")
+            self.firstwall_cooling.add_nuclide("Si30",0.00000089300, "ao")
+            self.firstwall_cooling.add_nuclide("V51", 0.00003128000, "ao")
+            self.firstwall_cooling.add_nuclide("Cr50",0.00005325680, "ao")
+            self.firstwall_cooling.add_nuclide("Cr52",0.00102700000, "ao")
+            self.firstwall_cooling.add_nuclide("Cr53",0.00011645400, "ao")
+            self.firstwall_cooling.add_nuclide("Cr54",0.00002898790, "ao")
+            self.firstwall_cooling.add_nuclide("Mn55",0.00001462000, "ao")
+            self.firstwall_cooling.add_nuclide("Fe54",0.00074606200, "ao")
+            self.firstwall_cooling.add_nuclide("Fe56",0.01171160000, "ao")
+            self.firstwall_cooling.add_nuclide("Fe57",0.00027047200, "ao")
+            self.firstwall_cooling.add_nuclide("Fe58",0.00003599480, "ao")
+            self.firstwall_cooling.add_nuclide("Ta181",0.00000170000, "ao")
+            self.firstwall_cooling.add_nuclide("W182",0.00002297550, "ao")
+            self.firstwall_cooling.add_nuclide("W183",0.00001240680, "ao")
+            self.firstwall_cooling.add_nuclide("W184",0.00002656490, "ao")
+            self.firstwall_cooling.add_nuclide("W186",0.00002464880, "ao")
+            self.firstwall_cooling.set_density("g/cm3", """""FIX""""")
 
+            self.back_plate = openmc.Material(name="back_plate", temperature=self.temp_k)
+            self.back_plate.depletable = False
+            self.back_plate.add_nuclide("C0",    0.00040000000, "ao")
+            self.back_plate.add_nuclide("Si28",  0.00015679100, "ao")
+            self.back_plate.add_nuclide("Si29",  0.00000795600, "ao")
+            self.back_plate.add_nuclide("Si30",  0.00000525300, "ao")
+            self.back_plate.add_nuclide("V51",   0.00018400000, "ao")
+            self.back_plate.add_nuclide("Cr50",  0.00031327500, "ao")
+            self.back_plate.add_nuclide("Cr52",  0.00604119000, "ao")
+            self.back_plate.add_nuclide("Cr53",  0.00068502200, "ao")
+            self.back_plate.add_nuclide("Cr54",  0.00017051700, "ao")
+            self.back_plate.add_nuclide("Mn55",  0.00008600000, "ao")
+            self.back_plate.add_nuclide("Fe54",  0.00438860000, "ao")
+            self.back_plate.add_nuclide("Fe56",  0.06889170000, "ao")
+            self.back_plate.add_nuclide("Fe57",  0.00159101000, "ao")
+            self.back_plate.add_nuclide("Fe58",  0.00021173400, "ao")
+            self.back_plate.add_nuclide("Ta181", 0.00001000000, "ao")
+            self.back_plate.add_nuclide("W182",  0.00013515000, "ao")
+            self.back_plate.add_nuclide("W183",  0.00007298100, "ao")
+            self.back_plate.add_nuclide("W184",  0.00015626400, "ao")
+            self.back_plate.add_nuclide("W186",  0.00014499300, "ao")
+            self.back_plate.set_density("g/cm3", """FIX""")
         # ------------------------------------------------------------------
         # Breeder material
         # ------------------------------------------------------------------
 
         self.breeder = openmc.Material(name='breeder', temperature=self.temp_k)
-        self.breeder.set_density('g/cm3', self.breeder_density)
+        self.breeder.set_density('g/cm3', self.breeder_density) #"""""checkkk"""""
 
         if self.breeder_name in ['FLiBe','ARC']:
             self.breeder.add_elements_from_formula('F4Li2Be', 'ao', enrichment_target='Li6', enrichment_type='wo', enrichment=self.breeder_enrich)
 
-        # elif self.breeder_name.lower() == 'll':
-        #     breeder.add_element('Pb', 0.83)
-        #     breeder.add_element('Li', 0.17, enrichment=self.breeder_enrich, enrichment_target='Li6', enrichment_type='wo')  # Li-6 enrichment to 90%
+        elif self.breeder_name in ['LL']:
+            # --emma: might need He4...
+            self.breeder.add_element('Pb', 0.83, percent_type='wo')  # Pb isotopes expanded below
+            self.breeder.add_element('Li', 0.17, percent_type='wo',
+                                          enrichment=self.breeder_enrich,
+                                          enrichment_target='Li6',
+                                          enrichment_type='wo') #Li-6 enrichment to 90%
+            self.breeder_pbli.set_density('g/cm3', """""FIX""""")  # Pb-17Li density (MCNP table 60 approx)
 
         # elif self.blanket.lower() == 'pb':
         #     self.blanket_density = DENSITY_PB
         #     self.blanket_enrich  = ENRICH_PB
-        
 
+        # ------------------------------------------------------------------
+        # Divider material
+        # ------------------------------------------------------------------
+        
+        if self.breeder_name in ['LL']:
+            self.divider1 = openmc.Material(name="divider1", temperature=self.temp_k)
+            self.divider1.depletable = False
+            self.divider1.add_nuclide("He4", 0.00029280000, "ao")
+            self.divider1.add_nuclide("C0", 0.00020480000, "ao")
+            self.divider1.add_nuclide("Si28", 0.00008027700, "ao")
+            self.divider1.add_nuclide("Si29", 0.00000407347, "ao")
+            self.divider1.add_nuclide("Si30", 0.00000268954, "ao")
+            self.divider1.add_nuclide("V51", 0.00009420800, "ao")
+            self.divider1.add_nuclide("Cr50", 0.00016039700, "ao")
+            self.divider1.add_nuclide("Cr52", 0.00309309000, "ao")
+            self.divider1.add_nuclide("Cr53", 0.00035073100, "ao")
+            self.divider1.add_nuclide("Cr54", 0.00008730470, "ao")
+            self.divider1.add_nuclide("Mn55", 0.00004403200, "ao")
+            self.divider1.add_nuclide("Fe54", 0.00224696000, "ao")
+            self.divider1.add_nuclide("Fe56", 0.03527260000, "ao")
+            self.divider1.add_nuclide("Fe57", 0.00081459700, "ao")
+            self.divider1.add_nuclide("Fe58", 0.00010840800, "ao")
+            self.divider1.add_nuclide("Ta181", 0.00000512000, "ao")
+            self.divider1.add_nuclide("W182", 0.00006919680, "ao")
+            self.divider1.add_nuclide("W183", 0.00003736630, "ao")
+            self.divider1.add_nuclide("W184", 0.00008000720, "ao")
+            self.divider1.add_nuclide("W186", 0.00007423640, "ao")
+            self.divider1.set_density("g/cm3", """fix""")
+
+            self.divider2 = openmc.Material(name="divider2", temperature=self.temp_k)
+            self.divider2.depletable = False
+            self.divider2.add_nuclide("He4", 0.00029280000, "ao")
+            self.divider2.add_nuclide("C0", 0.00020480000, "ao")
+            self.divider2.add_nuclide("Si28", 0.00008027700, "ao")
+            self.divider2.add_nuclide("Si29", 0.00000407347, "ao")
+            self.divider2.add_nuclide("Si30", 0.00000268954, "ao")
+            self.divider2.add_nuclide("V51", 0.00009420800, "ao")
+            self.divider2.add_nuclide("Cr50", 0.00016039700, "ao")
+            self.divider2.add_nuclide("Cr52", 0.00309309000, "ao")
+            self.divider2.add_nuclide("Cr53", 0.00035073100, "ao")
+            self.divider2.add_nuclide("Cr54", 0.00008730470, "ao")
+            self.divider2.add_nuclide("Mn55", 0.00004403200, "ao")
+            self.divider2.add_nuclide("Fe54", 0.00224696000, "ao")
+            self.divider2.add_nuclide("Fe56", 0.03527260000, "ao")
+            self.divider2.add_nuclide("Fe57", 0.00081459700, "ao")
+            self.divider2.add_nuclide("Fe58", 0.00010840800, "ao")
+            self.divider2.add_nuclide("Ta181", 0.00000512000, "ao")
+            self.divider2.add_nuclide("W182", 0.00006919680, "ao")
+            self.divider2.add_nuclide("W183", 0.00003736630, "ao")
+            self.divider2.add_nuclide("W184", 0.00008000720, "ao")
+            self.divider2.add_nuclide("W186", 0.00007423640, "ao")
+            self.divider2.set_density("g/cm3", """fix""")
+
+            #--INNER MANIFOLD-- 
+            self.inner_manifold = openmc.Material(name="inner_manifold", temperature=self.temp_k)
+            self.inner_manifold.depletable = False
+            self.inner_manifold.add_nuclide("He4", 0.00032820000, "ao")
+            self.inner_manifold.add_nuclide("C0", 0.00018120000, "ao")
+            self.inner_manifold.add_nuclide("Si28", 0.00007102630, "ao")
+            self.inner_manifold.add_nuclide("Si29", 0.00000360407, "ao")
+            self.inner_manifold.add_nuclide("Si30", 0.00000237961, "ao")
+            self.inner_manifold.add_nuclide("V51", 0.00008335200, "ao")
+            self.inner_manifold.add_nuclide("Cr50", 0.00014191400, "ao")
+            self.inner_manifold.add_nuclide("Cr52", 0.00273666000, "ao")
+            self.inner_manifold.add_nuclide("Cr53", 0.00031031500, "ao")
+            self.inner_manifold.add_nuclide("Cr54", 0.00007724420, "ao")
+            self.inner_manifold.add_nuclide("Mn55", 0.00003895800, "ao")
+            self.inner_manifold.add_nuclide("Fe54", 0.00198804000, "ao")
+            self.inner_manifold.add_nuclide("Fe56", 0.03120790000, "ao")
+            self.inner_manifold.add_nuclide("Fe57", 0.00072072800, "ao")
+            self.inner_manifold.add_nuclide("Fe58", 0.00009591550, "ao")
+            self.inner_manifold.add_nuclide("Ta181", 0.00000453000, "ao")
+            self.inner_manifold.add_nuclide("W182", 0.00006122300, "ao")
+            self.inner_manifold.add_nuclide("W183", 0.00003306040, "ao")
+            self.inner_manifold.add_nuclide("W184", 0.00007078760, "ao")
+            self.inner_manifold.add_nuclide("W186", 0.00006568180, "ao")
+            self.inner_manifold.set_density("g/cm3", """FIX""")
         # ------------------------------------------------------------------
         # Fertile material
         # ------------------------------------------------------------------
