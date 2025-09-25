@@ -65,6 +65,23 @@ ENRICH_LL   = 90.0
 
 DENSITY_TRISO = 7 # g/cm3
 
+LL_R0    = 620  # cm - major radius
+LL_A     = 207  # cm - minor radius
+LL_KAPPA = 1.72 #    - elongation
+LL_DELTA = 0.4  #    - triangularity
+
+LL_FW_CM  =   0.2  # cm - first wall
+LL_ST1_CM =   0.4  # cm - structural region 1
+LL_BR1_CM =   2.0  # cm -   breeding region 1
+LL_ST2_CM =   0.4  # cm - structural region 2
+LL_BR2_CM =  22.5  # cm -   breeding region 2
+LL_ST3_CM =   3.2  # cm - structural region 3
+LL_BR3_CM =  21.0  # cm -   breeding region 3
+LL_ST4_CM =   3.2  # cm - structural region 4
+LL_BR4_CM =  21.0  # cm -   breeding region 4
+LL_ST5_CM =   8.0  # cm - structural region 5
+
+LL_BR_VOL = 771.8 # m^3 - analytic vol from plot_miller_models.py
 
 
 
