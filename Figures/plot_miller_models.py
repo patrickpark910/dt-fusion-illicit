@@ -1,5 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+matplotlib.use("Agg")  # non-GUI backend
+import os
+os.makedirs("figures", exist_ok=True)
 
 
 """
@@ -73,37 +76,37 @@ def plot_separate(reactors_to_plot, n=10000):
         if reactor.inboardlayers is not None and reactor.inboardlayers != reactor.outboardlayers:
             # Outboard
             offset_out = 0
-            for d, label in reactor.outboardlayers:
-                offset_out += d
+            for d, label in enumerate(reactor.outboardlayers):
+                offset_out += label[0]
                 (R_in, Z_in, _), (R_out, Z_out, _) = miller_offset_split(
                     t, reactor.R0, reactor.a, reactor.kappa, reactor.delta,
                     d_in=0, d_out=offset_out, calc_vol=False
                 )
-                ax[i].plot(R_out, Z_out, '-', color=color, linewidth=1, label=f'OB {label}')
+                ax[i].plot(R_out, Z_out, '-', color=color, linewidth=1, label=f'OB {label[1]}')
 
             # Inboard
             offset_in = 0
-            for d, label in reactor.inboardlayers:
-                offset_in += d
+            for d, label in enumerate(reactor.inboardlayers):
+                offset_in += label[0]
                 (R_in, Z_in, _), (R_out, Z_out, _) = miller_offset_split(
                     t, reactor.R0, reactor.a, reactor.kappa, reactor.delta,
                     d_in=offset_in, d_out=0, calc_vol=False
                 )
-                ax[i].plot(R_in, Z_in, '--', color=color, linewidth=1, label=f'IB {label}')
+                ax[i].plot(R_in, Z_in, '--', color=color, linewidth=1, label=f'IB {label[1]}')
 
         # --- Case 2: symmetric (use old loop) ---
         else:
             offset = 0
-            for d, label in reactor.outboardlayers:
-                offset += d
+            for d, label in enumerate(reactor.outboardlayers):
+                offset += label[0]
                 R_offset, Z_offset, _ = miller_offset(t, reactor.R0, reactor.a, reactor.kappa, reactor.delta, offset)
-                ax[i].plot(R_offset, Z_offset, '-', color=color, linewidth=1, label=f'{label}')
+                ax[i].plot(R_offset, Z_offset, '-', color=color, linewidth=1, label=f'{label[1]}')
 
         ax[i].legend(loc='best', fontsize=8)
 
     plt.tight_layout()
-    # plt.show()
-    
+    plt.show()
+    plt.savefig('tokamaks_sym_asym.png', dpi=300, bbox_inches='tight', transparent=False)  
 
 
 def plot_together(reactors_to_plot, n=10000):
@@ -128,30 +131,30 @@ def plot_together(reactors_to_plot, n=10000):
         if reactor.inboardlayers is not None and reactor.inboardlayers != reactor.outboardlayers:
             # --- Outboard layers ---
             offset_out, V_out_prev = 0, VPlasma
-            for d, tag in reactor.outboardlayers:
-                offset_out += d
+            for d, tag in enumerate(reactor.outboardlayers):
+                offset_out += tag[0]
                 (R_in, Z_in, V_in), (R_out, Z_out, V_out) = miller_offset_split(
                     t, reactor.R0, reactor.a, reactor.kappa, reactor.delta,
                     d_in=0, d_out=offset_out, calc_vol=True
                 )
                 dV_out = V_out - V_out_prev
                 print(f"{reactor.name}  OUT {tag[1]} vol = {dV_out/1e6:.4f} m^3")
-                if layer[1].startswith('br'):
+                if tag[1].startswith('br'):
                     breeding_vol += dV_out
                 V_out_prev = V_out
                 ax.plot(R_out, Z_out, color=color, linestyle='-', linewidth=1)
 
             # --- Inboard layers ---
             offset_in, V_in_prev = 0, VPlasma
-            for d, tag in reactor.inboardlayers:
-                offset_in += d
+            for d, tag in enumerate(reactor.inboardlayers):
+                offset_in += tag[0]
                 (R_in, Z_in, V_in), (R_out, Z_out, V_out) = miller_offset_split(
                     t, reactor.R0, reactor.a, reactor.kappa, reactor.delta,
                     d_in=offset_in, d_out=0, calc_vol=True
                 )
                 dV_in = V_in - V_in_prev
-                print(f"{reactor.name} IN {tag} vol = {dV_in/1e6:.4f} m^3")
-                if layer[1].startswith('br'):
+                print(f"{reactor.name} IN {tag[1]} vol = {dV_in/1e6:.4f} m^3")
+                if tag[1].startswith('br'):
                     breeding_vol += dV_in 
                 V_in_prev = V_in
                 ax.plot(R_in, Z_in, color=color, linestyle='-', linewidth=1)
@@ -185,8 +188,8 @@ def plot_together(reactors_to_plot, n=10000):
     ax.grid(True, alpha=0.3)
     ax.legend(loc='best', fontsize=8)
     plt.tight_layout()
-    # plt.show()
-    # plt.savefig('tokamaks_together_lowres.png', dpi=300, bbox_inches='tight', transparent=False)  
+    plt.show()
+    plt.savefig('tokamaks_together_sym_asym.png', dpi=300, bbox_inches='tight', transparent=False)  
 
 
 
