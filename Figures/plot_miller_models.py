@@ -1,6 +1,8 @@
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-matplotlib.use("Agg")  # non-GUI backend
+
 import os
 os.makedirs("figures", exist_ok=True)
 
@@ -36,13 +38,13 @@ def main():
     Emma_FLiBe     = Specs('Emma FLiBe',
                            600, 200, 1.72, 0.4 , [(0.3,'fw'), (1,'st1'), (2,'br1'), (3,'st2'), (100,'br2'), (3,'st3')])
     Emma_LL        = Specs('Emma LL/PB',
-                           620, 207, 1.72, 0.4 , [(0.2,'fw'), (0.4,'fwf'), (2,'fwc'), (0.4,'fwb'), (22.5,'br1'), (3.2,'d1'), (21.0,'br2'), (3.2,'d2'), (21.0,'br3'), (8.0,'im'), (1.5, 'bp')], 
-                           [(0.2,'fw'), (0.4,'fwf'), (2,'fwc'), (0.4,'fwb'), (22.5,'br1'), (3.2,'d1'), (21.0,'br2'), (8.0,'im'), (1.5, 'bp')])
-    
+                           620, 207, 1.72, 0.4 , [(0.2,'fwplasma'), (0.4,'fwf'), (2,'fwc'), (0.4,'fwb'), (22.5,'br1'), (3.2,'d1'), (21.0,'br2'), (3.2,'d2'), (21.0,'br3'), (8.0,'im'), (1.5, 'bp')], 
+                           [(0.2,'fwplasma'), (0.4,'fwf'), (2,'fwc'), (0.4,'fwb'), (22.5,'br1'), (3.2,'d1'), (21.0,'br2'), (8.0,'im'), (1.5, 'bp')])
+    #fw+plasma just for volume, instead of subtracting the volume of my plasma hemispheres
+    #just total the first wall and plasma volume
     EU_DEMO        = Specs('EU DEMO',
                            907.2, 292.7, 1.59, 0.33, [(0.2,'fw'), (0.4,'st1'), (2,'br1'), (0.4,'st2'), (22.5,'br2'), (3.2,'st3'), (21.0,'br3'), (3.2,'st4'), (21.0,'br4'), (8.0,'st5')]) 
-
-    # plot_separate([ARC_Sorbom, ARC_Ball_code, Emma_FLiBe, Emma_LL, EU_DEMO]) # , ITER_LL, EU_DEMO_PB]
+    plot_separate([ARC_Sorbom, ARC_Ball_code, Emma_FLiBe, Emma_LL, EU_DEMO]) # , ITER_LL, EU_DEMO_PB]
     plot_together([ARC_Sorbom, ARC_Ball_code, ARC_Ball_paper, Emma_FLiBe, Emma_LL, EU_DEMO]) # , ITER_LL, EU_DEMO_PB]
 
 
@@ -66,11 +68,11 @@ def plot_separate(reactors_to_plot, n=10000):
         ax[i].set_title(f'{reactor.name}', fontsize=10)
         ax[i].grid(True, alpha=0.3)
         # ax[i].axis('equal')
-        ax[i].legend(loc='best', fontsize=8)
+        
 
         # Plasma shape
-        R, Z, V = miller_offset(t, reactor.R0, reactor.a, reactor.kappa, reactor.delta, 0)
-        ax[i].plot(R, Z, '-', color=color, linewidth=1) # , label='Original Miller D-shape')
+        R, Z, _ = miller_offset(t, reactor.R0, reactor.a, reactor.kappa, reactor.delta, 0)
+        ax[i].plot(R, Z, '-', color=color, linewidth=1,label=reactor.name) # , label='Original Miller D-shape')
         
         # --- Case 1: asymmetric (separate inboard vs outboard) ---
         if reactor.inboardlayers is not None and reactor.inboardlayers != reactor.outboardlayers:
@@ -78,21 +80,21 @@ def plot_separate(reactors_to_plot, n=10000):
             offset_out = 0
             for d, label in enumerate(reactor.outboardlayers):
                 offset_out += label[0]
-                (R_in, Z_in, _), (R_out, Z_out, _) = miller_offset_split(
+                (R_in, Z_in), (R_out, Z_out) = miller_offset_split(
                     t, reactor.R0, reactor.a, reactor.kappa, reactor.delta,
                     d_in=0, d_out=offset_out, calc_vol=False
                 )
-                ax[i].plot(R_out, Z_out, '-', color=color, linewidth=1, label=f'OB {label[1]}')
+                ax[i].plot(R_out, Z_out, '-', color=color, linewidth=1)
 
             # Inboard
             offset_in = 0
             for d, label in enumerate(reactor.inboardlayers):
                 offset_in += label[0]
-                (R_in, Z_in, _), (R_out, Z_out, _) = miller_offset_split(
+                (R_in, Z_in), (R_out, Z_out) = miller_offset_split(
                     t, reactor.R0, reactor.a, reactor.kappa, reactor.delta,
                     d_in=offset_in, d_out=0, calc_vol=False
                 )
-                ax[i].plot(R_in, Z_in, '--', color=color, linewidth=1, label=f'IB {label[1]}')
+                ax[i].plot(R_in, Z_in, '--', color=color, linewidth=1)
 
         # --- Case 2: symmetric (use old loop) ---
         else:
@@ -100,14 +102,12 @@ def plot_separate(reactors_to_plot, n=10000):
             for d, label in enumerate(reactor.outboardlayers):
                 offset += label[0]
                 R_offset, Z_offset, _ = miller_offset(t, reactor.R0, reactor.a, reactor.kappa, reactor.delta, offset)
-                ax[i].plot(R_offset, Z_offset, '-', color=color, linewidth=1, label=f'{label[1]}')
-
-        ax[i].legend(loc='best', fontsize=8)
+                ax[i].plot(R_offset, Z_offset, '-', color=color, linewidth=1)
+        ax[i].legend(fontsize=8, loc="best")
 
     plt.tight_layout()
-    plt.show()
-    plt.savefig('tokamaks_sym_asym.png', dpi=300, bbox_inches='tight', transparent=False)  
 
+    plt.savefig('tokamaks_seperate_sym_asym.png', dpi=300, bbox_inches='tight', transparent=False)  
 
 def plot_together(reactors_to_plot, n=10000):
     fig, ax = plt.subplots(1, 1, figsize=(10, 8))  # Single subplot
@@ -130,7 +130,8 @@ def plot_together(reactors_to_plot, n=10000):
         # Asymmetric inboard and outboard layers
         if reactor.inboardlayers is not None and reactor.inboardlayers != reactor.outboardlayers:
             # --- Outboard layers ---
-            offset_out, V_out_prev = 0, VPlasma
+            offset_out, V_out_prev = 0, 0
+            print(f"\n{reactor.name} Plasma volume = {VPlasma/1e6:.4f} m^3")
             for d, tag in enumerate(reactor.outboardlayers):
                 offset_out += tag[0]
                 (R_in, Z_in, V_in), (R_out, Z_out, V_out) = miller_offset_split(
@@ -142,10 +143,11 @@ def plot_together(reactors_to_plot, n=10000):
                 if tag[1].startswith('br'):
                     breeding_vol += dV_out
                 V_out_prev = V_out
+
                 ax.plot(R_out, Z_out, color=color, linestyle='-', linewidth=1)
 
             # --- Inboard layers ---
-            offset_in, V_in_prev = 0, VPlasma
+            offset_in, V_in_prev = 0, 0
             for d, tag in enumerate(reactor.inboardlayers):
                 offset_in += tag[0]
                 (R_in, Z_in, V_in), (R_out, Z_out, V_out) = miller_offset_split(
@@ -153,6 +155,7 @@ def plot_together(reactors_to_plot, n=10000):
                     d_in=offset_in, d_out=0, calc_vol=True
                 )
                 dV_in = V_in - V_in_prev
+                
                 print(f"{reactor.name} IN {tag[1]} vol = {dV_in/1e6:.4f} m^3")
                 if tag[1].startswith('br'):
                     breeding_vol += dV_in 
@@ -188,7 +191,7 @@ def plot_together(reactors_to_plot, n=10000):
     ax.grid(True, alpha=0.3)
     ax.legend(loc='best', fontsize=8)
     plt.tight_layout()
-    plt.show()
+   
     plt.savefig('tokamaks_together_sym_asym.png', dpi=300, bbox_inches='tight', transparent=False)  
 
 
@@ -237,13 +240,12 @@ def split_inboard_outboard(R, Z):
         R2, Z2 = R[i_bot:i_top+1], Z[i_bot:i_top+1]
 
     # Now decide which is inboard vs outboard
-    # Outboard has larger R (to the right)
     if np.mean(R1) > np.mean(R2):
-        R_out, Z_out = R1, Z1
-        R_in, Z_in   = R2, Z2
+        R_in, Z_in = R1, Z1
+        R_out, Z_out   = R2, Z2
     else:
-        R_out, Z_out = R2, Z2
-        R_in, Z_in   = R1, Z1
+        R_in, Z_in = R2, Z2
+        R_out, Z_out   = R1, Z1
 
     return (R_in, Z_in), (R_out, Z_out)
 
@@ -331,11 +333,11 @@ def miller_offset_split(t, R0, a, kappa, delta, d_in, d_out, calc_vol=True):
     i_bot = np.argmin(Z)
 
     if i_top < i_bot:
-        idx_out = np.arange(i_top, i_bot+1)
-        idx_in  = np.concatenate([np.arange(i_bot, len(R)), np.arange(0, i_top+1)])
+        idx_in = np.arange(i_top, i_bot+1)
+        idx_out  = np.concatenate([np.arange(i_bot, len(R)), np.arange(0, i_top+1)])
     else:
-        idx_out = np.concatenate([np.arange(i_top, len(R)), np.arange(0, i_bot+1)])
-        idx_in  = np.arange(i_bot, i_top+1)
+        idx_in = np.concatenate([np.arange(i_top, len(R)), np.arange(0, i_bot+1)])
+        idx_out  = np.arange(i_bot, i_top+1)
 
     # Apply different offsets
     R_out = R[idx_out] + d_out * N_R_unit[idx_out]
