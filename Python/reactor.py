@@ -107,18 +107,18 @@ class Reactor:
             self.firstwall.add_nuclide("W183", 0.00904706820, "ao")
             self.firstwall.add_nuclide("W184", 0.01937122080, "ao")
             self.firstwall.add_nuclide("W186", 0.01797401460, "ao")
-            self.firstwall.set_density("g/cm3", """""FIX""""")  # tungsten density
+            self.firstwall.set_density("g/cm3", 19.3)  # tungsten density from mcnp 0.06322200000 atomic density in atoms/barn-cm
         
 
         # ------------------------------------------------------------------
         # Structure 
         # ------------------------------------------------------------------
 
-        self.structure = openmc.Material(name='structure', temperature=self.temp_k)
-        self.structure.depletable = False
 
         if self.breeder_name in ['FLiBe','ARC']:
             """ V-4Cr-4Ti """
+            self.structure = openmc.Material(name='structure', temperature=self.temp_k)
+            self.structure.depletable = False
             # This code is from jlball but V-4Cr-4Ti specs also can be found
             # from ANL material id BL-47, p.3 (1994) altho these are slightly different
             # cf. osti.gov/servlets/purl/10194461 --ppark 2025-07-22
@@ -159,12 +159,12 @@ class Reactor:
             self.firstwall_front.add_nuclide("Fe56",  0.06889170000, "ao")
             self.firstwall_front.add_nuclide("Fe57",  0.00159101000, "ao")
             self.firstwall_front.add_nuclide("Fe58",  0.00021173400, "ao")
-            self.firstwall_front.add_nuclide("Ta181", 0.00001000000, "ao")
+            self.firstwall_front.add_nuclide("Ta181",  0.00001000000, "ao") 
             self.firstwall_front.add_nuclide("W182",  0.00013515000, "ao")
             self.firstwall_front.add_nuclide("W183",  0.00007298100, "ao")
             self.firstwall_front.add_nuclide("W184",  0.00015626400, "ao")
             self.firstwall_front.add_nuclide("W186",  0.00014499300, "ao")
-            self.structure.set_density("g/cm3", """""FIX""""")  # steel density (MCNP table 60)
+            self.firstwall_front.set_density("atom/b-cm", 0.08365243600)  # from MCNP cell 112
 
             self.firstwall_cooling = openmc.Material(name="firstwall_cooling", temperature=self.temp_k)
             self.firstwall_cooling.depletable = False
@@ -188,7 +188,7 @@ class Reactor:
             self.firstwall_cooling.add_nuclide("W183",0.00001240680, "ao")
             self.firstwall_cooling.add_nuclide("W184",0.00002656490, "ao")
             self.firstwall_cooling.add_nuclide("W186",0.00002464880, "ao")
-            self.firstwall_cooling.set_density("g/cm3", """""FIX""""")
+            self.firstwall_cooling.set_density("atom/b-cm", 0.01471892350)
 
             self.back_plate = openmc.Material(name="back_plate", temperature=self.temp_k)
             self.back_plate.depletable = False
@@ -211,7 +211,7 @@ class Reactor:
             self.back_plate.add_nuclide("W183",  0.00007298100, "ao")
             self.back_plate.add_nuclide("W184",  0.00015626400, "ao")
             self.back_plate.add_nuclide("W186",  0.00014499300, "ao")
-            self.back_plate.set_density("g/cm3", """FIX""")
+            self.back_plate.set_density("atom/b-cm", 0.08365243600)
         # ------------------------------------------------------------------
         # Breeder material
         # ------------------------------------------------------------------
@@ -229,7 +229,7 @@ class Reactor:
                                           enrichment=self.breeder_enrich,
                                           enrichment_target='Li6',
                                           enrichment_type='wo') #Li-6 enrichment to 90%
-            self.breeder_pbli.set_density('g/cm3', """""FIX""""")  # Pb-17Li density (MCNP table 60 approx)
+            self.breeder.set_density("atom/b-cm",  0.03560280138)  # Pb-17Li density MCNP table
 
         # elif self.blanket.lower() == 'pb':
         #     self.blanket_density = DENSITY_PB
@@ -262,7 +262,7 @@ class Reactor:
             self.divider1.add_nuclide("W183", 0.00003736630, "ao")
             self.divider1.add_nuclide("W184", 0.00008000720, "ao")
             self.divider1.add_nuclide("W186", 0.00007423640, "ao")
-            self.divider1.set_density("g/cm3", """fix""")
+            self.divider1.set_density("atom/b-cm", 0.04312289441)
 
             self.divider2 = openmc.Material(name="divider2", temperature=self.temp_k)
             self.divider2.depletable = False
@@ -286,7 +286,7 @@ class Reactor:
             self.divider2.add_nuclide("W183", 0.00003736630, "ao")
             self.divider2.add_nuclide("W184", 0.00008000720, "ao")
             self.divider2.add_nuclide("W186", 0.00007423640, "ao")
-            self.divider2.set_density("g/cm3", """fix""")
+            self.divider2.set_density("atom/b-cm", 0.04312289441)
 
             #--INNER MANIFOLD-- 
             self.inner_manifold = openmc.Material(name="inner_manifold", temperature=self.temp_k)
@@ -311,7 +311,7 @@ class Reactor:
             self.inner_manifold.add_nuclide("W183", 0.00003306040, "ao")
             self.inner_manifold.add_nuclide("W184", 0.00007078760, "ao")
             self.inner_manifold.add_nuclide("W186", 0.00006568180, "ao")
-            self.inner_manifold.set_density("g/cm3", """FIX""")
+            self.inner_manifold.set_density("atom/b-cm", 0.03822271948)
         # ------------------------------------------------------------------
         # Fertile material
         # ------------------------------------------------------------------
@@ -326,9 +326,35 @@ class Reactor:
                 self.fertile.add_elements_from_formula('ThF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
                 self.fertile.set_density('g/cm3', DENSITY_ThF4) 
 
-        # elif self.breeder_name in ['LL', 'PB']:
-        #     if self.fertile_element == 'U':
-        #         pass  # UO2 pebbles
+        elif self.breeder_name in ['LL', 'PB']:
+           if self.fertile_element == 'U':
+                # UO2 kernel (enriched uranium)
+                uo2 = openmc.Material(name='UO2')
+                uo2.add_elements_from_formula('UO2', enrichment=ENRICH_U,
+                                            enrichment_target='U235',
+                                            enrichment_type='wo')  
+                uo2.set_density('g/cm3', 10.5)  # nominal UO2 density
+
+                # SiC coating
+                sic = openmc.Material(name='SiC')
+                sic.add_elements_from_formula('SiC')
+                sic.set_density('g/cm3', 3.2)
+
+                # Glaser & Goldston BISO particles used for simplicity
+        # # and to validate our results with their model
+        # # BISO particles include our fuel pellet coated in one layer of SiC
+
+        # r_uo2 = 400e-4  # r = 400 μm = 0.0400 cm // "800 μm kernel"
+        # r_sic = 500e-4  # 500 μm = 0.0500 cm // "100 μm thickness"
+        # V_biso_particle = (4 / 3) * np.pi * (r_sic)**3     # volume of single BISO particle
+        # V_uo2_in_biso   = (4 / 3) * np.pi * (r_uo2)**3     # volume of UO2 in single BISO particle
+        # Vf_uo2_in_biso  = V_uo2_in_biso / V_biso_particle  # vol frac UO2 in single BISO
+        # Vf_sic_in_biso  = 1.0 - Vf_uo2_in_biso             # vol frac SiC in single BISO
+
+        # biso = openmc.Material.mix_materials([uo2, sic], [Vf_uo2_in_biso, Vf_sic_in_biso], 'vo')
+                biso.set_density('g/cm3', DENSITY_BISO)  
+
+                self.fertile = biso
         #     elif self.fertile_element == 'Th':
         #         pass  # ThO2 pebbles
 
