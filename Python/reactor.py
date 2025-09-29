@@ -28,9 +28,9 @@ class Reactor:
 
         elif breeder.lower() == 'll':
             self.temp_k          = TEMP_K
-            self.blanket         = 'LL'
-            self.blanket_density = DENSITY_LL # g/cm^3
-            self.blanket_enrich  = ENRICH_LL  # wt% 
+            self.breeder_name    = 'LL'
+            self.breeder_density = DENSITY_LL # g/cm^3
+            self.breeder_enrich  = ENRICH_LL  # wt% 
             self.breeder_volume  = LL_BR_VOL  # m^3 must check could be fishy -ezoccoli
 
         # elif blanket.lower() == 'pb':
@@ -227,12 +227,8 @@ class Reactor:
         elif self.breeder_name in ['LL']:
             # --emma: might need He4...
             self.breeder.add_element('Pb', 0.83, percent_type='wo')  # Pb isotopes expanded below
-            self.breeder.add_element('Li', 0.17, percent_type='wo',
-                                          enrichment=self.breeder_enrich,
-                                          enrichment_target='Li6',
-                                          enrichment_type='wo') #Li-6 enrichment to 90%
-            self.breeder.set_density("atom/b-cm",  0.03560280138)  # Pb-17Li density MCNP table
-
+            self.breeder.add_element('Li', 0.17, percent_type='wo', enrichment=self.breeder_enrich, enrichment_target='Li6', enrichment_type='wo') #Li-6 enrichment to 90%
+        
         # elif self.blanket.lower() == 'pb':
         #     self.blanket_density = DENSITY_PB
         #     self.blanket_enrich  = ENRICH_PB
@@ -357,6 +353,7 @@ class Reactor:
                 biso.set_density('g/cm3', DENSITY_BISO)  
 
                 self.fertile = biso
+
         #     elif self.fertile_element == 'Th':
         #         pass  # ThO2 pebbles
 
@@ -376,12 +373,12 @@ class Reactor:
             
 
         elif self.breeder_name in ['LL']:
-            breeder_mass_frac, fertile_mass_frac = calc_blanket_mass_fracs(self.fertile_bulk_density_kgm3,
+            breeder_mass_frac, fertile_compound_mass_frac = calc_biso_blanket_mass_fracs(self.fertile_bulk_density_kgm3,
                                                                         self.breeder_volume,
                                                                         fertile_element=self.fertile_element,
                                                                         fertile_enrich=ENRICH_U,
                                                                         breeder_density_kgm3=DENSITY_LL*1e3)
-            self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [breeder_mass_frac, fertile_mass_frac], 'wo')
+            self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [breeder_mass_frac, fertile_compound_mass_frac], 'wo')
             self.blanket.name, self.blanket.temperature = self.name, self.temp_k
 
 
@@ -391,8 +388,8 @@ class Reactor:
         if self.breeder_name  in ['FLiBe','ARC']:
             self.materials = openmc.Materials([self.air, self.firstwall, self.firstwall_front, self.firstwall_cooling, self.backplate, self.blanket])
             # self.materials.export_to_xml(self.path)
-        elif self.breeder_name in ['LL']:
-            self.materials = openmc.Materials([self.air, self.firstwall, self.firstwall_cooling, self.back_plate, self.divider1, self.divider2, self.inner_manifold, self.blanket])
+        elif self.breeder_name == 'LL':
+            self.materials = openmc.Materials([self.air, self.firstwall, self.firstwall_cooling, self.divider1, self.divider2, self.inner_manifold, self.blanket]) #check if need to add self.backplate
 
     @timer
     def geometry(self):
@@ -426,45 +423,122 @@ class Reactor:
             self.extent_z = (self.kappa*self.a + d_st3)*1.2
         
         elif self.breeder_name == 'LL':
-            
+            self.R0, self.a, self.kappa, self.delta = LL_R0, LL_A, LL_KAPPA, LL_DELTA
 
+            #----Outboard thickness stack----
+            d_fw_o   = LL_FW_O_CM
+            d_fwf_o  = d_fw_o   + LL_FWF_O_CM
+            d_fwc_o  = d_fwf_o  + LL_FWC_O_CM
+            d_fwb_o  = d_fwc_o  + LL_FWB_O_CM
+            d_br1_o  = d_fwb_o  + LL_BR1_O_CM
+            d_d1_o   = d_br1_o  + LL_D1_O_CM
+            d_br2_o  = d_d1_o   + LL_BR2_O_CM
+            d_d2_o   = d_br2_o  + LL_D2_O_CM
+            d_br3_o  = d_d2_o   + LL_BR3_O_CM
+            d_im_o  = d_br3_o  + LL_IM_O_CM
+
+            #----Inboard thickness stack----
+            d_fw_i   = LL_FW_I_CM
+            d_fwf_i  = d_fw_i   + LL_FWF_I_CM
+            d_fwc_i  = d_fwf_i  + LL_FWC_I_CM
+            d_fwb_i  = d_fwc_i  + LL_FWB_I_CM
+            d_br1_i  = d_fwb_i  + LL_BR1_I_CM
+            d_d1_i   = d_br1_i  + LL_D1_I_CM
+            d_br2_i  = d_d1_i   + LL_BR2_I_CM
+            d_im_i  = d_br2_i  + LL_IM_I_CM
+
+            # Take the larger of outboard vs inboard stack for safety margin (check, i think it could be reversed -ezoccoli)
+            d_outboard = d_im_o
+            d_inboard  = d_im_i
+            d_total    = max(d_outboard, d_inboard)
+
+            self.extent_r = (self.R0 + self.a + d_total) * 1.2   # 110% radial extent
+            self.extent_z = (self.kappa*self.a + d_total) * 1.2  # 110% vertical extent
 
         # ------------------------------------------------------------------
         # Surfaces 
         # ------------------------------------------------------------------
+        if self.breeder_name  in ['FLiBe','ARC']:
+            # Arrays of a (minor r) and z points
+            points_vc  =  miller_model(self.R0, self.a, self.kappa, self.delta)         # coords around vacuum chamber
+            points_fw  = miller_offset(self.R0, self.a, self.kappa, self.delta, d_fw)   # outer coords around first wall
+            points_st1 = miller_offset(self.R0, self.a, self.kappa, self.delta, d_st1)  # outer coords around structural region 1
+            points_br1 = miller_offset(self.R0, self.a, self.kappa, self.delta, d_br1)  # outer coords around breeding region 1
+            points_st2 = miller_offset(self.R0, self.a, self.kappa, self.delta, d_st2)  # outer coords around structural region 2
+            points_br2 = miller_offset(self.R0, self.a, self.kappa, self.delta, d_br2)  # outer coords around breeding region 2
+            points_st3 = miller_offset(self.R0, self.a, self.kappa, self.delta, d_st3)  # outer coords around structural region 3
 
-        # Arrays of a (minor r) and z points
-        points_vc  =  miller_model(self.R0, self.a, self.kappa, self.delta)         # coords around vacuum chamber
-        points_fw  = miller_offset(self.R0, self.a, self.kappa, self.delta, d_fw)   # outer coords around first wall
-        points_st1 = miller_offset(self.R0, self.a, self.kappa, self.delta, d_st1)  # outer coords around structural region 1
-        points_br1 = miller_offset(self.R0, self.a, self.kappa, self.delta, d_br1)  # outer coords around breeding region 1
-        points_st2 = miller_offset(self.R0, self.a, self.kappa, self.delta, d_st2)  # outer coords around structural region 2
-        points_br2 = miller_offset(self.R0, self.a, self.kappa, self.delta, d_br2)  # outer coords around breeding region 2
-        points_st3 = miller_offset(self.R0, self.a, self.kappa, self.delta, d_st3)  # outer coords around structural region 3
+            # Create OpenMC surfaces and STORE THEM AS CLASS ATTRIBUTES for tally use
+            self.surface_vc  = openmc.model.Polygon(points_vc , basis='rz')  # Plasma-facing surface (inner FW)
+            self.surface_fw  = openmc.model.Polygon(points_fw , basis='rz')  # Outer surface of first wall
+            self.surface_st1 = openmc.model.Polygon(points_st1, basis='rz')
+            self.surface_br1 = openmc.model.Polygon(points_br1, basis='rz')
+            self.surface_st2 = openmc.model.Polygon(points_st2, basis='rz')
+            self.surface_br2 = openmc.model.Polygon(points_br2, basis='rz')
+            self.surface_st3 = openmc.model.Polygon(points_st3, basis='rz')
 
-        # Create OpenMC surfaces and STORE THEM AS CLASS ATTRIBUTES for tally use
-        self.surface_vc  = openmc.model.Polygon(points_vc , basis='rz')  # Plasma-facing surface (inner FW)
-        self.surface_fw  = openmc.model.Polygon(points_fw , basis='rz')  # Outer surface of first wall
-        self.surface_st1 = openmc.model.Polygon(points_st1, basis='rz')
-        self.surface_br1 = openmc.model.Polygon(points_br1, basis='rz')
-        self.surface_st2 = openmc.model.Polygon(points_st2, basis='rz')
-        self.surface_br2 = openmc.model.Polygon(points_br2, basis='rz')
-        self.surface_st3 = openmc.model.Polygon(points_st3, basis='rz')
+            # Create OpenMC surfaces
+            surfaces = [self.surface_vc, self.surface_fw, self.surface_st1, 
+                        self.surface_br1, self.surface_st2, self.surface_br2, self.surface_st3]
 
-        # Create OpenMC surfaces
-        surfaces = [self.surface_vc, self.surface_fw, self.surface_st1, 
-                    self.surface_br1, self.surface_st2, self.surface_br2, self.surface_st3]
+            # Add boundary surfaces
+            # r_max = max([point[0] for point in points_st3]) + 1.0  # 1 cm beyond outermost surface
+            # z_max = max([point[1] for point in points_st3]) + 1.0
+            # z_min = min([point[1] for point in points_st3]) - 1.0
 
-        # Add boundary surfaces
-        # r_max = max([point[0] for point in points_st3]) + 1.0  # 1 cm beyond outermost surface
-        # z_max = max([point[1] for point in points_st3]) + 1.0
-        # z_min = min([point[1] for point in points_st3]) - 1.0
+            outer_cylinder = openmc.ZCylinder(r=self.extent_r, boundary_type='vacuum')
+            top_plane      = openmc.ZPlane(z0=self.extent_z, boundary_type='vacuum')
+            bottom_plane   = openmc.ZPlane(z0=-self.extent_z, boundary_type='vacuum')
+        
+        elif self.breeder_name == 'LL':
+             # ---- Outboard offsets ----
+            points_fw_o   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_fw_o)
+            points_fwf_o  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_fwf_o)
+            points_fwc_o  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_fwc_o)
+            points_fwb_o  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_fwb_o)
+            points_br1_o  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_br1_o)
+            points_d1_o   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_d1_o)
+            points_br2_o  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_br2_o)
+            points_d2_o   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_d2_o)
+            points_br3_o  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_br3_o)
+            points_im_o   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_im_o)
 
-        outer_cylinder = openmc.ZCylinder(r=self.extent_r, boundary_type='vacuum')
-        top_plane      = openmc.ZPlane(z0=self.extent_z, boundary_type='vacuum')
-        bottom_plane   = openmc.ZPlane(z0=-self.extent_z, boundary_type='vacuum')
+            # ---- Inboard offsets ----
+            points_fw_i   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_fw_i, 0)
+            points_fwf_i  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_fwf_i, 0)
+            points_fwc_i  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_fwc_i, 0)
+            points_fwb_i  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_fwb_i, 0)
+            points_br1_i  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_br1_i, 0)
+            points_d1_i   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_d1_i, 0)
+            points_br2_i  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_br2_i, 0)
+            points_im_i   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_im_i, 0)
 
+             # ---- Store as surfaces ----
+            self.surface_vc = openmc.model.Polygon(points_vc , basis='rz')
 
+            # Outboard surfaces
+            self.surface_fw_o   = openmc.model.Polygon(points_fw_o, basis='rz')
+            self.surface_fwf_o  = openmc.model.Polygon(points_fwf_o, basis='rz')
+            self.surface_fwc_o  = openmc.model.Polygon(points_fwc_o, basis='rz')
+            self.surface_fwb_o  = openmc.model.Polygon(points_fwb_o, basis='rz')
+            self.surface_br1_o  = openmc.model.Polygon(points_br1_o, basis='rz')
+            self.surface_d1_o   = openmc.model.Polygon(points_d1_o,  basis='rz')
+            self.surface_br2_o  = openmc.model.Polygon(points_br2_o, basis='rz')
+            self.surface_d2_o   = openmc.model.Polygon(points_d2_o,  basis='rz')
+            self.surface_br3_o  = openmc.model.Polygon(points_br3_o, basis='rz')
+            self.surface_im_o   = openmc.model.Polygon(points_im_o,  basis='rz')
+
+            # Inboard surfaces
+            self.surface_fw_i   = openmc.model.Polygon(points_fw_i, basis='rz')
+            self.surface_fwf_i  = openmc.model.Polygon(points_fwf_i, basis='rz')
+            self.surface_fwc_i  = openmc.model.Polygon(points_fwc_i, basis='rz')
+            self.surface_fwb_i  = openmc.model.Polygon(points_fwb_i, basis='rz')
+            self.surface_br1_i  = openmc.model.Polygon(points_br1_i, basis='rz')
+            self.surface_d1_i   = openmc.model.Polygon(points_d1_i,  basis='rz')
+            self.surface_br2_i  = openmc.model.Polygon(points_br2_i, basis='rz')
+            self.surface_im_i   = openmc.model.Polygon(points_im_i,  basis='rz')
+
+            
         # ------------------------------------------------------------------
         # Cells 
         # ------------------------------------------------------------------
