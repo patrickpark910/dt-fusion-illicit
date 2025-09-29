@@ -27,9 +27,11 @@ class Reactor:
             self.breeder_volume  = FLIBE_BR_VOL  # m^3
 
         elif breeder.lower() == 'll':
+            self.temp_k          = TEMP_K
             self.blanket         = 'LL'
-            self.blanket_density = DENSITY_LL
-            self.blanket_enrich  = ENRICH_LL
+            self.blanket_density = DENSITY_LL # g/cm^3
+            self.blanket_enrich  = ENRICH_LL  # wt% 
+            self.breeder_volume  = LL_BR_VOL  # m^3 must check could be fishy -ezoccoli
 
         # elif blanket.lower() == 'pb':
         #     self.blanket         = 'PB'
@@ -217,7 +219,7 @@ class Reactor:
         # ------------------------------------------------------------------
 
         self.breeder = openmc.Material(name='breeder', temperature=self.temp_k)
-        self.breeder.set_density('g/cm3', self.breeder_density) #"""""checkkk"""""
+        self.breeder.set_density('g/cm3', self.breeder_density)
 
         if self.breeder_name in ['FLiBe','ARC']:
             self.breeder.add_elements_from_formula('F4Li2Be', 'ao', enrichment_target='Li6', enrichment_type='wo', enrichment=self.breeder_enrich)
@@ -341,17 +343,17 @@ class Reactor:
                 sic.set_density('g/cm3', 3.2)
 
                 # Glaser & Goldston BISO particles used for simplicity
-        # # and to validate our results with their model
-        # # BISO particles include our fuel pellet coated in one layer of SiC
+                # and to validate our results with their model
+                # BISO particles include our fuel pellet coated in one layer of SiC
 
-        # r_uo2 = 400e-4  # r = 400 μm = 0.0400 cm // "800 μm kernel"
-        # r_sic = 500e-4  # 500 μm = 0.0500 cm // "100 μm thickness"
-        # V_biso_particle = (4 / 3) * np.pi * (r_sic)**3     # volume of single BISO particle
-        # V_uo2_in_biso   = (4 / 3) * np.pi * (r_uo2)**3     # volume of UO2 in single BISO particle
-        # Vf_uo2_in_biso  = V_uo2_in_biso / V_biso_particle  # vol frac UO2 in single BISO
-        # Vf_sic_in_biso  = 1.0 - Vf_uo2_in_biso             # vol frac SiC in single BISO
+                r_uo2 = 400e-4  # r = 400 μm = 0.0400 cm // "800 μm kernel"
+                r_sic = 500e-4  # 500 μm = 0.0500 cm // "100 μm thickness"
+                V_biso_particle = (4 / 3) * np.pi * (r_sic)**3     # volume of single BISO particle
+                V_uo2_in_biso   = (4 / 3) * np.pi * (r_uo2)**3     # volume of UO2 in single BISO particle
+                Vf_uo2_in_biso  = V_uo2_in_biso / V_biso_particle  # vol frac UO2 in single BISO
+                Vf_sic_in_biso  = 1.0 - Vf_uo2_in_biso             # vol frac SiC in single BISO
 
-        # biso = openmc.Material.mix_materials([uo2, sic], [Vf_uo2_in_biso, Vf_sic_in_biso], 'vo')
+                biso = openmc.Material.mix_materials([uo2, sic], [Vf_uo2_in_biso, Vf_sic_in_biso], 'vo')
                 biso.set_density('g/cm3', DENSITY_BISO)  
 
                 self.fertile = biso
@@ -373,17 +375,24 @@ class Reactor:
             self.blanket.name, self.blanket.temperature = self.name, self.temp_k
             
 
-        # elif self.breeder_name in ['LL', 'PB']:
-        #     pass
+        elif self.breeder_name in ['LL']:
+            breeder_mass_frac, fertile_mass_frac = calc_blanket_mass_fracs(self.fertile_bulk_density_kgm3,
+                                                                        self.breeder_volume,
+                                                                        fertile_element=self.fertile_element,
+                                                                        fertile_enrich=ENRICH_U,
+                                                                        breeder_density_kgm3=DENSITY_LL*1e3)
+            self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [breeder_mass_frac, fertile_mass_frac], 'wo')
+            self.blanket.name, self.blanket.temperature = self.name, self.temp_k
 
 
         # ------------------------------------------------------------------
         # Add materials 
         # ------------------------------------------------------------------
-
-        self.materials = openmc.Materials([self.air, self.firstwall, self.structure, self.blanket])
-        # self.materials.export_to_xml(self.path)
-
+        if self.breeder_name  in ['FLiBe','ARC']:
+            self.materials = openmc.Materials([self.air, self.firstwall, self.firstwall_front, self.firstwall_cooling, self.backplate, self.blanket])
+            # self.materials.export_to_xml(self.path)
+        elif self.breeder_name in ['LL']:
+            self.materials = openmc.Materials([self.air, self.firstwall, self.firstwall_cooling, self.back_plate, self.divider1, self.divider2, self.inner_manifold, self.blanket])
 
     @timer
     def geometry(self):
@@ -415,6 +424,9 @@ class Reactor:
 
             self.extent_r = (self.R0 + self.a + d_st3)*1.2 # 110%
             self.extent_z = (self.kappa*self.a + d_st3)*1.2
+        
+        elif self.breeder_name == 'LL':
+            
 
 
         # ------------------------------------------------------------------
