@@ -145,28 +145,28 @@ class Reactor:
         
         elif self.breeder_name in ['LL']:
             # First wall front (F82H steel)
-            self.firstwall_front = openmc.Material(name='firstwall_front', temperature=self.temp_k)
-            self.firstwall_front.depletable = False
-            self.firstwall_front.add_nuclide("C0",    0.00040000000, "ao")
-            self.firstwall_front.add_nuclide("Si28",  0.00015679100, "ao")
-            self.firstwall_front.add_nuclide("Si29",  0.00000795600, "ao")
-            self.firstwall_front.add_nuclide("Si30",  0.00000525300, "ao")
-            self.firstwall_front.add_nuclide("V51",   0.00018400000, "ao")
-            self.firstwall_front.add_nuclide("Cr50",  0.00031327500, "ao")
-            self.firstwall_front.add_nuclide("Cr52",  0.00604119000, "ao")
-            self.firstwall_front.add_nuclide("Cr53",  0.00068502200, "ao")
-            self.firstwall_front.add_nuclide("Cr54",  0.00017051700, "ao")
-            self.firstwall_front.add_nuclide("Mn55",  0.00008600000, "ao")
-            self.firstwall_front.add_nuclide("Fe54",  0.00438860000, "ao")
-            self.firstwall_front.add_nuclide("Fe56",  0.06889170000, "ao")
-            self.firstwall_front.add_nuclide("Fe57",  0.00159101000, "ao")
-            self.firstwall_front.add_nuclide("Fe58",  0.00021173400, "ao")
-            self.firstwall_front.add_nuclide("Ta181",  0.00001000000, "ao") 
-            self.firstwall_front.add_nuclide("W182",  0.00013515000, "ao")
-            self.firstwall_front.add_nuclide("W183",  0.00007298100, "ao")
-            self.firstwall_front.add_nuclide("W184",  0.00015626400, "ao")
-            self.firstwall_front.add_nuclide("W186",  0.00014499300, "ao")
-            self.firstwall_front.set_density("atom/b-cm", 0.08365243600)  # from MCNP cell 112
+            self.structure = openmc.Material(name='firstwall_front', temperature=self.temp_k)
+            self.structure.depletable = False
+            self.structure.add_nuclide("C0",    0.00040000000, "ao")
+            self.structure.add_nuclide("Si28",  0.00015679100, "ao")
+            self.structure.add_nuclide("Si29",  0.00000795600, "ao")
+            self.structure.add_nuclide("Si30",  0.00000525300, "ao")
+            self.structure.add_nuclide("V51",   0.00018400000, "ao")
+            self.structure.add_nuclide("Cr50",  0.00031327500, "ao")
+            self.structure.add_nuclide("Cr52",  0.00604119000, "ao")
+            self.structure.add_nuclide("Cr53",  0.00068502200, "ao")
+            self.structure.add_nuclide("Cr54",  0.00017051700, "ao")
+            self.structure.add_nuclide("Mn55",  0.00008600000, "ao")
+            self.structure.add_nuclide("Fe54",  0.00438860000, "ao")
+            self.structure.add_nuclide("Fe56",  0.06889170000, "ao")
+            self.structure.add_nuclide("Fe57",  0.00159101000, "ao")
+            self.structure.add_nuclide("Fe58",  0.00021173400, "ao")
+            self.structure.add_nuclide("Ta181",  0.00001000000, "ao") 
+            self.structure.add_nuclide("W182",  0.00013515000, "ao")
+            self.structure.add_nuclide("W183",  0.00007298100, "ao")
+            self.structure.add_nuclide("W184",  0.00015626400, "ao")
+            self.structure.add_nuclide("W186",  0.00014499300, "ao")
+            self.structure.set_density("atom/b-cm", 0.08365243600)  # from MCNP cell 112
 
             self.firstwall_cooling = openmc.Material(name="firstwall_cooling", temperature=self.temp_k)
             self.firstwall_cooling.depletable = False
@@ -192,28 +192,6 @@ class Reactor:
             self.firstwall_cooling.add_nuclide("W186",0.00002464880, "ao")
             self.firstwall_cooling.set_density("atom/b-cm", 0.01471892350)
 
-            self.back_plate = openmc.Material(name="back_plate", temperature=self.temp_k)
-            self.back_plate.depletable = False
-            self.back_plate.add_nuclide("C0",    0.00040000000, "ao")
-            self.back_plate.add_nuclide("Si28",  0.00015679100, "ao")
-            self.back_plate.add_nuclide("Si29",  0.00000795600, "ao")
-            self.back_plate.add_nuclide("Si30",  0.00000525300, "ao")
-            self.back_plate.add_nuclide("V51",   0.00018400000, "ao")
-            self.back_plate.add_nuclide("Cr50",  0.00031327500, "ao")
-            self.back_plate.add_nuclide("Cr52",  0.00604119000, "ao")
-            self.back_plate.add_nuclide("Cr53",  0.00068502200, "ao")
-            self.back_plate.add_nuclide("Cr54",  0.00017051700, "ao")
-            self.back_plate.add_nuclide("Mn55",  0.00008600000, "ao")
-            self.back_plate.add_nuclide("Fe54",  0.00438860000, "ao")
-            self.back_plate.add_nuclide("Fe56",  0.06889170000, "ao")
-            self.back_plate.add_nuclide("Fe57",  0.00159101000, "ao")
-            self.back_plate.add_nuclide("Fe58",  0.00021173400, "ao")
-            self.back_plate.add_nuclide("Ta181", 0.00001000000, "ao")
-            self.back_plate.add_nuclide("W182",  0.00013515000, "ao")
-            self.back_plate.add_nuclide("W183",  0.00007298100, "ao")
-            self.back_plate.add_nuclide("W184",  0.00015626400, "ao")
-            self.back_plate.add_nuclide("W186",  0.00014499300, "ao")
-            self.back_plate.set_density("atom/b-cm", 0.08365243600)
         # ------------------------------------------------------------------
         # Breeder material
         # ------------------------------------------------------------------
@@ -238,53 +216,29 @@ class Reactor:
         # ------------------------------------------------------------------
         
         if self.breeder_name in ['LL']:
-            self.divider1 = openmc.Material(name="divider1", temperature=self.temp_k)
-            self.divider1.depletable = False
-            self.divider1.add_nuclide("He4", 0.00029280000, "ao")
-            self.divider1.add_nuclide("C0", 0.00020480000, "ao")
-            self.divider1.add_nuclide("Si28", 0.00008027700, "ao")
-            self.divider1.add_nuclide("Si29", 0.00000407347, "ao")
-            self.divider1.add_nuclide("Si30", 0.00000268954, "ao")
-            self.divider1.add_nuclide("V51", 0.00009420800, "ao")
-            self.divider1.add_nuclide("Cr50", 0.00016039700, "ao")
-            self.divider1.add_nuclide("Cr52", 0.00309309000, "ao")
-            self.divider1.add_nuclide("Cr53", 0.00035073100, "ao")
-            self.divider1.add_nuclide("Cr54", 0.00008730470, "ao")
-            self.divider1.add_nuclide("Mn55", 0.00004403200, "ao")
-            self.divider1.add_nuclide("Fe54", 0.00224696000, "ao")
-            self.divider1.add_nuclide("Fe56", 0.03527260000, "ao")
-            self.divider1.add_nuclide("Fe57", 0.00081459700, "ao")
-            self.divider1.add_nuclide("Fe58", 0.00010840800, "ao")
-            self.divider1.add_nuclide("Ta181", 0.00000512000, "ao")
-            self.divider1.add_nuclide("W182", 0.00006919680, "ao")
-            self.divider1.add_nuclide("W183", 0.00003736630, "ao")
-            self.divider1.add_nuclide("W184", 0.00008000720, "ao")
-            self.divider1.add_nuclide("W186", 0.00007423640, "ao")
-            self.divider1.set_density("atom/b-cm", 0.04312289441)
-
-            self.divider2 = openmc.Material(name="divider2", temperature=self.temp_k)
-            self.divider2.depletable = False
-            self.divider2.add_nuclide("He4", 0.00029280000, "ao")
-            self.divider2.add_nuclide("C0", 0.00020480000, "ao")
-            self.divider2.add_nuclide("Si28", 0.00008027700, "ao")
-            self.divider2.add_nuclide("Si29", 0.00000407347, "ao")
-            self.divider2.add_nuclide("Si30", 0.00000268954, "ao")
-            self.divider2.add_nuclide("V51", 0.00009420800, "ao")
-            self.divider2.add_nuclide("Cr50", 0.00016039700, "ao")
-            self.divider2.add_nuclide("Cr52", 0.00309309000, "ao")
-            self.divider2.add_nuclide("Cr53", 0.00035073100, "ao")
-            self.divider2.add_nuclide("Cr54", 0.00008730470, "ao")
-            self.divider2.add_nuclide("Mn55", 0.00004403200, "ao")
-            self.divider2.add_nuclide("Fe54", 0.00224696000, "ao")
-            self.divider2.add_nuclide("Fe56", 0.03527260000, "ao")
-            self.divider2.add_nuclide("Fe57", 0.00081459700, "ao")
-            self.divider2.add_nuclide("Fe58", 0.00010840800, "ao")
-            self.divider2.add_nuclide("Ta181", 0.00000512000, "ao")
-            self.divider2.add_nuclide("W182", 0.00006919680, "ao")
-            self.divider2.add_nuclide("W183", 0.00003736630, "ao")
-            self.divider2.add_nuclide("W184", 0.00008000720, "ao")
-            self.divider2.add_nuclide("W186", 0.00007423640, "ao")
-            self.divider2.set_density("atom/b-cm", 0.04312289441)
+            self.divider = openmc.Material(name="divider1", temperature=self.temp_k)
+            self.divider.depletable = False
+            self.divider.add_nuclide("He4", 0.00029280000, "ao")
+            self.divider.add_nuclide("C0", 0.00020480000, "ao")
+            self.divider.add_nuclide("Si28", 0.00008027700, "ao")
+            self.divider.add_nuclide("Si29", 0.00000407347, "ao")
+            self.divider.add_nuclide("Si30", 0.00000268954, "ao")
+            self.divider.add_nuclide("V51", 0.00009420800, "ao")
+            self.divider.add_nuclide("Cr50", 0.00016039700, "ao")
+            self.divider.add_nuclide("Cr52", 0.00309309000, "ao")
+            self.divider.add_nuclide("Cr53", 0.00035073100, "ao")
+            self.divider.add_nuclide("Cr54", 0.00008730470, "ao")
+            self.divider.add_nuclide("Mn55", 0.00004403200, "ao")
+            self.divider.add_nuclide("Fe54", 0.00224696000, "ao")
+            self.divider.add_nuclide("Fe56", 0.03527260000, "ao")
+            self.divider.add_nuclide("Fe57", 0.00081459700, "ao")
+            self.divider.add_nuclide("Fe58", 0.00010840800, "ao")
+            self.divider.add_nuclide("Ta181", 0.00000512000, "ao")
+            self.divider.add_nuclide("W182", 0.00006919680, "ao")
+            self.divider.add_nuclide("W183", 0.00003736630, "ao")
+            self.divider.add_nuclide("W184", 0.00008000720, "ao")
+            self.divider.add_nuclide("W186", 0.00007423640, "ao")
+            self.divider.set_density("atom/b-cm", 0.04312289441)
 
             #--INNER MANIFOLD-- 
             self.inner_manifold = openmc.Material(name="inner_manifold", temperature=self.temp_k)
@@ -386,10 +340,10 @@ class Reactor:
         # Add materials 
         # ------------------------------------------------------------------
         if self.breeder_name  in ['FLiBe','ARC']:
-            self.materials = openmc.Materials([self.air, self.firstwall, self.firstwall_front, self.firstwall_cooling, self.backplate, self.blanket])
+            self.materials = openmc.Materials([self.air, self.firstwall, self.structure, self.blanket])
             # self.materials.export_to_xml(self.path)
         elif self.breeder_name == 'LL':
-            self.materials = openmc.Materials([self.air, self.firstwall, self.firstwall_cooling, self.divider1, self.divider2, self.inner_manifold, self.blanket]) #check if need to add self.backplate
+            self.materials = openmc.Materials([self.air, self.firstwall, self.firstwall_cooling, self.divider, self.inner_manifold, self.blanket]) #check if need to add self.backplate
 
     @timer
     def geometry(self):
@@ -492,6 +446,7 @@ class Reactor:
         
         elif self.breeder_name == 'LL':
              # ---- Outboard offsets ----
+            points_vc  =  miller_model(self.R0, self.a, self.kappa, self.delta)
             points_fw_o   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_fw_o)
             points_fwf_o  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_fwf_o)
             points_fwc_o  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_fwc_o)
@@ -504,14 +459,14 @@ class Reactor:
             points_im_o   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_im_o)
 
             # ---- Inboard offsets ----
-            points_fw_i   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_fw_i, 0)
+            points_fw_i   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_fw_i,  0)
             points_fwf_i  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_fwf_i, 0)
             points_fwc_i  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_fwc_i, 0)
             points_fwb_i  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_fwb_i, 0)
             points_br1_i  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_br1_i, 0)
-            points_d1_i   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_d1_i, 0)
+            points_d1_i   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_d1_i,  0)
             points_br2_i  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_br2_i, 0)
-            points_im_i   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_im_i, 0)
+            points_im_i   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_im_i,  0)
 
              # ---- Store as surfaces ----
             self.surface_vc = openmc.model.Polygon(points_vc , basis='rz')
@@ -538,30 +493,92 @@ class Reactor:
             self.surface_br2_i  = openmc.model.Polygon(points_br2_i, basis='rz')
             self.surface_im_i   = openmc.model.Polygon(points_im_i,  basis='rz')
 
+            # Create OpenMC surfaces
+            surfaces = [
+                self.surface_vc,
+                self.surface_fw_o, self.surface_fwf_o, self.surface_fwc_o,
+                self.surface_fwb_o, self.surface_br1_o, self.surface_d1_o,
+                self.surface_br2_o, self.surface_d2_o, self.surface_br3_o, self.surface_im_o,
+                self.surface_fw_i, self.surface_fwf_i, self.surface_fwc_i,
+                self.surface_fwb_i, self.surface_br1_i, self.surface_d1_i,
+                self.surface_br2_i, self.surface_im_i
+            ]
+
+            outer_cylinder = openmc.ZCylinder(r=self.extent_r, boundary_type='vacuum')
+            top_plane      = openmc.ZPlane(z0=self.extent_z, boundary_type='vacuum')
+            bottom_plane   = openmc.ZPlane(z0=-self.extent_z, boundary_type='vacuum')
+        
+
             
         # ------------------------------------------------------------------
         # Cells 
         # ------------------------------------------------------------------
+        if self.breeder_name  in ['FLiBe','ARC']:
+            cell_vc   = openmc.Cell(cell_id=10, region= -surfaces[0])
+            cell_vc.importance = {'neutron':1}
+            cell_fw   = openmc.Cell(cell_id=11, region= +surfaces[0] & -surfaces[1] , fill=self.firstwall) 
+            cell_st1  = openmc.Cell(cell_id=21, region= +surfaces[1] & -surfaces[2] , fill=self.structure)
+            cell_br1  = openmc.Cell(cell_id=31, region= +surfaces[2] & -surfaces[3] , fill=self.blanket)
+            cell_st2  = openmc.Cell(cell_id=22, region= +surfaces[3] & -surfaces[4] , fill=self.structure)
+            cell_br2  = openmc.Cell(cell_id=32, region= +surfaces[4] & -surfaces[5] , fill=self.blanket)
+            cell_st3  = openmc.Cell(cell_id=23, region= +surfaces[5] & -surfaces[6] , fill=self.structure) 
 
-        cell_vc   = openmc.Cell(cell_id=10, region= -surfaces[0])
-        cell_vc.importance = {'neutron':1}
-        cell_fw   = openmc.Cell(cell_id=11, region= +surfaces[0] & -surfaces[1] , fill=self.firstwall) 
-        cell_st1  = openmc.Cell(cell_id=21, region= +surfaces[1] & -surfaces[2] , fill=self.structure)
-        cell_br1  = openmc.Cell(cell_id=31, region= +surfaces[2] & -surfaces[3] , fill=self.blanket)
-        cell_st2  = openmc.Cell(cell_id=22, region= +surfaces[3] & -surfaces[4] , fill=self.structure)
-        cell_br2  = openmc.Cell(cell_id=32, region= +surfaces[4] & -surfaces[5] , fill=self.blanket)
-        cell_st3  = openmc.Cell(cell_id=23, region= +surfaces[5] & -surfaces[6] , fill=self.structure) 
+            # Surrounding air cell with proper boundaries (otherwise causes error with just Polygons)
+            # cell_air = openmc.Cell(cell_id=99, region= +surfaces[6] & -outer_cylinder & +bottom_plane & -top_plane, fill=self.air)
+            cell_void = openmc.Cell(cell_id=99, region= +surfaces[6] & -outer_cylinder & +bottom_plane & -top_plane)
+            cell_void.importance = {'neutron':0}
 
-        # Surrounding air cell with proper boundaries (otherwise causes error with just Polygons)
-        # cell_air = openmc.Cell(cell_id=99, region= +surfaces[6] & -outer_cylinder & +bottom_plane & -top_plane, fill=self.air)
-        cell_void = openmc.Cell(cell_id=99, region= +surfaces[6] & -outer_cylinder & +bottom_plane & -top_plane)
-        cell_void.importance = {'neutron':0}
+            self.cells = [cell_vc, cell_fw, cell_st1, cell_br1, cell_st2, cell_br2, cell_st3, cell_void]
+            self.geometry = openmc.Geometry(openmc.Universe(cells=self.cells))
+            # self.geometry.export_to_xml(self.path)
+        
+        elif self.breeder_name == 'LL':
+            cell_vc = openmc.Cell(cell_id=24, region=-surfaces[0])  
+            cell_vc.importance = {'neutron': 1}
 
-        self.cells = [cell_vc, cell_fw, cell_st1, cell_br1, cell_st2, cell_br2, cell_st3, cell_void]
-        self.geometry = openmc.Geometry(openmc.Universe(cells=self.cells))
-        # self.geometry.export_to_xml(self.path)
+            # Outboard cells
+            cell_fw_o   = openmc.Cell(cell_id=25, region=+surfaces[0] & -surfaces[1], fill=self.firstwall)
+            cell_fwf_o  = openmc.Cell(cell_id=26, region=+surfaces[1] & -surfaces[2], fill=self.structure)
+            cell_fwc_o  = openmc.Cell(cell_id=27, region=+surfaces[2] & -surfaces[3], fill=self.firstwall_cooling)
+            cell_fwb_o  = openmc.Cell(cell_id=28, region=+surfaces[3] & -surfaces[4], fill=self.structure)
 
+            cell_br1_o  = openmc.Cell(cell_id=29, region=+surfaces[4] & -surfaces[5], fill=self.blanket)
+            cell_d1_o   = openmc.Cell(cell_id=30, region=+surfaces[5] & -surfaces[6], fill=self.divider)
+            cell_br2_o  = openmc.Cell(cell_id=31, region=+surfaces[6] & -surfaces[7], fill=self.blanket)
+            cell_d2_o   = openmc.Cell(cell_id=32, region=+surfaces[7] & -surfaces[8], fill=self.divider)
+            cell_br3_o  = openmc.Cell(cell_id=33, region=+surfaces[8] & -surfaces[9], fill=self.blanket)
+            cell_im_o   = openmc.Cell(cell_id=34, region=+surfaces[9] & -surfaces[10],fill=self.inner_manifold)
 
+            # Inboard Cells
+            cell_fw_i   = openmc.Cell(cell_id=35, region=+surfaces[0] & -surfaces[11], fill=self.firstwall)
+            cell_fwf_i  = openmc.Cell(cell_id=36, region=+surfaces[11] & -surfaces[12], fill=self.structure)
+            cell_fwc_i  = openmc.Cell(cell_id=37, region=+surfaces[12] & -surfaces[13], fill=self.firstwall_cooling)
+            cell_fwb_i  = openmc.Cell(cell_id=38, region=+surfaces[13] & -surfaces[14], fill=self.structure)
+
+            cell_br1_i  = openmc.Cell(cell_id=39, region=+surfaces[14] & -surfaces[15], fill=self.blanket)
+            cell_d1_i   = openmc.Cell(cell_id=40, region=+surfaces[15] & -surfaces[16], fill=self.divider)
+            cell_br2_i  = openmc.Cell(cell_id=41, region=+surfaces[16] & -surfaces[17], fill=self.blanket)
+            cell_im_i   = openmc.Cell(cell_id=42, region=+surfaces[17] & -surfaces[18], fill=self.inner_manifold)
+
+            cell_void = openmc.Cell(
+                cell_id=43,
+                region=+surfaces[10] & +surfaces[18] -outer_cylinder & +bottom_plane & -top_plane
+            )
+            cell_void.importance = {'neutron': 0}
+
+            # -------------------------------------------------------
+            # Collect all cells
+            # -------------------------------------------------------
+            self.cells = [
+                cell_vc,
+                cell_fw_o, cell_fwf_o, cell_fwc_o, cell_fwb_o,
+                cell_br1_o, cell_d1_o, cell_br2_o, cell_d2_o, cell_br3_o, cell_im_o,
+                cell_fw_i, cell_fwf_i, cell_fwc_i, cell_fwb_i,
+                cell_br1_i, cell_d1_i, cell_br2_i, cell_im_i,
+                cell_void
+            ]
+            self.geometry = openmc.Geometry(openmc.Universe(cells=self.cells))
+    
     @timer
     def tallies(self):
         """ 
@@ -742,7 +759,10 @@ class Reactor:
         xy.colors = {
             self.firstwall: (255, 0, 0),    # Red for first wall
             self.structure: (0, 255, 0),    # Green for structure
+            self.firstwall_cooling: (255, 255,   0), #yellow
             self.blanket: (0, 0, 255),    # Blue for breeder
+            self.divider: (255, 105, 180),   # Pink
+            self.inner_manifold:(255, 165,   0),   # Orange
             # Void regions will be white by default
         }
 
@@ -756,7 +776,10 @@ class Reactor:
         xz.colors = {
             self.firstwall: (255, 0, 0),    # Red for first wall
             self.structure: (0, 255, 0),    # Green for structure
+            self.firstwall_cooling: (255, 255,   0), #yellow
             self.blanket: (0, 0, 255),    # Blue for breeder
+            self.divider: (255, 105, 180),   # Pink
+            self.inner_manifold:(255, 165,   0),   # Orange
             # Void regions will be white by default
         }
 

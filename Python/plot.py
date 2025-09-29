@@ -22,7 +22,7 @@ class Plot(Reactor):
         self.show = show
 
 
-   def plot_tbr(self):
+    def plot_tbr(self):
         print(f"\nPlotting tritium breeding ratio vs. fertile density...")
 
         # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
