@@ -20,9 +20,14 @@ AMU_O = 15.999
 AMU_Th = 232.0381
 AMU_UF4 = AMU_U + 4 * AMU_F19
 AMU_ThF4 = AMU_Th + 4 * AMU_F19
+AMU_UO2 = AMU_U + 2 * AMU_O
+AMU_ThO2 = AMU_Th + 2 * AMU_O
 AMU_FLIBE = 98.89 # g/mol
 DENSITY_UF4 = 6.7 # g/cm3
 DENSITY_ThF4 = 6.3 # g/cm3
+DENSITY_UO2 = 10.5 # g/cm3
+DENSITY_ThO2 = 10.0 # g/cm3
+DENSITY_SIC = 3.2 # g/cm3
 AMU_PU239 = 239.0521634
 AMU_U233 = 233.039635207
 SEC_PER_YR = 3600 * 24 * 365
@@ -126,6 +131,75 @@ def calc_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertil
         thf4_mass_frac         = thf4_mass_kg / blanket_mass_kg
         breeder_mass_frac      = breeder_mass_kg /blanket_mass_kg
         return breeder_mass_frac, thf4_mass_frac
+
+def calc_biso_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertile_element='U', fertile_enrich=0.71, breeder_density_kgm3=9.4e3):
+    """
+    Calculate mass fractions of PbLi and BISO particles.
+    Following Glaser & Goldston (2012), we assume the BISO/TRISO particles are homogenized 
+    throughout the blanket, rather than resolving discrete particles. 
+    The kernel/coating geometry is used only to set the relative mass or 
+    volume fractions of fertile vs. coating material.
+    
+    Args:
+        fertile_bulk_density_kgm3 : desired bulk density of fertile isotope in blanket [kg/m3]
+        breeder_volume_m3         : breeding region volume [m3]
+        fertile_element           : 'U' or 'Th'
+        fertile_enrich            : enrichment fraction of fertile isotope [wt%]
+        breeder_density_kgm3      : density of PbLi [kg/m3]
+    """
+    fertile_enrich = fertile_enrich*0.01 # OpenMC uses this in % but we want fraction
+
+    if fertile_element == 'U':
+        uo2_bulk_density_kgm3 = fertile_bulk_density_kgm3 / (1-fertile_enrich) * AMU_UO2 / AMU_U
+
+        r_uo2 = 400e-4  # r = 400 μm = 0.0400 cm // "800 μm kernel"
+        r_sic = 500e-4  # 500 μm = 0.0500 cm // "100 μm thickness"
+        V_biso_particle = (4 / 3) * np.pi * (r_sic)**3     # volume of single BISO particle
+        V_uo2_in_biso   = (4 / 3) * np.pi * (r_uo2)**3     # volume of UO2 in single BISO particle
+        Vf_uo2_in_biso  = V_uo2_in_biso / V_biso_particle  # vol frac UO2 in single BISO
+        Vf_sic_in_biso  = 1.0 - Vf_uo2_in_biso  
+        # SiC mass per volume of UO2 (ratio inside a particle)
+        density_sic     = DENSITY_SIC * 10**3 #kg/m^3
+        density_uo2     = DENSITY_UO2 * 10**3#kg/m^3
+        m_sic_per_m_uo2 = (density_sic * Vf_sic_in_biso) / (density_uo2 * Vf_uo2_in_biso)
+
+        sic_bulk_density_kgm3 = uo2_bulk_density_kgm3 * m_sic_per_m_uo2
+
+        uo2_mass_kg       = uo2_bulk_density_kgm3 * breeder_volume_m3
+        sic_mass_kg       = sic_bulk_density_kgm3 * breeder_volume_m3
+        biso_mass_kg      = uo2_mass_kg + sic_mass_kg   # total fertile particle mass
+        breeder_mass_kg   = breeder_density_kgm3 * breeder_volume_m3  # PbLi mass
+        blanket_mass_kg   = breeder_mass_kg + biso_mass_kg
+        breeder_mass_frac = breeder_mass_kg / blanket_mass_kg
+        biso_mass_frac    = biso_mass_kg / blanket_mass_kg
+
+        return breeder_mass_frac, biso_mass_frac
+
+    elif fertile_element == 'Th':
+        tho2_bulk_density_kgm3 = fertile_bulk_density_kgm3 / (1-fertile_enrich) * AMU_ThO2 / AMU_Th
+
+        r_tho2 = 400e-4  # r = 400 μm = 0.0400 cm // "800 μm kernel"
+        r_sic = 500e-4  # 500 μm = 0.0500 cm // "100 μm thickness"
+        V_biso_particle = (4 / 3) * np.pi * (r_sic)**3     # volume of single BISO particle
+        V_tho2_in_biso   = (4 / 3) * np.pi * (r_tho2)**3     # volume of UO2 in single BISO particle
+        Vf_tho2_in_biso  = V_tho2_in_biso / V_biso_particle  # vol frac UO2 in single BISO
+        Vf_sic_in_biso  = 1.0 - Vf_tho2_in_biso  
+        # SiC mass per volume of UO2 (ratio inside a particle)
+        density_sic     = DENSITY_SIC * 10**3 #kg/m^3
+        density_tho2     = DENSITY_ThO2 * 10**3#kg/m^3
+        m_sic_per_m_tho2 = (density_sic * Vf_sic_in_biso) / (density_tho2 * Vf_tho2_in_biso)
+
+        sic_bulk_density_kgm3 = tho2_bulk_density_kgm3 * m_sic_per_m_tho2
+
+        tho2_mass_kg       = tho2_bulk_density_kgm3 * breeder_volume_m3
+        sic_mass_kg       = sic_bulk_density_kgm3 * breeder_volume_m3
+        biso_mass_kg      = tho2_mass_kg + sic_mass_kg   # total fertile particle mass
+        breeder_mass_kg   = breeder_density_kgm3 * breeder_volume_m3  # PbLi mass
+        blanket_mass_kg   = breeder_mass_kg + biso_mass_kg
+        breeder_mass_frac = breeder_mass_kg / blanket_mass_kg
+        biso_mass_frac    = biso_mass_kg / blanket_mass_kg
+
+        return breeder_mass_frac, biso_mass_frac
 
 
 def extract_lie(path: str) -> float:
@@ -246,6 +320,57 @@ def miller_offset(R0, a, kappa, delta, d, n=100):
 
     return list(zip(R_offset, Z_offset))
 
+def miller_offset_split(R0, a, kappa, delta, d_in, d_out):
+    """
+    Return closed offset polygons for inboard and outboard sides separately.
+    Each contour is closed by drawing a straight cut line between
+    top (Z max) and bottom (Z min) points, so the polygons are
+    valid for OpenMC cell definitions.
+    """
+    # Original shape
+    n=100
+    t = np.linspace(0, 2*np.pi, n)
+
+    # Base Miller contour
+    R = R0 + a * np.cos(t + delta * np.sin(t))
+    Z = kappa * a * np.sin(t)
+
+    # Derivatives for normal vector
+    dR_dt = -a * np.sin(t + delta * np.sin(t)) * (1 + delta * np.cos(t))
+    dZ_dt = kappa * a * np.cos(t)
+
+    N_R = dZ_dt
+    N_Z = -dR_dt
+    N_mag = np.sqrt(N_R**2 + N_Z**2)
+    N_R_unit, N_Z_unit = N_R / N_mag, N_Z / N_mag
+
+    # Split curve into inboard vs outboard
+    i_top = np.argmax(Z)
+    i_bot = np.argmin(Z)
+
+    if i_top < i_bot:
+        idx_in = np.arange(i_top, i_bot+1)
+        idx_out  = np.concatenate([np.arange(i_bot, len(R)), np.arange(0, i_top+1)])
+    else:
+        idx_in = np.concatenate([np.arange(i_top, len(R)), np.arange(0, i_bot+1)])
+        idx_out  = np.arange(i_bot, i_top+1)
+
+    R_out = R[idx_out] + d_out * N_R_unit[idx_out]
+    Z_out = Z[idx_out] + d_out * N_Z_unit[idx_out]
+
+    R_in  = R[idx_in]  + d_in  * N_R_unit[idx_in]
+    Z_in  = Z[idx_in]  + d_in  * N_Z_unit[idx_in]
+    # Close polygons: connect top to bottom with a chord across plasma boundary
+    R_out_closed = np.concatenate([R_out, [R_out[0]]])
+    Z_out_closed = np.concatenate([Z_out, [Z_out[0]]])
+
+    R_in_closed  = np.concatenate([R_in, [R_in[0]]])
+    Z_in_closed  = np.concatenate([Z_in, [Z_in[0]]])
+
+    poly_in  = list(zip(R_in_closed,  Z_in_closed))
+    poly_out = list(zip(R_out_closed, Z_out_closed))
+
+    return poly_in, poly_out
 
 def timer(func):
     @functools.wraps(func)

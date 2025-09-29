@@ -77,9 +77,9 @@ LL_FWB_O_CM =   0.4  # cm -     first wall back
 LL_BR1_O_CM =  22.5  # cm -   breeding region 1
 LL_D1_O_CM  =   3.2  # cm -           divider 1
 LL_BR2_O_CM =  21.0  # cm -   breeding region 2
-LL_ST4_O_CM =   3.2  # cm -           divider 2
-LL_BR4_O_CM =  21.0  # cm -   breeding region 3
-LL_ST5_O_CM =   8.0  # cm -      inner manifold 
+LL_D2_O_CM =   3.2  # cm -           divider 2
+LL_BR3_O_CM =  21.0  # cm -   breeding region 3
+LL_IM_O_CM =   8.0  # cm -      inner manifold 
 #addititional F2H8 back plate
 
 #----Inboard Layers----
@@ -90,7 +90,7 @@ LL_FWB_I_CM =   0.4  # cm -     first wall back
 LL_BR1_I_CM =  22.5  # cm -   breeding region 1
 LL_D1_I_CM  =   3.2  # cm -           divider 1
 LL_BR2_I_CM =  21.0  # cm -   breeding region 2
-LL_ST5_I_CM =   8.0  # cm -      inner manifold 
+LL_IM_I_CM =   8.0  # cm -      inner manifold 
 
 LL_BR_VOL =  440.3757# m^3 - analytic vol from plot_miller_models.py
 #Check this value why is it so low?? -ezoccoli
