@@ -161,7 +161,7 @@ class Reactor:
 
         if self.breeder_name in ['FLiBe','ARC']:
             if self.fertile_element == 'U':
-                self.fertile.add_elements_from_formula('UF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
+                self.fertile.add_elements_from_formula('UF4','ao',enrichment=ENRICH_U) # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
                 self.fertile.set_density('g/cm3', DENSITY_UF4) 
             elif self.fertile_element == 'Th':
                 self.fertile.add_elements_from_formula('ThF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
