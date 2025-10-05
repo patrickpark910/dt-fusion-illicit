@@ -2,6 +2,7 @@ import openmc
 import os, sys
 import numpy as np
 import pandas as pd
+from PIL import Image
 from datetime import date
 
 
@@ -12,12 +13,11 @@ from Python.utilities import *
 class Reactor:
 
     @timer
-    def __init__(self, breeder='flibe', fertile_element='U', fertile_bulk_density_kgm3=0.0, calc_volumes=False, run_openmc=False):
+    def __init__(self, breeder='flibe', fertile_element='U', fertile_bulk_density_kgm3=0.0, run_type='openmc'):
 
         self.fertile_bulk_density_kgm3 = fertile_bulk_density_kgm3
         self.fertile_element = fertile_element.capitalize()
-        self.run_openmc   = run_openmc    # i'm calling this self.run_openmc and self.openmc() is the function
-        self.calc_volumes = calc_volumes
+        self.run_type = run_type
 
         if breeder.lower() == 'flibe':
             self.temp_k          = TEMP_K
@@ -50,19 +50,24 @@ class Reactor:
         Name file based on reactor config
         """
         today     = date.today().strftime("%Y-%m-%d")
-        self.name = f"{self.breeder_name}_{self.fertile_element}{self.fertile_bulk_density_kgm3:3.2f}kgm3_Li{self.breeder_enrich:04.1f}_{self.temp_k}K" # _{today}
-        # should come out to smth like: FLiBe_U010kgm3_Li7.5_900K
+        self.name = f"{self.run_type}_{self.breeder_name}_{self.fertile_element}{self.fertile_bulk_density_kgm3:3.2f}kgm3_Li{self.breeder_enrich:04.1f}_{self.temp_k}K" # _{today}
+        # should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
+        
+
+
+
         self.path = f"./OpenMC/{self.name}"
         
-        # os.makedirs(self.path, exist_ok=True)
+        os.makedirs(self.path, exist_ok=True)
 
-        start_msg = f"="*42+f"\nWriting an OpenMC input for {self.name}"
-        print(f"{Colors.RED}{start_msg}{Colors.END}")
+        start_msg = f"="*42+f"\nWriting OpenMC input: {self.path}"
+        print(f"{Colors.UL}{start_msg}{Colors.END}")
 
         self.materials()
         self.geometry()
         self.settings()
         self.tallies()
+
 
     @timer
     def materials(self):
@@ -73,14 +78,14 @@ class Reactor:
         # ------------------------------------------------------------------
         # Air
         # ------------------------------------------------------------------
-        self.air = openmc.Material(name='air')
-        self.air.set_density('g/cm3', 0.001225)
+        # self.air = openmc.Material(name='air')
+        # self.air.set_density('g/cm3', 0.001225)
 
-        # Atom fractions for dry air
-        self.air.add_element('N', 0.78084, percent_type='ao')   # Nitrogen
-        self.air.add_element('O', 0.20946, percent_type='ao')   # Oxygen
-        self.air.add_element('Ar', 0.00934, percent_type='ao')  # Argon
-        self.air.add_element('C', 0.00036, percent_type='ao')   # Carbon from CO2
+        # # Atom fractions for dry air
+        # self.air.add_element('N', 0.78084, percent_type='ao')   # Nitrogen
+        # self.air.add_element('O', 0.20946, percent_type='ao')   # Oxygen
+        # self.air.add_element('Ar', 0.00934, percent_type='ao')  # Argon
+        # self.air.add_element('C', 0.00036, percent_type='ao')   # Carbon from CO2
 
         # ------------------------------------------------------------------
         # First wall 
@@ -89,27 +94,23 @@ class Reactor:
         self.firstwall = openmc.Material(name='firstwall', temperature=self.temp_k)
         self.firstwall.depletable = False
 
-        if self.breeder_name in ['FLiBe','ARC']:
-            self.firstwall.add_element('O',5/1e6,percent_type='wo')
-            self.firstwall.add_element('N',5/1e6,percent_type='wo')
-            self.firstwall.add_element('C',5/1e6,percent_type='wo')
-            self.firstwall.add_element('Na',4/1e6,percent_type='wo')
-            self.firstwall.add_element('K',2.5/1e6,percent_type='wo')
-            self.firstwall.add_element('Al',3/1e6,percent_type='wo')
-            self.firstwall.add_element('Ca',0.5/1e6,percent_type='wo')
-            self.firstwall.add_element('Cr',0.5/1e6,percent_type='wo')
-            self.firstwall.add_element('Cu',0.5/1e6,percent_type='wo')
-            self.firstwall.add_element('Fe',5/1e6,percent_type='wo')
-            self.firstwall.add_element('W',1-(5+5+5+4+2.5+3+0.5+0.5+0.5+5)/1e6,percent_type='wo')
+        if self.breeder_name in ['FLiBe','ARC','LL']:
+            # self.firstwall.add_element('O',5/1e6,percent_type='wo')
+            # self.firstwall.add_element('N',5/1e6,percent_type='wo')
+            # self.firstwall.add_element('C',5/1e6,percent_type='wo')
+            # self.firstwall.add_element('Na',4/1e6,percent_type='wo')
+            # self.firstwall.add_element('K',2.5/1e6,percent_type='wo')
+            # self.firstwall.add_element('Al',3/1e6,percent_type='wo')
+            # self.firstwall.add_element('Ca',0.5/1e6,percent_type='wo')
+            # self.firstwall.add_element('Cr',0.5/1e6,percent_type='wo')
+            # self.firstwall.add_element('Cu',0.5/1e6,percent_type='wo')
+            # self.firstwall.add_element('Fe',5/1e6,percent_type='wo')
+            # self.firstwall.add_element('W',1-(5+5+5+4+2.5+3+0.5+0.5+0.5+5)/1e6,percent_type='wo')
+            self.firstwall.add_element('W',1)
             self.firstwall.set_density('g/cm3',19.3)
-
-        elif self.breeder_name in ['LL']:
-            self.firstwall.add_nuclide("W180", 0.00007586640, "ao")
-            self.firstwall.add_nuclide("W182", 0.01675383000, "ao")
-            self.firstwall.add_nuclide("W183", 0.00904706820, "ao")
-            self.firstwall.add_nuclide("W184", 0.01937122080, "ao")
-            self.firstwall.add_nuclide("W186", 0.01797401460, "ao")
-            self.firstwall.set_density("g/cm3", 19.3)  # tungsten density from mcnp 0.06322200000 atomic density in atoms/barn-cm
+            # The original first wall specs we were using from Ball 25 is 99.9969 wt% W 
+            # and the rest O, N ,C, Na, K, Al, Ca, Cr, Cu, Fe impurities...
+            # I think we can just set it to be W to save compute time loading nuclide data
         
 
         # ------------------------------------------------------------------
@@ -138,7 +139,8 @@ class Reactor:
             self.structure.add_element('Fe',80/1e6,percent_type='wo')
             self.structure.add_element('Ni',13/1e6,percent_type='wo')
             self.structure.add_element('Cu',4/1e6,percent_type='wo')
-            self.structure.add_element('V',1-0.04-0.04-(56+181+103+7+17+0.5+119+280+0.5+80+13+4)/1e6,percent_type='wo')
+            self.structure.add_element('V',0.919139,percent_type='wo')
+            # 1-0.04-0.04-(56+181+103+7+17+0.5+119+280+0.5+80+13+4)/1e6 = 0.919139
             self.structure.set_density('g/cm3',6.05) 
             # This density value is sus and needs a good source --jlball 
             # This value is from Metals Handbook, 9th ed, vol 2: "Properties and Selection: Nonferrous Alloys and Pure Metals" (1979) --ppark 2025-07-22
@@ -147,7 +149,7 @@ class Reactor:
             # First wall front (F82H steel)
             self.structure = openmc.Material(name='firstwall_front', temperature=self.temp_k)
             self.structure.depletable = False
-            self.structure.add_nuclide("C0",    0.00040000000, "ao")
+            self.structure.add_nuclide("C12",    0.00040000000, "ao")
             self.structure.add_nuclide("Si28",  0.00015679100, "ao")
             self.structure.add_nuclide("Si29",  0.00000795600, "ao")
             self.structure.add_nuclide("Si30",  0.00000525300, "ao")
@@ -171,7 +173,7 @@ class Reactor:
             self.firstwall_cooling = openmc.Material(name="firstwall_cooling", temperature=self.temp_k)
             self.firstwall_cooling.depletable = False
             self.firstwall_cooling.add_nuclide("He4", 0.00049800000, "ao")
-            self.firstwall_cooling.add_nuclide("C0",  0.00006800000, "ao")
+            self.firstwall_cooling.add_nuclide("C12",  0.00006800000, "ao")
             self.firstwall_cooling.add_nuclide("Si28",0.00002665450, "ao")
             self.firstwall_cooling.add_nuclide("Si29",0.00000135250, "ao")
             self.firstwall_cooling.add_nuclide("Si30",0.00000089300, "ao")
@@ -200,12 +202,12 @@ class Reactor:
         self.breeder.set_density('g/cm3', self.breeder_density)
 
         if self.breeder_name in ['FLiBe','ARC']:
-            self.breeder.add_elements_from_formula('F4Li2Be', 'ao', enrichment_target='Li6', enrichment_type='wo', enrichment=self.breeder_enrich)
+            self.breeder.add_elements_from_formula('F4Li2Be', 'ao', enrichment_target='Li6', enrichment_type='ao', enrichment=self.breeder_enrich)
 
         elif self.breeder_name in ['LL']:
             # --emma: might need He4...
             self.breeder.add_element('Pb', 0.83, percent_type='wo')  # Pb isotopes expanded below
-            self.breeder.add_element('Li', 0.17, percent_type='wo', enrichment=self.breeder_enrich, enrichment_target='Li6', enrichment_type='wo') #Li-6 enrichment to 90%
+            self.breeder.add_element('Li', 0.17, percent_type='wo', enrichment=self.breeder_enrich, enrichment_target='Li6', enrichment_type='ao') # Li-6 enrichment to 90%
         
         # elif self.blanket.lower() == 'pb':
         #     self.blanket_density = DENSITY_PB
@@ -219,7 +221,7 @@ class Reactor:
             self.divider = openmc.Material(name="divider1", temperature=self.temp_k)
             self.divider.depletable = False
             self.divider.add_nuclide("He4", 0.00029280000, "ao")
-            self.divider.add_nuclide("C0", 0.00020480000, "ao")
+            self.divider.add_nuclide("C12", 0.00020480000, "ao")
             self.divider.add_nuclide("Si28", 0.00008027700, "ao")
             self.divider.add_nuclide("Si29", 0.00000407347, "ao")
             self.divider.add_nuclide("Si30", 0.00000268954, "ao")
@@ -244,7 +246,7 @@ class Reactor:
             self.inner_manifold = openmc.Material(name="inner_manifold", temperature=self.temp_k)
             self.inner_manifold.depletable = False
             self.inner_manifold.add_nuclide("He4", 0.00032820000, "ao")
-            self.inner_manifold.add_nuclide("C0", 0.00018120000, "ao")
+            self.inner_manifold.add_nuclide("C12", 0.00018120000, "ao")
             self.inner_manifold.add_nuclide("Si28", 0.00007102630, "ao")
             self.inner_manifold.add_nuclide("Si29", 0.00000360407, "ao")
             self.inner_manifold.add_nuclide("Si30", 0.00000237961, "ao")
@@ -264,6 +266,8 @@ class Reactor:
             self.inner_manifold.add_nuclide("W184", 0.00007078760, "ao")
             self.inner_manifold.add_nuclide("W186", 0.00006568180, "ao")
             self.inner_manifold.set_density("atom/b-cm", 0.03822271948)
+
+
         # ------------------------------------------------------------------
         # Fertile material
         # ------------------------------------------------------------------
@@ -282,9 +286,7 @@ class Reactor:
            if self.fertile_element == 'U':
                 # UO2 kernel (enriched uranium)
                 uo2 = openmc.Material(name='UO2')
-                uo2.add_elements_from_formula('UO2', enrichment=ENRICH_U,
-                                            enrichment_target='U235',
-                                            enrichment_type='wo')  
+                uo2.add_elements_from_formula('UO2', enrichment=ENRICH_U)
                 uo2.set_density('g/cm3', 10.5)  # nominal UO2 density
 
                 # SiC coating
@@ -340,10 +342,11 @@ class Reactor:
         # Add materials 
         # ------------------------------------------------------------------
         if self.breeder_name  in ['FLiBe','ARC']:
-            self.materials = openmc.Materials([self.air, self.firstwall, self.structure, self.blanket])
+            self.materials = openmc.Materials([self.firstwall, self.structure, self.blanket]) # self.air, 
             # self.materials.export_to_xml(self.path)
-        elif self.breeder_name == 'LL':
-            self.materials = openmc.Materials([self.air, self.firstwall, self.firstwall_cooling, self.divider, self.inner_manifold, self.blanket]) #check if need to add self.backplate
+
+        elif self.breeder_name in ['LL']:
+            self.materials = openmc.Materials([self.firstwall, self.structure, self.firstwall_cooling, self.divider, self.inner_manifold, self.blanket]) # check if need to add self.backplate
 
     @timer
     def geometry(self):
@@ -355,227 +358,169 @@ class Reactor:
         if self.breeder_name == 'FLiBe':
             self.R0, self.a, self.kappa, self.delta = FLIBE_R0, FLIBE_A, FLIBE_KAPPA, FLIBE_DELTA 
             d_fw  = FLIBE_FW_CM 
-            d_st1 = d_fw  + FLIBE_ST1_CM
-            d_br1 = d_st1 + FLIBE_BR1_CM
-            d_st2 = d_br1 + FLIBE_ST2_CM
-            d_br2 = d_st2 + FLIBE_BR2_CM
-            d_st3 = d_br2 + FLIBE_ST3_CM
+            d_st0 = d_fw  + FLIBE_ST1_CM
+            d_br0 = d_st0 + FLIBE_BR1_CM
+            d_st1 = d_br0 + FLIBE_ST2_CM
+            d_br1 = d_st1 + FLIBE_BR2_CM
+            d_st2 = d_br1 + FLIBE_ST3_CM
 
-            self.extent_r = (self.R0 + self.a + d_st3)*1.1 # 110%
-            self.extent_z = (self.kappa*self.a + d_st3)*1.1
+            self.extent_r = (self.R0 + self.a + d_st2)*1.2 # 110%
+            self.extent_z = (self.kappa*self.a + d_st2)*1.2
+
 
         elif self.breeder_name == 'ARC':
             self.R0, self.a, self.kappa, self.delta = ARC_R0, ARC_A, ARC_KAPPA, ARC_DELTA 
             d_fw  = ARC_FW_CM 
-            d_st1 = d_fw  + ARC_ST1_CM
-            d_br1 = d_st1 + ARC_BR1_CM
-            d_st2 = d_br1 + ARC_ST2_CM
-            d_br2 = d_st2 + ARC_BR2_CM
-            d_st3 = d_br2 + ARC_ST3_CM
+            d_st0 = d_fw  + ARC_ST1_CM
+            d_br0 = d_st0 + ARC_BR1_CM
+            d_st1 = d_br0 + ARC_ST2_CM
+            d_br1 = d_st1 + ARC_BR2_CM
+            d_st2 = d_br1 + ARC_ST3_CM
 
-            self.extent_r = (self.R0 + self.a + d_st3)*1.2 # 110%
-            self.extent_z = (self.kappa*self.a + d_st3)*1.2
+            self.extent_r = (self.R0 + self.a + d_st2)*1.2 # 120%
+            self.extent_z = (self.kappa*self.a + d_st2)*1.2
         
+
         elif self.breeder_name == 'LL':
             self.R0, self.a, self.kappa, self.delta = LL_R0, LL_A, LL_KAPPA, LL_DELTA
 
-            #----Outboard thickness stack----
-            d_fw_o   = LL_FW_O_CM
-            d_fwf_o  = d_fw_o   + LL_FWF_O_CM
-            d_fwc_o  = d_fwf_o  + LL_FWC_O_CM
-            d_fwb_o  = d_fwc_o  + LL_FWB_O_CM
-            d_br1_o  = d_fwb_o  + LL_BR1_O_CM
-            d_d1_o   = d_br1_o  + LL_D1_O_CM
-            d_br2_o  = d_d1_o   + LL_BR2_O_CM
-            d_d2_o   = d_br2_o  + LL_D2_O_CM
-            d_br3_o  = d_d2_o   + LL_BR3_O_CM
-            d_im_o  = d_br3_o  + LL_IM_O_CM
+            d_fw   = LL_FW_O_CM
+            d_fwf  = d_fw   + LL_FWF_O_CM  # front wall front
+            d_fwc  = d_fwf  + LL_FWC_O_CM  # front wall channel
+            d_fwb  = d_fwc  + LL_FWB_O_CM  # front wall back
+            d_br1  = d_fwb  + LL_BR1_O_CM  # breeding region 1
+            d_d1   = d_br1  + LL_D1_O_CM   # divider 1 
+            d_br2  = d_d1   + LL_BR2_O_CM  # breeding region 2
+            
+            d_d2_o  = d_br2    + LL_D2_O_CM    # only on outboard blanket
+            d_br3_o = d_d2_o   + LL_BR3_O_CM   # only on outboard blanket
+            d_im_o  = d_br3_o  + LL_IM_O_CM    # only on outboard blanket
+            
+            d_im_i  = d_br2  + LL_IM_I_CM   # inboard blanket
 
-            #----Inboard thickness stack----
-            d_fw_i   = LL_FW_I_CM
-            d_fwf_i  = d_fw_i   + LL_FWF_I_CM
-            d_fwc_i  = d_fwf_i  + LL_FWC_I_CM
-            d_fwb_i  = d_fwc_i  + LL_FWB_I_CM
-            d_br1_i  = d_fwb_i  + LL_BR1_I_CM
-            d_d1_i   = d_br1_i  + LL_D1_I_CM
-            d_br2_i  = d_d1_i   + LL_BR2_I_CM
-            d_im_i  = d_br2_i  + LL_IM_I_CM
+            self.extent_r = (self.R0 + self.a + d_im_o)  * 1.2  # 120% radial extent
+            self.extent_z = (self.kappa*self.a + d_im_o) * 1.2  # 120% vertical extent
 
-            # Take the larger of outboard vs inboard stack for safety margin (check, i think it could be reversed -ezoccoli)
-            d_outboard = d_im_o
-            d_inboard  = d_im_i
-            d_total    = max(d_outboard, d_inboard)
-
-            self.extent_r = (self.R0 + self.a + d_total) * 1.2   # 110% radial extent
-            self.extent_z = (self.kappa*self.a + d_total) * 1.2  # 110% vertical extent
 
         # ------------------------------------------------------------------
         # Surfaces 
         # ------------------------------------------------------------------
+
         if self.breeder_name  in ['FLiBe','ARC']:
             # Arrays of a (minor r) and z points
-            points_vc  =  miller_model(self.R0, self.a, self.kappa, self.delta)         # coords around vacuum chamber
-            points_fw  = miller_offset(self.R0, self.a, self.kappa, self.delta, d_fw)   # outer coords around first wall
-            points_st1 = miller_offset(self.R0, self.a, self.kappa, self.delta, d_st1)  # outer coords around structural region 1
-            points_br1 = miller_offset(self.R0, self.a, self.kappa, self.delta, d_br1)  # outer coords around breeding region 1
-            points_st2 = miller_offset(self.R0, self.a, self.kappa, self.delta, d_st2)  # outer coords around structural region 2
-            points_br2 = miller_offset(self.R0, self.a, self.kappa, self.delta, d_br2)  # outer coords around breeding region 2
-            points_st3 = miller_offset(self.R0, self.a, self.kappa, self.delta, d_st3)  # outer coords around structural region 3
+            points_vc  = miller_model(self.R0, self.a, self.kappa, self.delta)                 # coords around vacuum chamber
+            points_fw  = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_fw)   # outer coords around first wall
+            points_st0 = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_st0)  # outer coords around structural region 0
+            points_br0 = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_br0)  # outer coords around breeding channel
+            points_st1 = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_st1)  # outer coords around structural region 1
+            points_br1 = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_br1)  # outer coords around breeding region 1
+            points_st2 = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_st2)  # outer coords around structural region 2
 
-            # Create OpenMC surfaces and STORE THEM AS CLASS ATTRIBUTES for tally use
+            # Create OpenMC surfaces and STORE THEM AS CLASS ATTRIBUTES
             self.surface_vc  = openmc.model.Polygon(points_vc , basis='rz')  # Plasma-facing surface (inner FW)
             self.surface_fw  = openmc.model.Polygon(points_fw , basis='rz')  # Outer surface of first wall
+            self.surface_st0 = openmc.model.Polygon(points_st0, basis='rz')
+            self.surface_br0 = openmc.model.Polygon(points_br0, basis='rz')
             self.surface_st1 = openmc.model.Polygon(points_st1, basis='rz')
             self.surface_br1 = openmc.model.Polygon(points_br1, basis='rz')
             self.surface_st2 = openmc.model.Polygon(points_st2, basis='rz')
-            self.surface_br2 = openmc.model.Polygon(points_br2, basis='rz')
-            self.surface_st3 = openmc.model.Polygon(points_st3, basis='rz')
-
-            # Create OpenMC surfaces
-            surfaces = [self.surface_vc, self.surface_fw, self.surface_st1, 
-                        self.surface_br1, self.surface_st2, self.surface_br2, self.surface_st3]
 
             # Add boundary surfaces
-            # r_max = max([point[0] for point in points_st3]) + 1.0  # 1 cm beyond outermost surface
-            # z_max = max([point[1] for point in points_st3]) + 1.0
-            # z_min = min([point[1] for point in points_st3]) - 1.0
-
             outer_cylinder = openmc.ZCylinder(r=self.extent_r, boundary_type='vacuum')
             top_plane      = openmc.ZPlane(z0=self.extent_z, boundary_type='vacuum')
             bottom_plane   = openmc.ZPlane(z0=-self.extent_z, boundary_type='vacuum')
+
         
         elif self.breeder_name == 'LL':
-             # ---- Outboard offsets ----
-            points_vc  =  miller_model(self.R0, self.a, self.kappa, self.delta)
-            points_fw_o   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_fw_o)
-            points_fwf_o  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_fwf_o)
-            points_fwc_o  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_fwc_o)
-            points_fwb_o  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_fwb_o)
-            points_br1_o  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_br1_o)
-            points_d1_o   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_d1_o)
-            points_br2_o  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_br2_o)
-            points_d2_o   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_d2_o)
-            points_br3_o  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_br3_o)
-            points_im_o   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, 0, d_im_o)
 
-            # ---- Inboard offsets ----
-            points_fw_i   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_fw_i,  0)
-            points_fwf_i  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_fwf_i, 0)
-            points_fwc_i  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_fwc_i, 0)
-            points_fwb_i  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_fwb_i, 0)
-            points_br1_i  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_br1_i, 0)
-            points_d1_i   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_d1_i,  0)
-            points_br2_i  = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_br2_i, 0)
-            points_im_i   = miller_offset_split(self.R0, self.a, self.kappa, self.delta, d_im_i,  0)
-
-             # ---- Store as surfaces ----
-            self.surface_vc = openmc.model.Polygon(points_vc , basis='rz')
-
-            # Outboard surfaces
-            self.surface_fw_o   = openmc.model.Polygon(points_fw_o, basis='rz')
-            self.surface_fwf_o  = openmc.model.Polygon(points_fwf_o, basis='rz')
-            self.surface_fwc_o  = openmc.model.Polygon(points_fwc_o, basis='rz')
-            self.surface_fwb_o  = openmc.model.Polygon(points_fwb_o, basis='rz')
-            self.surface_br1_o  = openmc.model.Polygon(points_br1_o, basis='rz')
-            self.surface_d1_o   = openmc.model.Polygon(points_d1_o,  basis='rz')
-            self.surface_br2_o  = openmc.model.Polygon(points_br2_o, basis='rz')
-            self.surface_d2_o   = openmc.model.Polygon(points_d2_o,  basis='rz')
-            self.surface_br3_o  = openmc.model.Polygon(points_br3_o, basis='rz')
-            self.surface_im_o   = openmc.model.Polygon(points_im_o,  basis='rz')
-
-            # Inboard surfaces
-            self.surface_fw_i   = openmc.model.Polygon(points_fw_i, basis='rz')
-            self.surface_fwf_i  = openmc.model.Polygon(points_fwf_i, basis='rz')
-            self.surface_fwc_i  = openmc.model.Polygon(points_fwc_i, basis='rz')
-            self.surface_fwb_i  = openmc.model.Polygon(points_fwb_i, basis='rz')
-            self.surface_br1_i  = openmc.model.Polygon(points_br1_i, basis='rz')
-            self.surface_d1_i   = openmc.model.Polygon(points_d1_i,  basis='rz')
-            self.surface_br2_i  = openmc.model.Polygon(points_br2_i, basis='rz')
-            self.surface_im_i   = openmc.model.Polygon(points_im_i,  basis='rz')
-
+            points_vc   =  miller_model(self.R0, self.a, self.kappa, self.delta)
+            points_fw   = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_fw)
+            points_fwf  = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_fwf)
+            points_fwc  = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_fwc)
+            points_fwb  = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_fwb)
+            points_br1  = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_br1)
+            points_d1   = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_d1)
+            points_br2  = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_br2)
+            points_im_i = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_im_i)   # inboard manifold
+            points_d2_o  = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_d2_o)  # outboard divider
+            points_br3_o = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_br3_o) # outboard blanket module
+            points_im_o  = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_im_o)  # outboard manifold
+            
             # Create OpenMC surfaces
-            surfaces = [
-                self.surface_vc,
-                self.surface_fw_o, self.surface_fwf_o, self.surface_fwc_o,
-                self.surface_fwb_o, self.surface_br1_o, self.surface_d1_o,
-                self.surface_br2_o, self.surface_d2_o, self.surface_br3_o, self.surface_im_o,
-                self.surface_fw_i, self.surface_fwf_i, self.surface_fwc_i,
-                self.surface_fwb_i, self.surface_br1_i, self.surface_d1_i,
-                self.surface_br2_i, self.surface_im_i
-            ]
+            self.surface_vc    = openmc.model.Polygon(points_vc , basis='rz')
+            self.surface_fw    = openmc.model.Polygon(points_fw, basis='rz')
+            self.surface_fwf   = openmc.model.Polygon(points_fwf, basis='rz')
+            self.surface_fwc   = openmc.model.Polygon(points_fwc, basis='rz')
+            self.surface_fwb   = openmc.model.Polygon(points_fwb, basis='rz')
+            self.surface_br1   = openmc.model.Polygon(points_br1, basis='rz')
+            self.surface_d1    = openmc.model.Polygon(points_d1,  basis='rz')
+            self.surface_br2   = openmc.model.Polygon(points_br2, basis='rz')
+            self.surface_im_i  = openmc.model.Polygon(points_im_i,  basis='rz') # inboard manifold
+            self.surface_d2_o  = openmc.model.Polygon(points_d2_o,  basis='rz') # outboard divider
+            self.surface_br3_o = openmc.model.Polygon(points_br3_o, basis='rz') # outboard blanket module
+            self.surface_im_o  = openmc.model.Polygon(points_im_o,  basis='rz') # outboard manifold
 
-            outer_cylinder = openmc.ZCylinder(r=self.extent_r, boundary_type='vacuum')
-            top_plane      = openmc.ZPlane(z0=self.extent_z, boundary_type='vacuum')
-            bottom_plane   = openmc.ZPlane(z0=-self.extent_z, boundary_type='vacuum')
+            dividing_cylinder = openmc.ZCylinder(r=self.R0)
+            outer_cylinder    = openmc.ZCylinder(r=self.extent_r, boundary_type='vacuum')
+            top_plane         = openmc.ZPlane(z0=self.extent_z, boundary_type='vacuum')
+            bottom_plane      = openmc.ZPlane(z0=-self.extent_z, boundary_type='vacuum')
         
 
-            
         # ------------------------------------------------------------------
-        # Cells 
+        # Cells | 10: vc, fw | 2X: structure | 3X: breeding
         # ------------------------------------------------------------------
         if self.breeder_name  in ['FLiBe','ARC']:
-            cell_vc   = openmc.Cell(cell_id=10, region= -surfaces[0])
+            cell_vc   = openmc.Cell(cell_id=10, region= -self.surface_vc)
             cell_vc.importance = {'neutron':1}
-            cell_fw   = openmc.Cell(cell_id=11, region= +surfaces[0] & -surfaces[1] , fill=self.firstwall) 
-            cell_st1  = openmc.Cell(cell_id=21, region= +surfaces[1] & -surfaces[2] , fill=self.structure)
-            cell_br1  = openmc.Cell(cell_id=31, region= +surfaces[2] & -surfaces[3] , fill=self.blanket)
-            cell_st2  = openmc.Cell(cell_id=22, region= +surfaces[3] & -surfaces[4] , fill=self.structure)
-            cell_br2  = openmc.Cell(cell_id=32, region= +surfaces[4] & -surfaces[5] , fill=self.blanket)
-            cell_st3  = openmc.Cell(cell_id=23, region= +surfaces[5] & -surfaces[6] , fill=self.structure) 
+            cell_fw   = openmc.Cell(cell_id=11, region= +self.surface_vc  & -self.surface_fw  , fill=self.firstwall) 
+            cell_st0  = openmc.Cell(cell_id=21, region= +self.surface_fw  & -self.surface_st0 , fill=self.structure)
+            cell_br0  = openmc.Cell(cell_id=31, region= +self.surface_st0 & -self.surface_br0 , fill=self.blanket)
+            cell_st1  = openmc.Cell(cell_id=22, region= +self.surface_br0 & -self.surface_st1 , fill=self.structure)
+            cell_br1  = openmc.Cell(cell_id=32, region= +self.surface_st1 & -self.surface_br1 , fill=self.blanket)
+            cell_st2  = openmc.Cell(cell_id=23, region= +self.surface_br1 & -self.surface_st2 , fill=self.structure) 
 
             # Surrounding air cell with proper boundaries (otherwise causes error with just Polygons)
-            # cell_air = openmc.Cell(cell_id=99, region= +surfaces[6] & -outer_cylinder & +bottom_plane & -top_plane, fill=self.air)
-            cell_void = openmc.Cell(cell_id=99, region= +surfaces[6] & -outer_cylinder & +bottom_plane & -top_plane)
+            cell_void = openmc.Cell(cell_id=99, region= +self.surface_st2 & -outer_cylinder & +bottom_plane & -top_plane) # fill=self.air
             cell_void.importance = {'neutron':0}
 
-            self.cells = [cell_vc, cell_fw, cell_st1, cell_br1, cell_st2, cell_br2, cell_st3, cell_void]
+            self.cells = [cell_vc, cell_fw, cell_st0, cell_br0, cell_st1, cell_br1, cell_st2, cell_void]
             self.geometry = openmc.Geometry(openmc.Universe(cells=self.cells))
             # self.geometry.export_to_xml(self.path)
         
+
         elif self.breeder_name == 'LL':
-            cell_vc = openmc.Cell(cell_id=24, region=-surfaces[0])  
-            cell_vc.importance = {'neutron': 1}
 
-            # Outboard cells
-            cell_fw_o   = openmc.Cell(cell_id=25, region=+surfaces[0] & -surfaces[1], fill=self.firstwall)
-            cell_fwf_o  = openmc.Cell(cell_id=26, region=+surfaces[1] & -surfaces[2], fill=self.structure)
-            cell_fwc_o  = openmc.Cell(cell_id=27, region=+surfaces[2] & -surfaces[3], fill=self.firstwall_cooling)
-            cell_fwb_o  = openmc.Cell(cell_id=28, region=+surfaces[3] & -surfaces[4], fill=self.structure)
+            cell_vc   = openmc.Cell(cell_id=10, region= -self.surface_vc)
+            cell_vc.importance = {'neutron':1}
 
-            cell_br1_o  = openmc.Cell(cell_id=29, region=+surfaces[4] & -surfaces[5], fill=self.blanket)
-            cell_d1_o   = openmc.Cell(cell_id=30, region=+surfaces[5] & -surfaces[6], fill=self.divider)
-            cell_br2_o  = openmc.Cell(cell_id=31, region=+surfaces[6] & -surfaces[7], fill=self.blanket)
-            cell_d2_o   = openmc.Cell(cell_id=32, region=+surfaces[7] & -surfaces[8], fill=self.divider)
-            cell_br3_o  = openmc.Cell(cell_id=33, region=+surfaces[8] & -surfaces[9], fill=self.blanket)
-            cell_im_o   = openmc.Cell(cell_id=34, region=+surfaces[9] & -surfaces[10],fill=self.inner_manifold)
+            cell_fw   = openmc.Cell(cell_id=11, region= +self.surface_vc  & -self.surface_fw,  fill=self.firstwall)
+            cell_fwf  = openmc.Cell(cell_id=21, region= +self.surface_fw  & -self.surface_fwf, fill=self.structure)
+            cell_fwc  = openmc.Cell(cell_id=12, region= +self.surface_fwf & -self.surface_fwc, fill=self.firstwall_cooling)
+            cell_fwb  = openmc.Cell(cell_id=22, region= +self.surface_fwc & -self.surface_fwb, fill=self.structure)
+            cell_br1  = openmc.Cell(cell_id=31, region= +self.surface_fwb & -self.surface_br1, fill=self.blanket)
+            cell_d1   = openmc.Cell(cell_id=23, region= +self.surface_br1 & -self.surface_d1,  fill=self.divider)
+            cell_br2  = openmc.Cell(cell_id=32, region= +self.surface_d1  & -self.surface_br2, fill=self.blanket)
+            cell_im_i   = openmc.Cell(cell_id=24, region= -dividing_cylinder & +self.surface_br2 & -self.surface_im_i, fill=self.inner_manifold)    # inboard manifold
+            cell_d2_o   = openmc.Cell(cell_id=25, region= +dividing_cylinder & +self.surface_br2 & -self.surface_d2_o,   fill=self.divider)         # outboard divider
+            cell_br3_o  = openmc.Cell(cell_id=33, region= +dividing_cylinder & +self.surface_d2_o & -self.surface_br3_o, fill=self.blanket)         # outboard blanket module
+            cell_im_o   = openmc.Cell(cell_id=26, region= +dividing_cylinder & +self.surface_br3_o & -self.surface_im_o, fill=self.inner_manifold)  # outboard manifold
 
-            # Inboard Cells
-            cell_fw_i   = openmc.Cell(cell_id=35, region=+surfaces[0] & -surfaces[11], fill=self.firstwall)
-            cell_fwf_i  = openmc.Cell(cell_id=36, region=+surfaces[11] & -surfaces[12], fill=self.structure)
-            cell_fwc_i  = openmc.Cell(cell_id=37, region=+surfaces[12] & -surfaces[13], fill=self.firstwall_cooling)
-            cell_fwb_i  = openmc.Cell(cell_id=38, region=+surfaces[13] & -surfaces[14], fill=self.structure)
+            # Void cells
+            cell_void_i = openmc.Cell(cell_id=99, region= +self.surface_im_i & -dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane)
+            cell_void_o = openmc.Cell(cell_id=98, region= +self.surface_im_o & +dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane)
+            cell_void_i.importance = {'neutron': 0}
+            cell_void_o.importance = {'neutron': 0}
 
-            cell_br1_i  = openmc.Cell(cell_id=39, region=+surfaces[14] & -surfaces[15], fill=self.blanket)
-            cell_d1_i   = openmc.Cell(cell_id=40, region=+surfaces[15] & -surfaces[16], fill=self.divider)
-            cell_br2_i  = openmc.Cell(cell_id=41, region=+surfaces[16] & -surfaces[17], fill=self.blanket)
-            cell_im_i   = openmc.Cell(cell_id=42, region=+surfaces[17] & -surfaces[18], fill=self.inner_manifold)
-
-            cell_void = openmc.Cell(
-                cell_id=43,
-                region=+surfaces[10] & +surfaces[18] -outer_cylinder & +bottom_plane & -top_plane
-            )
-            cell_void.importance = {'neutron': 0}
 
             # -------------------------------------------------------
             # Collect all cells
             # -------------------------------------------------------
             self.cells = [
                 cell_vc,
-                cell_fw_o, cell_fwf_o, cell_fwc_o, cell_fwb_o,
-                cell_br1_o, cell_d1_o, cell_br2_o, cell_d2_o, cell_br3_o, cell_im_o,
-                cell_fw_i, cell_fwf_i, cell_fwc_i, cell_fwb_i,
-                cell_br1_i, cell_d1_i, cell_br2_i, cell_im_i,
-                cell_void
+                cell_fw, cell_fwf, cell_fwc, cell_fwb, cell_br1, cell_d1, cell_br2, 
+                cell_im_i,
+                cell_d2_o, cell_br3_o, cell_im_o,
+                cell_void_i, cell_void_o,
             ]
             self.geometry = openmc.Geometry(openmc.Universe(cells=self.cells))
     
@@ -681,7 +626,7 @@ class Reactor:
         self.model.run(cwd=self.path)
 
 
-    # @timer
+    @timer
     def volumes(self, samples=int(1e8)):
         """
         Calculate volumes of all cells using OpenMC stochastic volume calculation.
@@ -705,14 +650,14 @@ class Reactor:
         self.materials.cross_sections = set_xs_path()
         self.model_vol_calc = openmc.model.Model(self.geometry, self.materials, settings_vol_calc)
         self.model_vol_calc.calculate_volumes(cwd=self.path, export_model_xml=False, apply_volumes=False)
-        
+        print('did openmc run')
 
         # ---------------------------
         # Process volume calc results
         # ---------------------------
         vol_results = openmc.VolumeCalculation.from_hdf5(f"{self.path}/volume_1.h5")
         
-        print(f"{Colors.GREEN}Stochastic Volume Calculation Results:{Colors.END}")
+        #print(f"{Colors.GREEN}Stochastic Volume Calculation Results:{Colors.END}")
 
         vol_dict = {}
         for k, v in vol_results.volumes.items():
@@ -725,8 +670,8 @@ class Reactor:
         df.rename(columns={'index': 'cells'}, inplace=True)
         df.to_csv(f'{self.path}/volume_1.csv',index=False)
 
-        print("CSV file 'volume_1.csv' created successfully")
-        print(df)
+        print(f"{Colors.YELLOW}Comment.{Colors.END} CSV file 'volume_1.csv' printed to {self.path}")
+        # print(df)
 
         """
         vol_results.volumes is a dictionary that looks like:
@@ -738,53 +683,73 @@ class Reactor:
 
         But also whoever designed the output of VolueCalculation.volumes() 
         honestly needs to WRITE in the documentation that the data is stored/written 
-        using the uncertainties package. I was going crazy using all sorts of 
+        using the 'uncertainties' package. I was going crazy using all sorts of 
         regex match patterns to try to understand why splitting the vol_results.volumes.items()
         into k, v was causing issues vs. what v looked like when I was printing it. 
-        It was the uncertainties package changing the formatting of v when you go print it. 
+        It was 'uncertainties' changing the formatting of v when you go print it. 
           --ppark  2025-09-20
         """
 
 
-    # @timer
+    @timer
     def plot(self):
-        # ---------- Plots.xml + generate images ----------
+
+        Image.MAX_IMAGE_PIXELS = None # suppreses DecompressionBombWarning lmao
+
+        settings_plot = openmc.Settings()
+        settings_plot.run_mode = 'plot'
+
+        if self.breeder_name in ['ARC', 'FLiBe']:
+            colors = {self.firstwall: (30, 27, 41),    # very dark gray
+                      self.structure: (109, 110, 113), # gray
+                      self.blanket: (129, 204, 185),   # teal
+                      # Void regions will be white by default
+                      }
+
+        elif self.breeder_name in ['LL']:
+            colors = {self.firstwall: (30, 27, 41),           # very dark gray
+                      self.structure: (109, 110, 113),        # gray
+                      self.firstwall_cooling: (37, 150, 190), # cobalt blue 
+                      self.blanket: (129, 204, 185),          # teal
+                      self.divider: (109, 110, 113),          # gray
+                      self.inner_manifold:(176, 123, 76),     # wood-color
+                      # Void regions will be white by default
+                      }
+
+        x_width = round(2*self.extent_r)
+        z_width = round(2*self.extent_z)
+        
         # XY toroidal slice
         xy = openmc.Plot()
-        xy.filename = "tokamak_xy"
+        xy.filename = f"{self.breeder_name}_xy" # {self.path}/
         xy.basis = "xy"
-        xy.width  = (1800, 1800)
-        xy.pixels = (18000, 18000)
+        xy.width  = (x_width, x_width)
+        xy.pixels = (8*x_width, 8*x_width)
         xy.color_by = "material"
-        xy.colors = {
-            self.firstwall: (255, 0, 0),    # Red for first wall
-            self.structure: (0, 255, 0),    # Green for structure
-            self.firstwall_cooling: (255, 255,   0), #yellow
-            self.blanket: (0, 0, 255),    # Blue for breeder
-            self.divider: (255, 105, 180),   # Pink
-            self.inner_manifold:(255, 165,   0),   # Orange
-            # Void regions will be white by default
-        }
+        xy.colors = colors
 
         # XZ poloidal slice
         xz = openmc.Plot()
-        xz.filename = "tokamak_xz"
+        xz.filename = f"{self.breeder_name}_xz" # {self.path}/
         xz.basis = "xz"
-        xz.width  = (1800, 1000)
-        xz.pixels = (18000, 10000)
+        xz.width  = (x_width, z_width)
+        xz.pixels = (8*x_width, 8*z_width)
         xz.color_by = "material"
-        xz.colors = {
-            self.firstwall: (255, 0, 0),    # Red for first wall
-            self.structure: (0, 255, 0),    # Green for structure
-            self.firstwall_cooling: (255, 255,   0), #yellow
-            self.blanket: (0, 0, 255),    # Blue for breeder
-            self.divider: (255, 105, 180),   # Pink
-            self.inner_manifold:(255, 165,   0),   # Orange
-            # Void regions will be white by default
-        }
+        xz.colors = colors
 
-        openmc.Plots([xy, xz]).export_to_xml(self.path)
-        openmc.plot_geometry(path_input=self.path)  # writes tokamak_rz.ppm and tokamak_xz.ppm
-        print("Done. Files: tokamak_rz.ppm, tokamak_xz.ppm")
+        plots = openmc.Plots([xy, xz])
+        model_plot = openmc.model.Model(self.geometry, self.materials, settings_plot)
+        model_plot.plots = plots 
+        model_plot.plot_geometry(cwd=f"{self.path}")  # writes tokamak_rz.ppm and tokamak_xz.ppm
+
+        for basename in [f"{self.breeder_name}_xy", f"{self.breeder_name}_xz"]:
+            ppm_file = os.path.join(self.path, f"{basename}.ppm")
+            png_file = os.path.join(self.path, f"{basename}.png")
+            if os.path.exists(ppm_file):
+                with Image.open(ppm_file) as im:
+                    im.save(png_file)
+                print(f"{Colors.YELLOW}Comment.{Colors.END} Plots '{self.breeder_name}_xy.png', '{self.breeder_name}_xz.png' printed to {self.path}")
+            else:
+                print(f"{Colors.YELLOW}Error.{Colors.END} OpenMC did not print '{self.breeder_name}_xy.ppm', '{self.breeder_name}_xz.ppm' to {self.path}!")
 
                 
