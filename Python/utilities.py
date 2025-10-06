@@ -20,9 +20,14 @@ AMU_O = 15.999
 AMU_Th = 232.0381
 AMU_UF4 = AMU_U + 4 * AMU_F19
 AMU_ThF4 = AMU_Th + 4 * AMU_F19
+AMU_UO2 = AMU_U + 2 * AMU_O
+AMU_ThO2 = AMU_Th + 2 * AMU_O
 AMU_FLIBE = 98.89 # g/mol
 DENSITY_UF4 = 6.7 # g/cm3
 DENSITY_ThF4 = 6.3 # g/cm3
+DENSITY_UO2 = 10.5 # g/cm3
+DENSITY_ThO2 = 10.0 # g/cm3
+DENSITY_SIC = 3.2 # g/cm3
 AMU_PU239 = 239.0521634
 AMU_U233 = 233.039635207
 SEC_PER_YR = 3600 * 24 * 365
@@ -45,7 +50,7 @@ class Colors:
     CYAN = '\033[96m'
     WHITE = '\033[97m'
     BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+    UL = '\033[4m'
     END = '\033[0m'  # Reset to default
     
 
@@ -127,6 +132,75 @@ def calc_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertil
         breeder_mass_frac      = breeder_mass_kg / blanket_mass_kg
         return breeder_mass_frac, thf4_mass_frac
 
+def calc_biso_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertile_element='U', fertile_enrich=0.71, breeder_density_kgm3=9.4e3):
+    """
+    Calculate mass fractions of PbLi and BISO particles.
+    Following Glaser & Goldston (2012), we assume the BISO/TRISO particles are homogenized 
+    throughout the blanket, rather than resolving discrete particles. 
+    The kernel/coating geometry is used only to set the relative mass or 
+    volume fractions of fertile vs. coating material.
+    
+    Args:
+        fertile_bulk_density_kgm3 : desired bulk density of fertile isotope in blanket [kg/m3]
+        breeder_volume_m3         : breeding region volume [m3]
+        fertile_element           : 'U' or 'Th'
+        fertile_enrich            : enrichment fraction of fertile isotope [wt%]
+        breeder_density_kgm3      : density of PbLi [kg/m3]
+    """
+    fertile_enrich = fertile_enrich*0.01 # OpenMC uses this in % but we want fraction
+
+    if fertile_element == 'U':
+        uo2_bulk_density_kgm3 = fertile_bulk_density_kgm3 / (1-fertile_enrich) * AMU_UO2 / AMU_U
+
+        r_uo2 = 400e-4  # r = 400 μm = 0.0400 cm // "800 μm kernel"
+        r_sic = 500e-4  # 500 μm = 0.0500 cm // "100 μm thickness"
+        V_biso_particle = (4 / 3) * np.pi * (r_sic)**3     # volume of single BISO particle
+        V_uo2_in_biso   = (4 / 3) * np.pi * (r_uo2)**3     # volume of UO2 in single BISO particle
+        Vf_uo2_in_biso  = V_uo2_in_biso / V_biso_particle  # vol frac UO2 in single BISO
+        Vf_sic_in_biso  = 1.0 - Vf_uo2_in_biso  
+        # SiC mass per volume of UO2 (ratio inside a particle)
+        density_sic     = DENSITY_SIC * 10**3 #kg/m^3
+        density_uo2     = DENSITY_UO2 * 10**3#kg/m^3
+        m_sic_per_m_uo2 = (density_sic * Vf_sic_in_biso) / (density_uo2 * Vf_uo2_in_biso)
+
+        sic_bulk_density_kgm3 = uo2_bulk_density_kgm3 * m_sic_per_m_uo2
+
+        uo2_mass_kg       = uo2_bulk_density_kgm3 * breeder_volume_m3
+        sic_mass_kg       = sic_bulk_density_kgm3 * breeder_volume_m3
+        biso_mass_kg      = uo2_mass_kg + sic_mass_kg   # total fertile particle mass
+        breeder_mass_kg   = breeder_density_kgm3 * breeder_volume_m3  # PbLi mass
+        blanket_mass_kg   = breeder_mass_kg + biso_mass_kg
+        breeder_mass_frac = breeder_mass_kg / blanket_mass_kg
+        biso_mass_frac    = biso_mass_kg / blanket_mass_kg
+
+        return breeder_mass_frac, biso_mass_frac
+
+    elif fertile_element == 'Th':
+        tho2_bulk_density_kgm3 = fertile_bulk_density_kgm3 / (1-fertile_enrich) * AMU_ThO2 / AMU_Th
+
+        r_tho2 = 400e-4  # r = 400 μm = 0.0400 cm // "800 μm kernel"
+        r_sic = 500e-4  # 500 μm = 0.0500 cm // "100 μm thickness"
+        V_biso_particle = (4 / 3) * np.pi * (r_sic)**3     # volume of single BISO particle
+        V_tho2_in_biso   = (4 / 3) * np.pi * (r_tho2)**3     # volume of UO2 in single BISO particle
+        Vf_tho2_in_biso  = V_tho2_in_biso / V_biso_particle  # vol frac UO2 in single BISO
+        Vf_sic_in_biso  = 1.0 - Vf_tho2_in_biso  
+        # SiC mass per volume of UO2 (ratio inside a particle)
+        density_sic     = DENSITY_SIC * 10**3 #kg/m^3
+        density_tho2     = DENSITY_ThO2 * 10**3#kg/m^3
+        m_sic_per_m_tho2 = (density_sic * Vf_sic_in_biso) / (density_tho2 * Vf_tho2_in_biso)
+
+        sic_bulk_density_kgm3 = tho2_bulk_density_kgm3 * m_sic_per_m_tho2
+
+        tho2_mass_kg       = tho2_bulk_density_kgm3 * breeder_volume_m3
+        sic_mass_kg       = sic_bulk_density_kgm3 * breeder_volume_m3
+        biso_mass_kg      = tho2_mass_kg + sic_mass_kg   # total fertile particle mass
+        breeder_mass_kg   = breeder_density_kgm3 * breeder_volume_m3  # PbLi mass
+        blanket_mass_kg   = breeder_mass_kg + biso_mass_kg
+        breeder_mass_frac = breeder_mass_kg / blanket_mass_kg
+        biso_mass_frac    = biso_mass_kg / blanket_mass_kg
+
+        return breeder_mass_frac, biso_mass_frac
+
 
 def extract_lie(path: str) -> float:
     """
@@ -152,98 +226,86 @@ def set_xs_path():
     """
     Temporary solution for finding xs files between WSL and Ubuntu on Computing Cluster without editing PATH --ppark 2025-06-28
     """
-    xs_path_ubuntu = '/opt/openmc_data/endfb-viii.0-hdf5/cross_sections.xml'
-    xs_path_wsl   = '/mnt/c/openmc/data/endfb-viii.0-hdf5/cross_sections.xml'
+    xs_path_zotac = '/opt/openmc_data/endfb-viii.0-hdf5/cross_sections.xml'
+    xs_path_wsl   = '/mnt/c/OpenMC/data/endfb-viii.0-hdf5/cross_sections.xml'
 
     xs_path = os.environ.get("OPENMC_CROSS_SECTIONS")
-    print(f"Checking if 'OPENMC_CROSS_SECTIONS' is set: {xs_path}")
+    
 
     if xs_path is None:
-        if os.path.isfile(xs_path_ubuntu):
-            return xs_path_ubuntu # use this on Zotacs --ppark
+        print(f"{Colors.YELLOW}Warning.{Colors.END} 'OPENMC_CROSS_SECTIONS' is NOT set in PATH.")
+        
+        if os.path.isfile(xs_path_zotac):
+            print(f"{Colors.YELLOW}Warning.{Colors.END} 'OPENMC_CROSS_SECTIONS' is now set to {xs_path_ubuntu}.")
+            return xs_path_zotac # use this on Zotacs --ppark
+
         elif os.path.isfile(xs_path_wsl):
+            print(f"{Colors.YELLOW}Warning.{Colors.END} 'OPENMC_CROSS_SECTIONS' is now set to {xs_path_wsl}.")
             return xs_path_wsl
+        
         else:
-            sys.exit(f"{Colors.RED}Error finding cross section XML!{Colors.END}")
+            sys.exit(f"{Colors.RED}Fatal. Cannot find cross section XML!{Colors.END}")
+    
     else:
         print(f"{Colors.GREEN}'OPENMC_CROSS_SECTIONS' found!{Colors.END}")
         return xs_path
 
 
-def miller_model(R0, a, kappa, delta, n=100):
+def miller_model(R0, a, kappa, delta, extrude=0, calc_vol=False, n=100):
     """
     Calculate parametric coordinates from the Miller local equilibrium model.
     cf. R. L. Miller et al., doi.org/10.1063/1.872666
     cf. (Justin) Ball et al., arxiv.org/pdf/1510.08923
     
     Args:
-        t  : array : parameter from 0 to 2pi
         R0 : float : major radius (cm)
         a  : float : minor radius (cm)
         kappa : float : elongation
         delta : float : triangularity
+        extrude : float : thickness by which to extrude the boundary (for blanket layers)
+        calc_vol : bool : return volume?
+        n  : int : number of (r, z) pairs to generate
     
     Returns:
-        R, Z : arrays of R and Z coordinates
+        R, Z : arrays of R and Z coordinates 
     """
+    # Original Miller contour
     t = np.linspace(0, 2*np.pi, n)
     R = R0 + a * np.cos(t + delta * np.sin(t))
     Z = kappa * a * np.sin(t)
 
-    # Ensure the contours are closed (first point = last point) for OpenMC
-    if not (np.isclose(R[0], R[-1]) and np.isclose(Z[0], Z[-1])):
-        R = np.append(R, R[0])
-        Z = np.append(Z, Z[0])
-
-    return list(zip(R, Z)) 
-
-
-
-
-def miller_offset(R0, a, kappa, delta, d, n=100):
-    """
-    Calculate a new contour that is precisely [d] meters extruded from a shape generated by miller_model().
-    
-    Args:
-        t  : array : parameter from 0 to 2pi
-        R0 : float : major radius (m)
-        a  : float : minor radius (m)
-        kappa : float : elongation
-        delta : float : triangularity
-        d  : float : offset distance (m)
-    
-    Returns:
-        R_offset, Z_offset : arrays of offset R and Z coordinates
-    """
-    # Original shape
-    t = np.linspace(0, 2*np.pi, n)
-    R = R0 + a * np.cos(t + delta * np.sin(t))
-    Z = kappa * a * np.sin(t)
-    
     # Derivatives
     dR_dt = -a * np.sin(t + delta * np.sin(t)) * (1 + delta * np.cos(t))
     dZ_dt = kappa * a * np.cos(t)
-    
-    # Normal vector components (not normalized)
-    N_R = dZ_dt   # kappa * a * cos(t)
-    N_Z = -dR_dt  # a * sin(t + delta*sin(t)) * (1 + delta*cos(t))
-    
-    # Magnitude of normal vector
+
+    # Outward normal
+    N_R = dZ_dt
+    N_Z = -dR_dt
     N_mag = np.sqrt(N_R**2 + N_Z**2)
-    
-    # Unit normal components
-    N_R_unit = N_R / N_mag
-    N_Z_unit = N_Z / N_mag
-    
-    # Offset coordinates
-    R_offset = R + d * N_R_unit
-    Z_offset = Z + d * N_Z_unit
-    
-    # Ensure the contours are closed (first point = last point) for OpenMC
+    N_R_unit, N_Z_unit = N_R/N_mag, N_Z/N_mag
+
+    # Offset contour
+    R_offset = R + extrude * N_R_unit
+    Z_offset = Z + extrude * N_Z_unit
+
+    # Close polygon
     if not (np.isclose(R_offset[0], R_offset[-1]) and np.isclose(Z_offset[0], Z_offset[-1])):
         R_offset = np.append(R_offset, R_offset[0])
         Z_offset = np.append(Z_offset, Z_offset[0])
 
+    # if calc_vol:
+    #     # Shoelace area
+    #     A = 0.5 * np.sum(R_offset[:-1]*Z_offset[1:] - R_offset[1:]*Z_offset[:-1])
+
+    #     # Centroid in R
+    #     Cx = (1/(6*A)) * np.sum((R_offset[:-1] + R_offset[1:]) *
+    #                                (R_offset[:-1]*Z_offset[1:] - R_offset[1:]*Z_offset[:-1]))
+    #     # Torus volume
+    #     volume = 2*np.pi*Cx*abs(A)
+
+    #     return R_offset, Z_offset, volume
+
+    # return R_offset, Z_offset
     return list(zip(R_offset, Z_offset))
 
 
@@ -267,7 +329,7 @@ def timer(func):
     return wrapper
 
 
-def has_statepoint_file(directory_path):
+def has_statepoint(directory_path):
     """
     Check if any file starting with 'statepoint' exists in the given directory.
     
@@ -277,17 +339,11 @@ def has_statepoint_file(directory_path):
     Returns:
         bool: True if a file starting with 'statepoint' is found, False otherwise
     """
-    try:
-        for filename in os.listdir(directory_path):
-            if filename.startswith("statepoint"):
-                return True
-        return False
-    except FileNotFoundError:
-        print(f"Directory '{directory_path}' not found.")
-        return False
-    except PermissionError:
-        print(f"Permission denied to access directory '{directory_path}'.")
-        return False
+    for filename in os.listdir(directory_path):
+        if filename.startswith("statepoint"):
+            return True
+        else:
+            return False
 
 
 if __name__ == "__main__":

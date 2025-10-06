@@ -31,6 +31,7 @@ def main():
                            400, 100, 1.6 , 0.5 , [(0.3,'fw'), (1,'st1'), (2,'br1'), (3,'st2'), (100,'br2'), (3,'st3')])
     Emma_FLiBe     = Specs('Emma FLiBe',
                            600, 200, 1.72, 0.4 , [(0.3,'fw'), (1,'st1'), (2,'br1'), (3,'st2'), (100,'br2'), (3,'st3')])
+    
     Emma_LL        = Specs('Emma LL/PB',
                            620, 207, 1.72, 0.4 , [(0.2,'fw'), (0.4,'st1'), (2,'br1'), (0.4,'st2'), (22.5,'br2'), (3.2,'st3'), (21.0,'br3'), (3.2,'st4'), (21.0,'br4'), (8.0,'st5')])
     
@@ -64,13 +65,13 @@ def plot_separate(reactors_to_plot, n=10000):
         ax[i].legend(loc='best', fontsize=8)
 
         # Plasma shape
-        R, Z, V = miller_offset(t, reactor.R0, reactor.a, reactor.kappa, reactor.delta, 0)
+        R, Z, V = miller_model(reactor.R0, reactor.a, reactor.kappa, reactor.delta, 0)
         ax[i].plot(R, Z, '-', color=color, linewidth=1) # , label='Original Miller D-shape')
         
         offset = 0
         for layer in reactor.layers:
             offset += layer[0]
-            R_offset, Z_offset, V = miller_offset(t, reactor.R0, reactor.a, reactor.kappa, reactor.delta, offset)
+            R_offset, Z_offset, V = miller_model(reactor.R0, reactor.a, reactor.kappa, reactor.delta, offset)
             ax[i].plot(R_offset, Z_offset, '-', color=color, linewidth=1, label=f'{layer[1]}')
 
         i+=1
@@ -94,14 +95,14 @@ def plot_together(reactors_to_plot, n=10000):
         color = colors[i]
         
         # Plasma shape
-        R, Z, V = miller_offset(t, reactor.R0, reactor.a, reactor.kappa, reactor.delta, 0)
+        R, Z, V = miller_model(reactor.R0, reactor.a, reactor.kappa, reactor.delta, 0)
         ax.plot(R, Z, color=color, linewidth=1, label=f'{reactor.name}')
         
         offset, V0 = 0, 0
         breeding_vol = 0
         for j, layer in enumerate(reactor.layers):
             offset += layer[0]
-            R, Z, V = miller_offset(t, reactor.R0, reactor.a, reactor.kappa, reactor.delta, offset)
+            R, Z, V = miller_model(reactor.R0, reactor.a, reactor.kappa, reactor.delta, offset)
 
             print(f"{reactor.name} {layer[1]} vol = {(V - V0)/1e6:.4f} m^3") # for debugging :)
             
@@ -133,8 +134,9 @@ def plot_together(reactors_to_plot, n=10000):
 
 
 
-def miller_model(t, R0, a, kappa, delta):
+def miller_model_simple(t, R0, a, kappa, delta):
     """
+    FOR V&V ONLY -- SUGGEST USING 'miller_model()' IN PROD CODE --ppark
     Calculate parametric coordinates from the Miller local equilibrium model.
     cf. R. L. Miller et al., doi.org/10.1063/1.872666
     cf. (Justin) Ball et al., arxiv.org/pdf/1510.08923
@@ -182,8 +184,24 @@ def miller_surface_area(R0, a, kappa, delta, n=1000):
     return A
 
 
-def miller_offset(t, R0, a, kappa, delta, d, calc_vol=True):
-
+def miller_model(R0, a, kappa, delta, extrude=0, calc_vol=True, n=100):
+    """
+    Calculate parametric coordinates from the Miller local equilibrium model.
+    cf. R. L. Miller et al., doi.org/10.1063/1.872666
+    cf. (Justin) Ball et al., arxiv.org/pdf/1510.08923
+    
+    Args:
+        t  : array : parameter from 0 to 2pi
+        R0 : float : major radius (cm)
+        a  : float : minor radius (cm)
+        kappa : float : elongation
+        delta : float : triangularity
+        extrude : float : thickness by which to extrude the boundary (for blanket layers)
+    
+    Returns:
+        R, Z : arrays of R and Z coordinates 
+    """
+    t = np.linspace(0, 2*np.pi, n)
     # Original Miller contour
     R = R0 + a * np.cos(t + delta * np.sin(t))
     Z = kappa * a * np.sin(t)
@@ -199,8 +217,8 @@ def miller_offset(t, R0, a, kappa, delta, d, calc_vol=True):
     N_R_unit, N_Z_unit = N_R/N_mag, N_Z/N_mag
 
     # Offset contour
-    R_offset = R + d * N_R_unit
-    Z_offset = Z + d * N_Z_unit
+    R_offset = R + extrude * N_R_unit
+    Z_offset = Z + extrude * N_Z_unit
 
     # Close polygon
     if not (np.isclose(R_offset[0], R_offset[-1]) and np.isclose(Z_offset[0], Z_offset[-1])):
@@ -219,7 +237,7 @@ def miller_offset(t, R0, a, kappa, delta, d, calc_vol=True):
 
         return R_offset, Z_offset, volume
 
-    return R_offset, Z_offset
+    return R_offset, Z_offset # use this for OpenMC: list(zip(R_offset, Z_offset))
 
 
 # def miller_volume(t, R0, a, kappa, delta, d):
@@ -229,5 +247,4 @@ def miller_offset(t, R0, a, kappa, delta, d, calc_vol=True):
 
 if __name__ == '__main__':
     main()
-
 
