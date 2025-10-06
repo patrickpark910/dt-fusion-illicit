@@ -17,13 +17,10 @@ def main():
     os.makedirs(f"./Figures/Data/", exist_ok=True)
     os.makedirs(f"./OpenMC/", exist_ok=True)
 
-    parser = argparse.ArgumentParser(description="Choose run type with -r flag")
-    parser.add_argument(
-        "-r", "--run_type",
-        type=str,
-        default='tallies',
-        help="Specify run type: 'tallies', 'volume', 'plot'"
-    )
+    parser = argparse.ArgumentParser(description="Choose run type with -r flag: ['tallies', 'volume', 'plot']")
+    parser.add_argument("-r", "--run_type", 
+                        type=str, default='tallies', 
+                        help="Specify run type: ['tallies', 'volume', 'plot']" )
     args = parser.parse_args()
     run_type = args.run_type
 
