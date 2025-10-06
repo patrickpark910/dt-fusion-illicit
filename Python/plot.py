@@ -111,6 +111,11 @@ class Plot(Reactor):
                       self.inner_manifold:(176, 123, 76),     # wood-color
                       # Void regions will be white by default
                       }
+        elif self.breeder_name in ['PB']:
+            colors = {self.firstwall: (30, 27, 41),           # very dark gray
+                      self.eurofer:   (109, 110, 113),        # gray
+                      self.blanket: (129, 204, 185),          # teal
+                      }
 
         x_width = round(2*self.extent_r)
         z_width = round(2*self.extent_z)
