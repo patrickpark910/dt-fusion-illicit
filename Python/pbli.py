@@ -112,10 +112,8 @@ class LL(Reactor):
 
         self.breeder = openmc.Material(name='breeder', temperature=self.temp_k)
         self.breeder.set_density('g/cm3', self.breeder_density)
-        self.breeder.add_element('Pb', 0.83, percent_type='wo')  # Pb isotopes expanded below
-        self.breeder.add_element('Li', 0.17, percent_type='wo', enrichment=self.breeder_enrich, enrichment_target='Li6', enrichment_type='ao') # Li-6 enrichment to 90%
-        # --emma: might need He4...
-
+        self.breeder.add_element('Pb', 0.83, percent_type='ao') 
+        self.breeder.add_element('Li', 0.17, percent_type='ao', enrichment_target='Li6', enrichment_type='ao', enrichment=self.breeder_enrich) # Li-6 enrichment to 90% 
 
         # ------------------------------------------------------------------
         # Divider material
@@ -215,7 +213,7 @@ class LL(Reactor):
         breeder_mass_frac, fertile_compound_mass_frac = calc_biso_blanket_mass_fracs(self.fertile_bulk_density_kgm3,
                                                                     self.breeder_volume,
                                                                     fertile_element=self.fertile_element,
-                                                                    fertile_enrich=ENRICH_U,
+                                                                    fertile_enrich=ENRICH_U if self.fertile_element == 'U' else 0.0,
                                                                     breeder_density_kgm3=DENSITY_LL*1e3)
         self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [breeder_mass_frac, fertile_compound_mass_frac], 'wo')
         self.blanket.name, self.blanket.temperature = self.name, self.temp_k
