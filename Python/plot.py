@@ -22,246 +22,128 @@ class Plot(Reactor):
         self.show = show
 
 
-    def plot_tbr(self):
-        print(f"\nPlotting tritium breeding ratio vs. fertile density...")
-
-        # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
-        x1, y1 =  self.flibe_u_rr_df['kg/m3_fertile'],  self.flibe_u_rr_df['Li-6(n,t)'] +  self.flibe_u_rr_df['Li-7(n,Xt)']
-        x2, y2 = self.flibe_th_rr_df['kg/m3_fertile'], self.flibe_th_rr_df['Li-6(n,t)'] + self.flibe_th_rr_df['Li-7(n,Xt)']
-        x3, y3 =   self.pbli_u_rr_df['kg/m3_fertile'],   self.pbli_u_rr_df['Li-6(n,t)'] +   self.pbli_u_rr_df['Li-7(n,Xt)']
-        # x4, y4 =  self.pbli_th_rr_df['kg/m3_fertile'],  self.pbli_th_rr_df['Li-6(n,t)'] +  self.pbli_th_rr_df['Li-7(n,Xt)']
-        x5, y5 =   self.pebble_rr_df['kg/m3_fertile'],   self.pebble_rr_df['Li-6(n,t)'] +   self.pebble_rr_df['Li-7(n,Xt)']
-
-        # AkimaInterpolation ripped from my ELWR paper --ppark 2025-08-06
-        x_fine = np.linspace(x1.min(), x1.max(), 300) # Evaluate on a fine grid
-        y_akima1 = Akima1DInterpolator(x1, y1)(x_fine)
-        y_akima2 = Akima1DInterpolator(x2, y2)(x_fine)
-        y_akima3 = Akima1DInterpolator(x3, y3)(x_fine)
-        # y_akima4 = akima4(x_fine)
-        y_akima5 = Akima1DInterpolator(x5, y5)(x_fine)
-
-        for y in [y_akima1,y_akima2,y_akima3,y_akima5]: # y_akima4,
-            for i in range(1, len(y)):
-                if y[i] > y[i-1]:
-                    y[i] = y[i-1] # adjust the current point to ensure it's not greater than the previous point
-
-
-        plt.figure(figsize=(7.5,5))
-
-        plt.scatter(x5, y5, marker='o', s=40, color='#b41f24') # ZR clean
-        plt.scatter(x3, y3, marker='^', s=50, color='#0047ba') # ZR clean
-        plt.scatter(x1, y1, marker='s', s=40, color='black') # ZR clean
-        plt.scatter(x2, y2, marker='x', s=60, color='#66b420') # ZR clean
-
-        plt.plot(x_fine, y_akima5, linewidth=1, color='#b41f24',)   # 'o-', markersize=4,  label=r'Pebble-BISO'
-        plt.plot(x_fine, y_akima3, linewidth=1, color='#0047ba', )     # '^-', markersize=5, label=r'PbLi-BISO'
-        plt.plot(x_fine, y_akima1, linewidth=1, color='black', )    # 's-', markersize=4, label=r'FLiBe-UF$_4$'
-        plt.plot(x_fine, y_akima2, linewidth=1, color='#66b420', ) # 'x-', markersize=6, label=r'FLiBe-ThF$_4$'
-
-        # Dummy plots for legend -- bit of a hack lmao -- ppark
-        plt.plot([9e98,9e99], [9e98,9e99], 'o-', markersize=4, linewidth=1, color='#b41f24', label=r'Pebble-BISO')   # 
-        plt.plot([9e98,9e99], [9e98,9e99], '^-', markersize=5, linewidth=1, color='#0047ba', label=r'PbLi-BISO')     # 
-        plt.plot([9e98,9e99], [9e98,9e99], 's-', markersize=4, linewidth=1, color='black',   label=r'FLiBe-UF$_4$')    # 
-        plt.plot([9e98,9e99], [9e98,9e99], 'x-', markersize=6, linewidth=1, color='#66b420', label=r'FLiBe-ThF$_4$') # 
-        
-        
-        # plt.title(f'Tritium breeding ratio (All)') # Exclude title for production figs --ppark 2025-08-06
-        plt.xlabel(r'Fertile isotope density in blanket [kg$/$m$^3$]')
-        plt.ylabel('Tritium breeding ratio')
-
-        plt.xlim(-5,165)
-        plt.ylim(1.03,1.42) # plt.ylim(0.98,1.42)
-        
-        # Tick grid
-        ax = plt.gca()
-        ax.xaxis.set_ticks_position('both')
-        ax.yaxis.set_ticks_position('both')
-        ax.yaxis.set_minor_locator(MultipleLocator(0.01))
-        ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
-        ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
-        # ax.axhspan(.9,1, color='#e0ded8') # color='#e0ded8', # alpha=0.3)
-        ax.axhspan(1,1.05, color='#e0ded8') # color='#f7f7f6' # , alpha=0.3)
-
-        plt.tight_layout()
-
-        leg = plt.legend(fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1)
-        leg.get_frame().set_linewidth(0.5) 
-
-        if self.save:
-            plt.savefig(f'./Figures/pdf/{self.name}/fig_tbr.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/png/{self.name}/fig_tbr.png', bbox_inches='tight', format='png')
-            print(f"Exported tritium breeding ratio plots.")
-        else:
-            print(f"Did not export tritium breeding ratio plots.")
-
-        if self.show: plt.show()
-        plt.close('all')
-
-
-    def plot_pu_per_yr(self):
-      
-        print(f"\nPlotting Pu-239 production per year for all fuels...")
-
-        # <utilities.py> Default NPS_FUS = 500 MJ/s * 3.546e17 n/MJ = 1.773e+20 n/s
-        # seconds in a year = 3.156e+7 s/yr
-
-        tot_n_per_yr = NPS_FUS * 3.156e+7
-
-        # Gotta then convert fissile atoms/yr to kg/yr
-        pu239_at_to_kg_per_yr = tot_n_per_yr / AVO * AMU_PU239 / 1e3
-        u233_at_to_kg_per_yr  = tot_n_per_yr / AVO * AMU_U233  / 1e3
-        
-        # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
-        x1, y1 =  self.flibe_u_rr_df['kg/m3_fertile'], pu239_at_to_kg_per_yr *  self.flibe_u_rr_df['U-238(n,gamma)'] 
-        x2, y2 = self.flibe_th_rr_df['kg/m3_fertile'], u233_at_to_kg_per_yr * self.flibe_th_rr_df['Th-232(n,gamma)']
-        x3, y3 =   self.pbli_u_rr_df['kg/m3_fertile'], pu239_at_to_kg_per_yr *   self.pbli_u_rr_df['U-238(n,gamma)'] 
-        # x4, y4 =  self.pbli_th_rr_df['kg/m3_fertile'], pu239_at_to_kg_per_yr * self.pbli_th_rr_df['U-238(n,gamma)']
-        x5, y5 =   self.pebble_rr_df['kg/m3_fertile'], pu239_at_to_kg_per_yr *   self.pebble_rr_df['U-238(n,gamma)']
-
-        # AkimaInterpolation ripped from my ELWR paper --ppark 2025-08-06
-        x_fine = np.linspace(x1.min(), x1.max(), 300) # Evaluate on a fine grid
-        y_akima1 = Akima1DInterpolator(x1, y1)(x_fine)
-        y_akima2 = Akima1DInterpolator(x2, y2)(x_fine)
-        y_akima3 = Akima1DInterpolator(x3, y3)(x_fine)
-        # y_akima4 = akima4(x_fine)
-        y_akima5 = Akima1DInterpolator(x5, y5)(x_fine)
-
-
-
-        plt.figure(figsize=(7.5,5))
-
-        plt.scatter(x5, y5, marker='o', s=40, color='#b41f24') # ZR clean
-        plt.scatter(x3, y3, marker='^', s=50, color='#0047ba') # ZR clean
-        plt.scatter(x1, y1, marker='s', s=40, color='black') # ZR clean
-        plt.scatter(x2, y2, marker='x', s=60, color='#66b420') # ZR clean
-
-        plt.plot(x_fine, y_akima5, linewidth=1, color='#b41f24',)   # 'o-', markersize=4,  label=r'Pebble-BISO'
-        plt.plot(x_fine, y_akima3, linewidth=1, color='#0047ba', )     # '^-', markersize=5, label=r'PbLi-BISO'
-        plt.plot(x_fine, y_akima1, linewidth=1, color='black', )    # 's-', markersize=4, label=r'FLiBe-UF$_4$'
-        plt.plot(x_fine, y_akima2, linewidth=1, color='#66b420', ) # 'x-', markersize=6, label=r'FLiBe-ThF$_4$'
-
-        # Dummy plots for legend -- bit of a hack lmao -- ppark
-        plt.plot([9e98,9e99], [9e98,9e99], 'o-', markersize=4, linewidth=1, color='#b41f24', label=r'Pebble-BISO')   # 
-        plt.plot([9e98,9e99], [9e98,9e99], '^-', markersize=5, linewidth=1, color='#0047ba', label=r'PbLi-BISO')     # 
-        plt.plot([9e98,9e99], [9e98,9e99], 's-', markersize=4, linewidth=1, color='black',   label=r'FLiBe-UF$_4$')  # 
-        plt.plot([9e98,9e99], [9e98,9e99], 'x-', markersize=6, linewidth=1, color='#66b420', label=r'FLiBe-ThF$_4$') # 
-        
-        
-        # plt.title(f'Tritium breeding ratio (All)') # Exclude title for production figs --ppark 2025-08-06
-        plt.xlabel(r'Fertile isotope density in blanket [kg$/$m$^3$]')
-        plt.ylabel('Fissile production rate [kg$/$yr]')
-
-        plt.xlim(-5,165)
-        plt.ylim(-7.5,225+7.5) 
-
-        # Tick grid
-        ax = plt.gca()
-        ax.xaxis.set_ticks_position('both')
-        ax.xaxis.set_minor_locator(MultipleLocator(10))
-        ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
-
-        ax.yaxis.set_ticks_position('both')
-        ax.yaxis.set_major_locator(MultipleLocator(25))
-        ax.yaxis.set_minor_locator(MultipleLocator(12.5))
-        ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
-
-        plt.tight_layout()
-
-        leg = plt.legend(fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1)
-        leg.get_frame().set_linewidth(0.5) 
-    
-        if self.save:
-            plt.savefig(f'./Figures/pdf/{self.name}/fig_fissile_per_yr.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/png/{self.name}/fig_fissile_per_yr.png', bbox_inches='tight', format='png')
-            print("Exported Pu-239 production per year plot for all fuels.")
-        else:
-            print("Did not export Pu-239 production per year plot due to user setting.")
-
-        if self.show: plt.show()
-        plt.close('all')
-
-
-
-    def plot_cum_norm_histogram(self):
+    @timer
+    def volumes(self, samples=int(1e8)):
         """
-        Plots cumulative, normalized Pu production vs. energy for contours of MTU.
+        Calculate volumes of all cells using OpenMC stochastic volume calculation.
         """
-        print(f"\nPlotting cumulative, normalized fissile production vs. energy...")
+        
+        # Get all cells that have materials (exclude voids)
+        cells_to_calc = self.cells # [cell for cell in self.cells if cell.fill == self.blanket] #  is not None]
+        
+        # Create volume calculation settings
+        vol_calc = openmc.VolumeCalculation(cells_to_calc, samples,
+                                            [-1*self.extent_r, -1*self.extent_r, -1*self.extent_z], # lower left of bounding box
+                                            [self.extent_r, self.extent_r, self.extent_z]) # upper right of bounding box
+        
+        # vol_calc.set_trigger(1e-02, 'std_dev')
 
-        fig, axes = plt.subplots(2, 2, figsize=(15,10)) # sharex='col', sharey='row', 
+        settings_vol_calc = openmc.Settings()
+        settings_vol_calc.volume_calculations = [vol_calc]
+        
+        print(f"{Colors.BLUE}Running stochastic volume calculation with {samples} samples...{Colors.END}")
 
-        titles = [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$", r"PbLi-BISO", r"Pebble-BISO"]
-        dfs    = [self.flibe_u_eb_df, self.flibe_th_eb_df, self.pbli_u_eb_df, self.pebble_eb_df]
+        self.materials.cross_sections = set_xs_path()
+        self.model_vol_calc = openmc.model.Model(self.geometry, self.materials, settings_vol_calc)
+        self.model_vol_calc.calculate_volumes(cwd=self.path, export_model_xml=False, apply_volumes=False)
+        print('did openmc run')
 
-        for ax, df, title in zip(axes.flatten(), dfs, titles):
+        # ---------------------------
+        # Process volume calc results
+        # ---------------------------
+        vol_results = openmc.VolumeCalculation.from_hdf5(f"{self.path}/volume_1.h5")
+        
+        #print(f"{Colors.GREEN}Stochastic Volume Calculation Results:{Colors.END}")
 
-            # Filter out MT_fertile loadings we want to plot 
-            df = df[df["MT_fertile"].isin([10, 20, 30, 40, 50])]
+        vol_dict = {}
+        for k, v in vol_results.volumes.items():
+            vol_dict[k] = (v.nominal_value/1e6, v.std_dev/1e6)
+        # vol_dict['sum'] = ( sum(v.nominal_value/1e6 for v in vol_results.volumes.values()),
+        #                     sum(v.std_dev/1e6 for v in vol_results.volumes.values())       )
 
-            # Compute sum of 'mean' for each MT_fertile. 
-            df_mean = df.groupby("MT_fertile")["mean"].sum().to_frame() # pd.DataFrame(, columns=["MT_fertile","sum"]) # 2-col df, colA = MT_fertile values, colB = sum of 'mean'
-            df_mean.columns = ["sum"]
-            df = df.merge(df_mean, on="MT_fertile", how="left") # adds sum as column to df
+        df = pd.DataFrame.from_dict(vol_dict, orient='index', columns=['volume_m3', 'stdev_m3'])
+        df.reset_index(inplace=True)
+        df.rename(columns={'index': 'cells'}, inplace=True)
+        df.to_csv(f'{self.path}/volume_1.csv',index=False)
 
-            df['norm_mean'] = df['mean'] / df['sum']
+        print(f"{Colors.YELLOW}Comment.{Colors.END} CSV file 'volume_1.csv' printed to {self.path}")
+        # print(df)
 
-            # df.to_csv('test.csv',index=False)
-            
+        """
+        vol_results.volumes is a dictionary that looks like:
+          {2: "909560.9858392784+/-140318.8308700002",
+           3: "5543990.770829888+/-346055.6196989608"}
+        so we will rewrite it to separate the value from the standev, like this:
+          {2: (909560.9858392784, 140318.8308700002),
+           3: (5543990.770829888, 346055.6196989608)}
 
-            # Create bin edges from low and high energy boundaries
-            edges = np.unique(np.concatenate([df['energy low [eV]'].values, df['energy high [eV]'].values]))
-            bins  = np.sort(df['energy mid [eV]'].unique())
+        But also whoever designed the output of VolueCalculation.volumes() 
+        honestly needs to WRITE in the documentation that the data is stored/written 
+        using the 'uncertainties' package. I was going crazy using all sorts of 
+        regex match patterns to try to understand why splitting the vol_results.volumes.items()
+        into k, v was causing issues vs. what v looked like when I was printing it. 
+        It was 'uncertainties' changing the formatting of v when you go print it. 
+          --ppark  2025-09-20
+        """
 
-            sub   = df[df['MT_fertile'] == 10]
-            label = int(round(sub['kg/m3_fertile'].iloc[0], -1))
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#ff1f5b', label=fr'{label} kg$/$m$^3$')
 
-            sub = df[df['MT_fertile'] == 20]
-            label = int(round(sub['kg/m3_fertile'].iloc[0], -1))
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#f48628', label=fr'{label} kg$/$m$^3$')
+    @timer
+    def plot(self):
 
-            sub = df[df['MT_fertile'] == 30]
-            label = int(round(sub['kg/m3_fertile'].iloc[0], -1))
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#04cc6c', label=fr'{label} kg$/$m$^3$')
+        Image.MAX_IMAGE_PIXELS = None # suppreses DecompressionBombWarning lmao
 
-            sub = df[df['MT_fertile'] == 40]
-            label = int(round(sub['kg/m3_fertile'].iloc[0], -1))
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#0c9edd', label=fr'{label} kg$/$m$^3$')
+        settings_plot = openmc.Settings()
+        settings_plot.run_mode = 'plot'
 
-            sub = df[df['MT_fertile'] == 50]
-            label = int(round(sub['kg/m3_fertile'].iloc[0], -1))
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#b367bd', label=fr'{label} kg$/$m$^3$')
-            
+        if self.breeder_name in ['ARC', 'FLiBe']:
+            colors = {self.firstwall: (30, 27, 41),    # very dark gray
+                      self.structure: (109, 110, 113), # gray
+                      self.blanket: (129, 204, 185),   # teal
+                      # Void regions will be white by default
+                      }
 
-            ax.xaxis.set_ticks_position('both')
-            ax.yaxis.set_ticks_position('both')
-            ax.yaxis.set_minor_locator(MultipleLocator(0.05))
-            ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
-            ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
+        elif self.breeder_name in ['LL']:
+            colors = {self.firstwall: (30, 27, 41),           # very dark gray
+                      self.structure: (109, 110, 113),        # gray
+                      self.firstwall_cooling: (37, 150, 190), # cobalt blue 
+                      self.blanket: (129, 204, 185),          # teal
+                      self.divider: (109, 110, 113),          # gray
+                      self.inner_manifold:(176, 123, 76),     # wood-color
+                      # Void regions will be white by default
+                      }
 
-            ax.set_xscale('log')
-            ax.set_xlim(0.67*1e0, 1.5*1e7)
-            ax.set_ylim(-0.03, 1.03)
-            fig.tight_layout()
+        x_width = round(2*self.extent_r)
+        z_width = round(2*self.extent_z)
+        
+        # XY toroidal slice
+        xy = openmc.Plot()
+        xy.filename = f"{self.breeder_name}_xy" # {self.path}/
+        xy.basis = "xy"
+        xy.width  = (x_width, x_width)
+        xy.pixels = (8*x_width, 8*x_width)
+        xy.color_by = "material"
+        xy.colors = colors
 
-            leg = ax.legend(title=title, fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1, loc="lower right")
-            leg.get_frame().set_linewidth(0.5) 
+        # XZ poloidal slice
+        xz = openmc.Plot()
+        xz.filename = f"{self.breeder_name}_xz" # {self.path}/
+        xz.basis = "xz"
+        xz.width  = (x_width, z_width)
+        xz.pixels = (8*x_width, 8*z_width)
+        xz.color_by = "material"
+        xz.colors = colors
 
-        for i in range(2):
-            for j in range(2):
-                ax = axes[i, j]
-                if i == 1:
-                    ax.set_xlabel("Incident neutron energy [eV]")
-                if j == 0:
-                    ax.set_ylabel(r"Cumulative fraction of fertile $($n,$\gamma)$ rxns")
+        plots = openmc.Plots([xy, xz])
+        model_plot = openmc.model.Model(self.geometry, self.materials, settings_plot)
+        model_plot.plots = plots 
+        model_plot.plot_geometry(cwd=f"{self.path}")  # writes tokamak_rz.ppm and tokamak_xz.ppm
 
-        if self.save:
-            plt.savefig(f'./Figures/pdf/{self.name}/fig_cum_norm_histogram.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/png/{self.name}/fig_cum_norm_histogram.png', bbox_inches='tight', format='png')
-            print(f"Exported cumulative normalized histogram plots.")
-        else:
-            print(f"Did not export cumulative normalized histogram plot.")
-
-        if self.show: plt.show()
-        plt.close('all')
-
+        for basename in [f"{self.breeder_name}_xy", f"{self.breeder_name}_xz"]:
+            ppm_file = os.path.join(self.path, f"{basename}.ppm")
+            png_file = os.path.join(self.path, f"{basename}.png")
+            if os.path.exists(ppm_file):
+                with Image.open(ppm_file) as im:
+                    im.save(png_file)
+                print(f"{Colors.YELLOW}Comment.{Colors.END} Plots '{self.breeder_name}_xy.png', '{self.breeder_name}_xz.png' printed to {self.path}")
+            else:
+                print(f"{Colors.YELLOW}Error.{Colors.END} OpenMC did not print '{self.breeder_name}_xy.ppm', '{self.breeder_name}_xz.ppm' to {self.path}!")
