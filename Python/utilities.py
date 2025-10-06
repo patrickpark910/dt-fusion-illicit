@@ -339,11 +339,12 @@ def has_statepoint(directory_path):
     Returns:
         bool: True if a file starting with 'statepoint' is found, False otherwise
     """
+    found = False
     for filename in os.listdir(directory_path):
         if filename.startswith("statepoint"):
-            return True
-        else:
-            return False
+            found = True
+    return found
+            
 
 
 if __name__ == "__main__":

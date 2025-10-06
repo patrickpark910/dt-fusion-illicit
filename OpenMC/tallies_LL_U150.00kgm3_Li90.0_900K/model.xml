@@ -32,7 +32,7 @@
       <nuclide ao="0.000156264" name="W184"/>
       <nuclide ao="0.000144993" name="W186"/>
     </material>
-    <material id="349" name="firstwall_cooling" temperature="900">
+    <material id="349" name="coolant" temperature="900">
       <density units="atom/b-cm" value="0.0147189235"/>
       <nuclide ao="0.000498" name="He4"/>
       <nuclide ao="6.8e-05" name="C12"/>
@@ -2566,7 +2566,7 @@
       <nuclides>Be9</nuclides>
       <scores>(n,gamma) (n,2n) elastic</scores>
     </tally>
-    <tally id="604" name="flux">
+    <tally id="604" name="flux spectrum">
       <filters>101 102</filters>
       <scores>flux</scores>
     </tally>
