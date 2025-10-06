@@ -1515,7 +1515,7 @@
       <nuclides>Be9</nuclides>
       <scores>(n,gamma) (n,2n) elastic</scores>
     </tally>
-    <tally id="160" name="flux">
+    <tally id="160" name="flux spectrum">
       <filters>27 28</filters>
       <scores>flux</scores>
     </tally>

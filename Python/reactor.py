@@ -77,7 +77,7 @@ class Reactor(ABC):
 
         # Flux tally 
         flux_tally        = self.make_tally('flux', ['flux'], filters=[cell_filter])
-        flux_energy_tally = self.make_tally('flux', ['flux'], filters=[cell_filter, energy_filter])
+        flux_energy_tally = self.make_tally('flux spectrum', ['flux'], filters=[cell_filter, energy_filter])
 
         # Uranium reaction rates
         U_tally        = self.make_tally('U rxn rates',          ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter], nuclides=['U238', 'U235'])
@@ -280,8 +280,6 @@ class Reactor(ABC):
 
         """ Load tallies """
         sp_path = f'{self.path}/statepoint.{self.n_cycles}.h5'
-        print("\n\n")
-        print("="*42)
         print(f"Loading statepoint: {sp_path}")
         
         try:
@@ -293,7 +291,7 @@ class Reactor(ABC):
 
         """ Convert tallies into usable forms """
         # Read tallies
-        print(f"\nReading tallies...")
+        print(f"Reading tallies...")
 
         flux   = sp.get_tally(name='flux')
         U_tot  = sp.get_tally(name='U rxn rates')
@@ -305,6 +303,9 @@ class Reactor(ABC):
         self.flux_df = flux.get_pandas_dataframe() # Convert Tally object! Not 'XXX_rr'! --ppark
         U_df  = U.get_pandas_dataframe()
         Li_df = Li.get_pandas_dataframe()
+        print(self.flux_df)
+        print(U_df)
+        print(Li_df)
         
         # Add new column for energy bin midpoint (for plotting)
         for df in [self.flux_df, U_df, Li_df]: # , F_df]:

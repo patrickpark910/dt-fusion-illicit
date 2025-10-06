@@ -53,7 +53,7 @@
       <nuclide name="V50" wo="0.002252996603475993"/>
       <nuclide name="V51" wo="0.916886003396524"/>
     </material>
-    <material depletable="true" id="125" name="tallies_FLiBe_U15.00kgm3_Li07.5_900K" temperature="900">
+    <material depletable="true" id="125" name="tallies_FLiBe_U015.00kgm3_Li07.5_900K" temperature="900">
       <density units="g/cm3" value="1.9541175390100067"/>
       <nuclide ao="0.5719555438941799" name="F19"/>
       <nuclide ao="0.02137916775992063" name="Li6"/>
@@ -1515,7 +1515,7 @@
       <nuclides>Be9</nuclides>
       <scores>(n,gamma) (n,2n) elastic</scores>
     </tally>
-    <tally id="292" name="flux">
+    <tally id="292" name="flux spectrum">
       <filters>49 50</filters>
       <scores>flux</scores>
     </tally>
