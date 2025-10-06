@@ -23,6 +23,8 @@ DENSITY_UF4   = 6.7 # g/cm3
 ENRICH_U  = 0.71  # wt% 
 TEMP_K = 900 # K
 
+DENSITY_BISO = 6.93759 #g/cc
+
 
 """ Parameters for ARC-class tokamak with FLiBe Breeder """
 ARC_R0    = 400  # cm - major radius
@@ -63,8 +65,35 @@ FLIBE_BR_VOL = 771.8 # m^3 - analytic vol from plot_miller_models.py
 DENSITY_LL  =  9.4 # g/cm3
 ENRICH_LL   = 90.0 
 
-DENSITY_TRISO = 7 # g/cm3
+LL_R0    = 620  # cm - major radius
+LL_A     = 207  # cm - minor radius
+LL_KAPPA = 1.72 #    - elongation
+LL_DELTA = 0.4  #    - triangularity
+#----Outboard Layers----
+LL_FW_O_CM  =   0.2  # cm -          first wall
+LL_FWF_O_CM =   0.4  # cm -    first wall front
+LL_FWC_O_CM =   2.0  # cm -  first wall cooling
+LL_FWB_O_CM =   0.4  # cm -     first wall back
+LL_BR1_O_CM =  22.5  # cm -   breeding region 1
+LL_D1_O_CM  =   3.2  # cm -           divider 1
+LL_BR2_O_CM =  21.0  # cm -   breeding region 2
+LL_D2_O_CM =   3.2  # cm -           divider 2
+LL_BR3_O_CM =  21.0  # cm -   breeding region 3
+LL_IM_O_CM =   8.0  # cm -      inner manifold 
+#addititional F2H8 back plate
 
+#----Inboard Layers----
+# LL_FW_I_CM  =   0.2  # cm -          first wall
+# LL_FWF_I_CM =   0.4  # cm -    first wall front
+# LL_FWC_I_CM =   2.0  # cm -  first wall cooling
+# LL_FWB_I_CM =   0.4  # cm -     first wall back
+# LL_BR1_I_CM =  22.5  # cm -   breeding region 1
+# LL_D1_I_CM  =   3.2  # cm -           divider 1
+# LL_BR2_I_CM =  21.0  # cm -   breeding region 2
+LL_IM_I_CM =   8.0  # cm -      inner manifold 
+
+LL_BR_VOL =  440.3757# m^3 - analytic vol from plot_miller_models.py
+#Check this value why is it so low?? -ezoccoli
 
 
 
