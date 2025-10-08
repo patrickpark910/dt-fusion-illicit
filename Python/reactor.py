@@ -293,62 +293,59 @@ class Reactor(ABC):
         # Read tallies
         print(f"Reading tallies...")
 
-        flux   = sp.get_tally(name='flux')
-        U_tot  = sp.get_tally(name='U rxn rates')
-        U      = sp.get_tally(name='U rxn rates spectrum')
-        Li_tot = sp.get_tally(name='Li rxn rates')
-        Li     = sp.get_tally(name='Li rxn rates spectrum')
+        flux      = sp.get_tally(name='flux').get_pandas_dataframe()
+        flux_spec = sp.get_tally(name='flux spectrum').get_pandas_dataframe()
+        U         = sp.get_tally(name='U rxn rates').get_pandas_dataframe()
+        U_spec    = sp.get_tally(name='U rxn rates spectrum').get_pandas_dataframe()
+        Li        = sp.get_tally(name='Li rxn rates').get_pandas_dataframe()
+        Li_spec   = sp.get_tally(name='Li rxn rates spectrum').get_pandas_dataframe()
 
-        # Convert Tally objects into pandas dataframes
-        self.flux_df = flux.get_pandas_dataframe() # Convert Tally object! Not 'XXX_rr'! --ppark
-        U_df  = U.get_pandas_dataframe()
-        Li_df = Li.get_pandas_dataframe()
-        print(self.flux_df)
-        print(U_df)
-        print(Li_df)
-        
         # Add new column for energy bin midpoint (for plotting)
-        for df in [self.flux_df, U_df, Li_df]: # , F_df]:
+        for df in [flux_spec, U_spec, Li_spec]:
             df['energy mid [eV]'] = (df['energy low [eV]'] + df['energy high [eV]'])/ 2
 
+        """
+        flux, U, and Li dataframes should have column headers: 
+            (index), cell, nuclide, score, mean, std. dev.
+        flux_spec, U_spec, and Li_spec should have column headers: 
+            (index), cell, energy low [eV], energy high [eV], nuclide, score, mean, std. dev., energy mid [eV]
+        """
 
-        """ Reaction rates for every mtu loading and for every energy bin """
-        self.U238_ng_Ebin_df  = U_df[(U_df['nuclide'] == 'U238') & (U_df['score'] == '(n,gamma)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        self.U238_fis_Ebin_df = U_df[(U_df['nuclide'] == 'U238') & (U_df['score'] == 'fission')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        self.Li6_nt_Ebin_df   = Li_df[(Li_df['nuclide'] == 'Li6') & (Li_df['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        self.Li7_nt_Ebin_df   = Li_df[(Li_df['nuclide'] == 'Li7') & (Li_df['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+        """ Reaction rates for every fertile loading and for every energy bin """
+        U238_ng_Ebin_df  = U_spec[(U_spec['nuclide'] == 'U238') & (U_spec['score'] == '(n,gamma)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+        U238_fis_Ebin_df = U_spec[(U_spec['nuclide'] == 'U238') & (U_spec['score'] == 'fission')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+        Li6_nt_Ebin_df   = Li_spec[(Li_spec['nuclide'] == 'Li6') & (Li_spec['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+        Li7_nt_Ebin_df   = Li_spec[(Li_spec['nuclide'] == 'Li7') & (Li_spec['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
 
-        # In each of those Ebin_df, add a new column translating the cell # into the metric tons of fertile mass loaded """
-        for df in [self.U238_ng_Ebin_df, self.U238_fis_Ebin_df, self.Li6_nt_Ebin_df, self.Li7_nt_Ebin_df]:
-            df['kg_fertile']    = df['cell'].apply(lambda c: self.fertile_mt_list[c - 1])
-            df['m3_fertile']    = df['cell'].apply(lambda c: self.fertile_mt_list[c - 1])
-            df['kg/m3_fertile'] = (df['MT_fertile']*1e3) / (VOL_CC/1e6)
+        # Lithium reaction rates 
+        Li6_nt = Li[(Li['nuclide']=='Li6') & (Li['score']=='(n,Xt)')][['cell','score','mean','std. dev.']] # Li6_rr.get_pandas_dataframe()
+        Li7_nt = Li[(Li['nuclide']=='Li7') & (Li['score']=='(n,Xt)')][['cell','score','mean','std. dev.']] 
+        
+        Li6_nt_list     = Li6_nt['mean'].tolist()
+        Li7_nt_list     = Li7_nt['mean'].tolist()
+        Li6_nt_err_list = Li6_nt['std. dev.'].tolist()
+        Li7_nt_err_list = Li7_nt['std. dev.'].tolist()
+        
+        tbr_list = [x + y for x, y in zip(Li6_nt_list, Li7_nt_list)]
+        tbr_err_list = [x + y for x, y in zip(Li6_nt_err_list, Li7_nt_err_list)]
 
-
-        # Lithium reaction rates for each mtu loading summed over all energies
-        Li6_df = Li6_rr.get_pandas_dataframe()
-        Li7_df = Li7_rr.get_pandas_dataframe()
-        self.Li6_nt_list = Li6_df[Li6_df['score'] == '(n,Xt)'][['cell', 'mean', 'std. dev.']]['mean'].tolist()
-        self.Li6_nt_err_list = Li6_df[Li6_df['score'] == '(n,Xt)'][['cell', 'mean', 'std. dev.']]['std. dev.'].tolist()
-        self.Li7_nt_list = Li7_df[Li7_df['score'] == '(n,Xt)'][['cell', 'mean', 'std. dev.']]['mean'].tolist()
-        self.Li7_nt_err_list = Li7_df[Li7_df['score'] == '(n,Xt)'][['cell', 'mean', 'std. dev.']]['std. dev.'].tolist()
-        self.tbr_list = [x + y for x, y in zip(self.Li6_nt_list, self.Li7_nt_list)]
-        self.tbr_err_list = [x + y for x, y in zip(self.Li6_nt_err_list, self.Li7_nt_err_list)]
+        print(Li6_nt_list)
+        print(tbr_list)
 
         # U-238 reaction rates for each mtu loading summed over all energies
-        U238_df = U238_rr.get_pandas_dataframe()
-        self.U238_fis_list     = U238_df[U238_df['score'] == 'fission'][['cell', 'mean', 'std. dev.']]['mean'].tolist()
-        self.U238_fis_err_list = U238_df[U238_df['score'] == 'fission'][['cell', 'mean', 'std. dev.']]['std. dev.'].tolist()
-        self.U238_ng_list     = U238_df[U238_df['score'] == '(n,gamma)'][['cell', 'mean', 'std. dev.']]['mean'].tolist()
-        self.U238_ng_err_list = U238_df[U238_df['score'] == '(n,gamma)'][['cell', 'mean', 'std. dev.']]['std. dev.'].tolist()
+        U238 = U[(U['nuclide']=='U238')][['cell','score','mean','std. dev.']]
+        U238_fis_list     = U238[U238['score'] == 'fission']['mean'].tolist()
+        U238_fis_err_list = U238[U238['score'] == 'fission'][['std. dev.']].tolist()
+        U238_ng_list      = U238[U238['score'] == '(n,gamma)'][['mean']].tolist()
+        U238_ng_err_list  = U238[U238['score'] == '(n,gamma)'][['std. dev.']].tolist()
 
         # Plutonium kg per year
-        self.Pu_per_yr_list = []
-        for Pu_per_srcn in self.U238_ng_list:
-            self.Pu_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3) 
+        Pu_per_yr_list = []
+        for Pu_per_srcn in U238_ng_list:
+            Pu_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3) 
 
         """Create list of cell IDs randomly assigned by OpenMC to match mtu loading to cell ID"""
-        self.cell_ids = U_df['cell'].unique().tolist()
+        cell_ids = U_df['cell'].unique().tolist()
 
 
     def print_tallies(self):
