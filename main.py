@@ -67,7 +67,7 @@ def main():
                     else:
                         current_run.openmc()
 
-                    # current_run.extract_tallies()
+                    current_run.extract_tallies()
 
 
 def build_reactor(breeder:str, **kwargs):
@@ -79,7 +79,7 @@ def build_reactor(breeder:str, **kwargs):
         reactor = cls(**kwargs)
         reactor.initialize()
     except KeyError:
-        raise ValueError(f"Unknown breeder '{breeder}'. Expected one of {list(BREEDER_CLASSES)}")
+        raise ValueError(f"Unknown breeder '{breeder}'.")
     return reactor
 
 
