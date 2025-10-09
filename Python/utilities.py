@@ -36,7 +36,7 @@ SEC_PER_YR = 3600 * 24 * 365
 Fusion parameters - from JL Ball 24
 """
 N_PER_MJ = 3.546e17 # 17.6 MeV
-P_FUS_MW = 500
+P_FUS_MW = 1000
 NPS_FUS  = P_FUS_MW * N_PER_MJ # n/s
 
 

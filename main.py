@@ -30,22 +30,22 @@ def main():
     if run_type == 'plot':
         for breeder in ['ARC','FLiBe','LL']: # make this match class name
             
-            current_run = build_reactor(breeder, breeder_name=breeder, run_type='plot')
+            current_run = build_reactor(breeder, breeder_name=breeder, run_type='plot', run_openmc=True)
 
             if os.path.exists(f"{current_run.path}/{current_run.breeder_name}_xz.ppm"):
                 print(f"{Colors.YELLOW}Warning.{Colors.END} File {current_run.path}/{current_run.breeder_name}_xz.ppm already exists, so this OpenMC volume calculation will be skipped...")
-            else:
+            elif current_run.run_openmc:
                 current_run.plot()
 
 
     elif run_type == 'volume':
         for breeder in ['ARC','FLiBe','LL']: # make this match class name
 
-            current_run = build_reactor(breeder, breeder_name=breeder, run_type='volume')
+            current_run = build_reactor(breeder, breeder_name=breeder, run_type='volume', run_openmc=True)
             
             if os.path.exists(f"{current_run.path}/volume_1.h5"):
                 print(f"{Colors.YELLOW}Warning.{Colors.END} File {current_run.path}/volume_1.h5 already exists, so this OpenMC volume calculation will be skipped...")
-            else:
+            elif current_run.run_openmc:
                 current_run.volumes()
 
 
@@ -58,13 +58,14 @@ def main():
                     current_run = build_reactor(breeder, breeder_name=breeder,
                                                 fertile_element=fertile_element,
                                                 fertile_bulk_density_kgm3=fbd_kgm3, 
-                                                run_type='tallies')
+                                                run_type='tallies',
+                                                run_openmc=True)
 
                     print(f"Check if '{current_run.path}' exists: {os.path.isdir(current_run.path)}")
 
                     if has_statepoint(current_run.path):
                         print(f"{Colors.YELLOW}Warning.{Colors.END} File {current_run.path}/statepoint.h5 already exists, so this OpenMC run will be skipped...")
-                    else:
+                    elif current_run.run_openmc:
                         current_run.openmc()
 
                     current_run.extract_tallies()

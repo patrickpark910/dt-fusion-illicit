@@ -144,8 +144,8 @@ class ARC(Reactor):
         d_br1 = d_st1 + ARC_BR2_CM
         d_st2 = d_br1 + ARC_ST3_CM
 
-        self.extent_r = (self.R0 + self.a + d_st2)*1.2 # 120%
-        self.extent_z = (self.kappa*self.a + d_st2)*1.2
+        self.extent_r = (self.R0 + self.a + d_st2)*1.1  # 110%
+        self.extent_z = (self.kappa*self.a + d_st2)*1.2 # 120%
 
 
         # ------------------------------------------------------------------

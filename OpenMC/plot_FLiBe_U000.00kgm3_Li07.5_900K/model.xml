@@ -52,7 +52,7 @@
       <nuclide name="V50" wo="0.002252996603475993"/>
       <nuclide name="V51" wo="0.916886003396524"/>
     </material>
-    <material depletable="true" id="10" name="plot_FLiBe_U0.00kgm3_Li07.5_900K" temperature="900">
+    <material depletable="true" id="10" name="plot_FLiBe_U000.00kgm3_Li07.5_900K" temperature="900">
       <density units="g/cm3" value="1.9399999999999995"/>
       <nuclide ao="0.5714285714285715" name="F19"/>
       <nuclide ao="0.02142857142857143" name="Li6"/>
@@ -1459,16 +1459,16 @@
     <run_mode>plot</run_mode>
   </settings>
   <plots>
-    <plot basis="xy" color_by="material" filename="FLiBe_xy" id="1" type="slice">
-      <pixels>17456 17456</pixels>
+    <plot basis="xy" color_by="material" filename="FLiBe_xy" id="3" type="slice">
+      <pixels>21820 21820</pixels>
       <origin>0.0 0.0 0.0</origin>
       <width>2182 2182</width>
       <color id="6" rgb="30 27 41"/>
       <color id="7" rgb="109 110 113"/>
       <color id="10" rgb="129 204 185"/>
     </plot>
-    <plot basis="xz" color_by="material" filename="FLiBe_xz" id="2" type="slice">
-      <pixels>17456 8704</pixels>
+    <plot basis="xz" color_by="material" filename="FLiBe_xz" id="4" type="slice">
+      <pixels>21820 10880</pixels>
       <origin>0.0 0.0 0.0</origin>
       <width>2182 1088</width>
       <color id="6" rgb="30 27 41"/>

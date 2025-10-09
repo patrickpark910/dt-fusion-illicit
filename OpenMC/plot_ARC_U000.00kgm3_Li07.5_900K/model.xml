@@ -52,7 +52,7 @@
       <nuclide name="V50" wo="0.002252996603475993"/>
       <nuclide name="V51" wo="0.916886003396524"/>
     </material>
-    <material depletable="true" id="5" name="plot_ARC_U0.00kgm3_Li07.5_900K" temperature="900">
+    <material depletable="true" id="5" name="plot_ARC_U000.00kgm3_Li07.5_900K" temperature="900">
       <density units="g/cm3" value="1.9399999999999995"/>
       <nuclide ao="0.5714285714285715" name="F19"/>
       <nuclide ao="0.02142857142857143" name="Li6"/>
@@ -1451,7 +1451,7 @@
     <surface coeffs="-4445.730742942893" id="1377" type="z-plane"/>
     <surface coeffs="0.0 0.0 -3404.907678435084 0.003083642501144584" id="1378" type="z-cone"/>
     <surface coeffs="-3404.907678435084" id="1379" type="z-plane"/>
-    <surface boundary="vacuum" coeffs="0.0 0.0 731.16" id="1380" type="z-cylinder"/>
+    <surface boundary="vacuum" coeffs="0.0 0.0 670.23" id="1380" type="z-cylinder"/>
     <surface boundary="vacuum" coeffs="323.16" id="1381" type="z-plane"/>
     <surface boundary="vacuum" coeffs="-323.16" id="1382" type="z-plane"/>
   </geometry>
@@ -1460,17 +1460,17 @@
   </settings>
   <plots>
     <plot basis="xy" color_by="material" filename="ARC_xy" id="1" type="slice">
-      <pixels>5848 5848</pixels>
+      <pixels>13400 13400</pixels>
       <origin>0.0 0.0 0.0</origin>
-      <width>1462 1462</width>
+      <width>1340 1340</width>
       <color id="1" rgb="30 27 41"/>
       <color id="2" rgb="109 110 113"/>
       <color id="5" rgb="129 204 185"/>
     </plot>
     <plot basis="xz" color_by="material" filename="ARC_xz" id="2" type="slice">
-      <pixels>5848 2584</pixels>
+      <pixels>13400 6460</pixels>
       <origin>0.0 0.0 0.0</origin>
-      <width>1462 646</width>
+      <width>1340 646</width>
       <color id="1" rgb="30 27 41"/>
       <color id="2" rgb="109 110 113"/>
       <color id="5" rgb="129 204 185"/>
