@@ -70,6 +70,8 @@ def main():
 
                     current_run.extract_tallies()
 
+        collate_tallies()
+
 
 def build_reactor(breeder:str, **kwargs):
     """
@@ -82,6 +84,25 @@ def build_reactor(breeder:str, **kwargs):
     except KeyError:
         raise ValueError(f"Unknown breeder '{breeder}'.")
     return reactor
+
+
+def collate_tallies():
+
+    
+
+    for breeder in ['ARC','FLiBe','LL']:
+
+        df = pd.DataFrame(columns=['filename','tbr','Pu_kg/yr'])
+        
+        tally_folders = [x for x in os.listdir("./OpenMC/") if x.startswith(f"tallies_{breeder}")]
+
+        for folder in tally_folders:
+
+            tally_summary = f"{folder}/tallies_summary.csv"
+            df = pd.read_csv(tally_summary)
+            sums = df[ df['cell']=='total' ]
+
+            common_cols = df1.columns.intersection(df2.columns)
 
 
 
