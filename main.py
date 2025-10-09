@@ -53,7 +53,7 @@ def main():
 
         for breeder in ['ARC','FLiBe','LL']: # make this match class name
             for fertile_element in ['U']:
-                for fbd_kgm3 in FERTILE_BULK_DENSITY_KGM3: # [FERTILE_BULK_DENSITY_KGM3[0]]: # 
+                for fbd_kgm3 in [0.0]: # FERTILE_BULK_DENSITY_KGM3: # [FERTILE_BULK_DENSITY_KGM3[0]]: # 
                     
                     current_run = build_reactor(breeder, breeder_name=breeder,
                                                 fertile_element=fertile_element,
@@ -70,7 +70,9 @@ def main():
 
                     current_run.extract_tallies()
 
-        collate_tallies()
+            collate_tallies(breeder)
+
+
 
 
 def build_reactor(breeder:str, **kwargs):
@@ -86,23 +88,26 @@ def build_reactor(breeder:str, **kwargs):
     return reactor
 
 
-def collate_tallies():
+def collate_tallies(breeder):
 
+    df_all = pd.DataFrame(columns=['filename','tbr','Pu239_kg/yr'])
     
+    tally_folders = [x for x in os.listdir("./OpenMC/") if x.startswith(f"tallies_{breeder}")]
 
-    for breeder in ['ARC','FLiBe','LL']:
+    for folder in tally_folders:
 
-        df = pd.DataFrame(columns=['filename','tbr','Pu_kg/yr'])
-        
-        tally_folders = [x for x in os.listdir("./OpenMC/") if x.startswith(f"tallies_{breeder}")]
+        tally_summary = f"./OpenMC/{folder}/tallies_summary.csv"
+        df = pd.read_csv(tally_summary)
 
-        for folder in tally_folders:
+        tbr = df[ df['cell']=='total' ]['tbr'].values[0]
+        pu  = df[ df['cell']=='total' ]['Pu239_kg/yr'].values[0]
 
-            tally_summary = f"{folder}/tallies_summary.csv"
-            df = pd.read_csv(tally_summary)
-            sums = df[ df['cell']=='total' ]
+        df_all.loc[len(df_all)] = {'filename': folder,
+                                        'tbr': tbr,
+                                'Pu239_kg/yr': pu }
 
-            common_cols = df1.columns.intersection(df2.columns)
+    df_all.to_csv(f"./Figures/Data/{breeder}_total_rxns.csv")
+
 
 
 
