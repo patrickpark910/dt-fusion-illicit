@@ -12,11 +12,12 @@ from Python.utilities import *
 
 class Reactor(ABC):
 
-    def __init__(self, breeder_name='flibe', fertile_element='U', fertile_bulk_density_kgm3=0.0, run_type='openmc'):
+    def __init__(self, breeder_name='flibe', fertile_element='U', fertile_bulk_density_kgm3=0.0, run_type='tallies', run_openmc=False):
 
         self.fertile_bulk_density_kgm3 = fertile_bulk_density_kgm3
         self.fertile_element = fertile_element.capitalize()
         self.run_type = run_type
+        self.run_openmc = run_openmc
         self.n_cycles = 10
 
         # All class templates must define these variables:
@@ -232,7 +233,7 @@ class Reactor(ABC):
         elif self.breeder_name in ['LL']:
             colors = {self.firstwall: (30, 27, 41),           # very dark gray
                       self.structure: (109, 110, 113),        # gray
-                      self.firstwall_cooling: (37, 150, 190), # cobalt blue 
+                      self.coolant: (37, 150, 190), # cobalt blue 
                       self.blanket: (129, 204, 185),          # teal
                       self.divider: (109, 110, 113),          # gray
                       self.inner_manifold:(176, 123, 76),     # wood-color
@@ -247,7 +248,7 @@ class Reactor(ABC):
         xy.filename = f"{self.breeder_name}_xy" # {self.path}/
         xy.basis = "xy"
         xy.width  = (x_width, x_width)
-        xy.pixels = (8*x_width, 8*x_width)
+        xy.pixels = (10*x_width, 10*x_width)
         xy.color_by = "material"
         xy.colors = colors
 
@@ -256,7 +257,7 @@ class Reactor(ABC):
         xz.filename = f"{self.breeder_name}_xz" # {self.path}/
         xz.basis = "xz"
         xz.width  = (x_width, z_width)
-        xz.pixels = (8*x_width, 8*z_width)
+        xz.pixels = (10*x_width, 10*z_width)
         xz.color_by = "material"
         xz.colors = colors
 
@@ -317,35 +318,60 @@ class Reactor(ABC):
         Li6_nt_Ebin_df   = Li_spec[(Li_spec['nuclide'] == 'Li6') & (Li_spec['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
         Li7_nt_Ebin_df   = Li_spec[(Li_spec['nuclide'] == 'Li7') & (Li_spec['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
 
+
+        # Flux
+        flux_list = flux['mean'].tolist()
+
         # Lithium reaction rates 
         Li6_nt = Li[(Li['nuclide']=='Li6') & (Li['score']=='(n,Xt)')][['cell','score','mean','std. dev.']] # Li6_rr.get_pandas_dataframe()
         Li7_nt = Li[(Li['nuclide']=='Li7') & (Li['score']=='(n,Xt)')][['cell','score','mean','std. dev.']] 
         
         Li6_nt_list     = Li6_nt['mean'].tolist()
-        Li7_nt_list     = Li7_nt['mean'].tolist()
+        Li7_nt_list     = Li7_nt['mean'].tolist() 
         Li6_nt_err_list = Li6_nt['std. dev.'].tolist()
         Li7_nt_err_list = Li7_nt['std. dev.'].tolist()
         
-        tbr_list = [x + y for x, y in zip(Li6_nt_list, Li7_nt_list)]
+        tbr_list = [x + y for x, y in zip(Li6_nt_list, Li7_nt_list)] # will look like: [0.0, 0.0, 0.094, 0.0, 1.074, 0.0]
         tbr_err_list = [x + y for x, y in zip(Li6_nt_err_list, Li7_nt_err_list)]
 
-        print(Li6_nt_list)
-        print(tbr_list)
 
         # U-238 reaction rates for each mtu loading summed over all energies
-        U238 = U[(U['nuclide']=='U238')][['cell','score','mean','std. dev.']]
-        U238_fis_list     = U238[U238['score'] == 'fission']['mean'].tolist()
-        U238_fis_err_list = U238[U238['score'] == 'fission'][['std. dev.']].tolist()
-        U238_ng_list      = U238[U238['score'] == '(n,gamma)'][['mean']].tolist()
-        U238_ng_err_list  = U238[U238['score'] == '(n,gamma)'][['std. dev.']].tolist()
+        U238              = U[(U['nuclide']=='U238')][['cell','score','mean','std. dev.']]
+        U238_fis_list     = U238[U238['score'] == 'fission'][['mean']]['mean'].tolist()
+        U238_fis_err_list = U238[U238['score'] == 'fission'][['std. dev.']]['std. dev.'].tolist()
+        U238_ng_list      = U238[U238['score'] == '(n,gamma)'][['mean']]['mean'].tolist()
+        U238_ng_err_list  = U238[U238['score'] == '(n,gamma)'][['std. dev.']]['std. dev.'].tolist()
 
         # Plutonium kg per year
         Pu_per_yr_list = []
         for Pu_per_srcn in U238_ng_list:
-            Pu_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3) 
+            Pu_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3) # kg/yr
+
 
         """Create list of cell IDs randomly assigned by OpenMC to match mtu loading to cell ID"""
-        cell_ids = U_df['cell'].unique().tolist()
+        cell_ids = [str(x) for x in flux['cell'].unique().tolist()] 
+        # turn into str to add 'total' at end -- otherwise gets pandas error for type mismatch -- ppark 2025-10-07
+
+        df = pd.DataFrame({
+            'cell': cell_ids,
+            'flux': flux_list,
+            'Li6(n,t)'          : Li6_nt_list,
+            'Li6(n,t)_stdev'    : Li6_nt_err_list,
+            'Li7(n,t)'          : Li7_nt_list,
+            'Li7(n,t)_stdev'    : Li7_nt_err_list,
+            'tbr'               : tbr_list,
+            'tbr_stdev'         : tbr_err_list,
+            'U238(n,fis)'       : Li7_nt_list,
+            'U238(n,fis)_stdev' : U238_fis_list,
+            'U238(n,g)'         : U238_ng_list,
+            'U238(n,g)_stdev'   : U238_ng_err_list,
+            'Pu239_kg/yr'       : Pu_per_yr_list,
+        })
+        totals = df.sum(numeric_only=True)
+        totals['cell'] = 'total'
+        df = pd.concat([df, pd.DataFrame([totals])], ignore_index=True)
+        
+        df.to_csv(f'./{self.path}/tallies_summary.csv', index=False)
 
 
     def print_tallies(self):
