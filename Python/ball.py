@@ -181,12 +181,12 @@ class ARCBall(Reactor):
         # ------------------------------------------------------------------
         cell_vc   = openmc.Cell(cell_id=10, region= -self.surface_vc)
         cell_vc.importance = {'neutron':1}
-        cell_fw   = openmc.Cell(cell_id=11, region= +self.surface_vc  & -self.surface_fw  , fill=self.firstwall) 
-        cell_st0  = openmc.Cell(cell_id=21, region= +self.surface_fw  & -self.surface_st0 , fill=self.structure)
-        cell_br0  = openmc.Cell(cell_id=31, region= +self.surface_st0 & -self.surface_br0 , fill=self.blanket)
-        cell_st1  = openmc.Cell(cell_id=22, region= +self.surface_br0 & -self.surface_st1 , fill=self.structure)
-        cell_br1  = openmc.Cell(cell_id=32, region= +self.surface_st1 & -self.surface_br1 , fill=self.blanket)
-        cell_st2  = openmc.Cell(cell_id=23, region= +self.surface_br1 & -self.surface_st2 , fill=self.structure) 
+        cell_fw   = openmc.Cell(cell_id=11, region= +self.surface_vc  & -self.surface_fw  , fill=self.firstwall, volume=159.9713) 
+        cell_st0  = openmc.Cell(cell_id=21, region= +self.surface_fw  & -self.surface_st0 , fill=self.structure, volume=2.3215)
+        cell_br0  = openmc.Cell(cell_id=31, region= +self.surface_st0 & -self.surface_br0 , fill=self.blanket,   volume=4.6879)
+        cell_st1  = openmc.Cell(cell_id=22, region= +self.surface_br0 & -self.surface_st1 , fill=self.structure, volume=7.1439)
+        cell_br1  = openmc.Cell(cell_id=32, region= +self.surface_st1 & -self.surface_br1 , fill=self.blanket,   volume=315.0828)
+        cell_st2  = openmc.Cell(cell_id=23, region= +self.surface_br1 & -self.surface_st2 , fill=self.structure, volume=11.7612) 
 
         # Surrounding air cell with proper boundaries (otherwise causes error with just Polygons)
         cell_void = openmc.Cell(cell_id=99, region= +self.surface_st2 & -outer_cylinder & +bottom_plane & -top_plane) # fill=self.air
