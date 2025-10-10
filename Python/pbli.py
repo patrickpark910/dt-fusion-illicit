@@ -15,9 +15,10 @@ class LL(Reactor):
         self.breeder_density = DENSITY_LL # g/cm^3
         self.breeder_enrich  = ENRICH_LL  # wt% 
         self.breeder_volume  = LL_BR_VOL  # m^3 must check could be fishy -ezoccoli
+        self.R0, self.a, self.kappa, self.delta = LL_R0, LL_A, LL_KAPPA, LL_DELTA
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
-        self.name = f"{self.run_type}_{self.breeder_name}_{self.fertile_element}{self.fertile_bulk_density_kgm3:06.2f}kgm3_Li{self.breeder_enrich:04.1f}_{self.temp_k}K"         
+        self.name = f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_element}{self.fertile_bulk_density_kgm3:06.2f}kgm3"         
         self.path = f"./OpenMC/{self.name}"
         
         os.makedirs(self.path, exist_ok=True)
@@ -231,8 +232,6 @@ class LL(Reactor):
         # ------------------------------------------------------------------
         # Tokamak geometry parameters 
         # ------------------------------------------------------------------
-
-        self.R0, self.a, self.kappa, self.delta = LL_R0, LL_A, LL_KAPPA, LL_DELTA
 
         d_fw   = LL_FW_O_CM
         d_fwf  = d_fw   + LL_FWF_O_CM  # front wall front

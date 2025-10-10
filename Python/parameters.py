@@ -21,9 +21,11 @@ ENRICH_FLIBE  = 7.5
 
 DENSITY_UF4   = 6.7 # g/cm3
 ENRICH_U  = 0.71  # wt% 
-TEMP_K = 294 # 900 # K # ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
+TEMP_K = 294 # 900 # 294 K # ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
 
-DENSITY_BISO = 6.93759 #g/cc for UO2 BISO
+DENSITY_BISO = 6.93759 # g/cc for UO2 BISO
+
+BREEDERS = ['ARC','ARCBall','FLiBe','LL']
 
 
 """ Parameters for ARC-class tokamak with FLiBe Breeder """
@@ -31,6 +33,13 @@ ARC_R0    = 400  # cm - major radius
 ARC_A     = 100  # cm - minor radius
 ARC_KAPPA = 1.6  #    - elongation
 ARC_DELTA = 0.5  #    - triangularity
+ARC_BR_VOL = 291.1  # m^3 - analytic vol from plot_miller_models.py
+
+BALL_R0    = 400    # cm  - major radius
+BALL_A     = 120    # cm  - minor radius
+BALL_KAPPA = 1.5    #     - elongation
+BALL_DELTA = 0.5    #     - triangularity
+BALL_BR_VOL = 320   # m^3 - analytic vol from plot_miller_models.py
 
 ARC_FW_CM  =   0.3  # cm - first wall
 ARC_ST1_CM =   1.0  # cm - structural region 1
@@ -38,8 +47,6 @@ ARC_BR1_CM =   2.0  # cm -   breeding region 1
 ARC_ST2_CM =   3.0  # cm - structural region 2
 ARC_BR2_CM = 100.0  # cm -   breeding region 2
 ARC_ST3_CM =   3.0  # cm - structural region 3
-
-ARC_BR_VOL = 291.1  # m^3 - analytic vol from plot_miller_models.py
 
 
 
