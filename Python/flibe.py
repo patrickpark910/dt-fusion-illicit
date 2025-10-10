@@ -15,9 +15,10 @@ class FLiBe(Reactor):
         self.breeder_density = DENSITY_FLIBE # g/cm^3
         self.breeder_enrich  = ENRICH_FLIBE  # wt% 
         self.breeder_volume  = FLIBE_BR_VOL  # m^3
+        self.R0, self.a, self.kappa, self.delta = FLIBE_R0, FLIBE_A, FLIBE_KAPPA, FLIBE_DELTA 
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
-        self.name = f"{self.run_type}_{self.breeder_name}_{self.fertile_element}{self.fertile_bulk_density_kgm3:06.2f}kgm3_Li{self.breeder_enrich:04.1f}_{self.temp_k}K"         
+        self.name = f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_element}{self.fertile_bulk_density_kgm3:06.2f}kgm3"         
         self.path = f"./OpenMC/{self.name}"
         
         os.makedirs(self.path, exist_ok=True)
@@ -178,7 +179,6 @@ class FLiBe(Reactor):
         # Tokamak geometry parameters 
         # ------------------------------------------------------------------
 
-        self.R0, self.a, self.kappa, self.delta = FLIBE_R0, FLIBE_A, FLIBE_KAPPA, FLIBE_DELTA 
         d_fw  = FLIBE_FW_CM 
         d_st0 = d_fw  + FLIBE_ST1_CM
         d_br0 = d_st0 + FLIBE_BR1_CM

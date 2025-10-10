@@ -7,6 +7,7 @@ import pandas as pd
 # Import helper functions
 from Python.reactor import *
 from Python.arc     import *
+from Python.ball     import *
 from Python.flibe   import *
 from Python.pbli    import *
 from Python.parameters import *
@@ -28,7 +29,7 @@ def main():
 
 
     if run_type == 'plot':
-        for breeder in ['ARC','FLiBe','LL']: # make this match class name
+        for breeder in ['ARC','ARCBall','FLiBe','LL']: # make this match class name
             
             current_run = build_reactor(breeder, breeder_name=breeder, run_type='plot', run_openmc=True)
 
@@ -39,7 +40,7 @@ def main():
 
 
     elif run_type == 'volume':
-        for breeder in ['ARC','FLiBe','LL']: # make this match class name
+        for breeder in ['ARC','ARCBall','FLiBe','LL']: # make this match class name
 
             current_run = build_reactor(breeder, breeder_name=breeder, run_type='volume', run_openmc=True)
             
@@ -51,9 +52,9 @@ def main():
 
     elif run_type == 'tallies':
 
-        for breeder in ['ARC','FLiBe','LL']: # make this match class name
+        for breeder in ['ARC','ARCBall','FLiBe','LL']: # make this match class name
             for fertile_element in ['U']:
-                for fbd_kgm3 in [0.0]: # FERTILE_BULK_DENSITY_KGM3: # [FERTILE_BULK_DENSITY_KGM3[0]]: # 
+                for fbd_kgm3 in FERTILE_BULK_DENSITY_KGM3: # [FERTILE_BULK_DENSITY_KGM3[0]]: # 
                     
                     current_run = build_reactor(breeder, breeder_name=breeder,
                                                 fertile_element=fertile_element,
@@ -68,9 +69,12 @@ def main():
                     elif current_run.run_openmc:
                         current_run.openmc()
 
-                    current_run.extract_tallies()
+                    if os.path.exists(f"{current_run.path}/tallies_summary.csv"): 
+                        print(f"{Colors.YELLOW}Warning.{Colors.END} File {current_run.path}/tallies_summary.csv already exists, so tally extraction will be skipped...")
+                    elif current_run.run_openmc:
+                        current_run.extract_tallies()
 
-            collate_tallies(breeder)
+            collate_tallies(breeder, current_run.temp_k, current_run.breeder_volume)
 
 
 
@@ -88,13 +92,19 @@ def build_reactor(breeder:str, **kwargs):
     return reactor
 
 
-def collate_tallies(breeder):
+def collate_tallies(breeder,temp_k,vol_m3):
 
-    df_all = pd.DataFrame(columns=['filename','tbr','Pu239_kg/yr'])
+    df_all = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'tbr','Pu239_kg/yr'])
     
-    tally_folders = [x for x in os.listdir("./OpenMC/") if x.startswith(f"tallies_{breeder}")]
+    tally_folders = [x for x in os.listdir("./OpenMC/") if x.startswith(f"tallies_{breeder}_{temp_k}K")]
 
     for folder in tally_folders:
+
+        # Extract the fertile loading
+        for part in folder.split("_"):
+            if part.startswith("U") or part.startswith("Th"):
+                fertile = float(part.replace("kgm3", "").lstrip("UTh"))
+                mt = fertile*vol_m3/1e3 # metric tons of fertile isotope
 
         tally_summary = f"./OpenMC/{folder}/tallies_summary.csv"
         df = pd.read_csv(tally_summary)
@@ -103,11 +113,15 @@ def collate_tallies(breeder):
         pu  = df[ df['cell']=='total' ]['Pu239_kg/yr'].values[0]
 
         df_all.loc[len(df_all)] = {'filename': folder,
+                              'fertile_kg/m3': fertile,
+                                 'fertile_mt': mt,
                                         'tbr': tbr,
                                 'Pu239_kg/yr': pu }
 
-    df_all.to_csv(f"./Figures/Data/{breeder}_total_rxns.csv")
-
+    dst = f"./Figures/Data/{breeder}_total_rxns_{temp_k}K.csv"
+    df_all.to_csv(dst, index=False)
+    print(f"{Colors.GREEN}Comment.{Colors.END} Collated tallies for {breeder} at {temp_k} K to: {dst}")
+                          
 
 
 

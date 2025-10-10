@@ -12,7 +12,7 @@ from Python.utilities import *
 
 class Reactor(ABC):
 
-    def __init__(self, breeder_name='flibe', fertile_element='U', fertile_bulk_density_kgm3=0.0, run_type='tallies', run_openmc=False):
+    def __init__(self, breeder_name='FLiBe', fertile_element='U', fertile_bulk_density_kgm3=0.0, run_type='tallies', run_openmc=False):
 
         self.fertile_bulk_density_kgm3 = fertile_bulk_density_kgm3
         self.fertile_element = fertile_element.capitalize()
@@ -167,12 +167,12 @@ class Reactor(ABC):
         settings_vol_calc = openmc.Settings()
         settings_vol_calc.volume_calculations = [vol_calc]
         
-        print(f"{Colors.BLUE}Running stochastic volume calculation with {samples} samples...{Colors.END}")
+        print(f"{Colors.GREEN}Running stochastic volume calculation with {samples} samples...{Colors.END}")
 
         self.materials.cross_sections = set_xs_path()
         self.model_vol_calc = openmc.model.Model(self.geometry, self.materials, settings_vol_calc)
         self.model_vol_calc.calculate_volumes(cwd=self.path, export_model_xml=False, apply_volumes=False)
-        print('did openmc run')
+
 
         # ---------------------------
         # Process volume calc results
