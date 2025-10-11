@@ -39,7 +39,7 @@ def main():
                            907.2, 292.7, 1.59, 0.33, [(0.2,'fw'), (0.4,'st1'), (2,'br1'), (0.4,'st2'), (22.5,'br2'), (3.2,'st3'), (21.0,'br3'), (3.2,'st4'), (21.0,'br4'), (8.0,'st5')]) 
 
     # plot_separate([ARC_Sorbom, ARC_Ball_code, Emma_FLiBe, Emma_LL, EU_DEMO]) # , ITER_LL, EU_DEMO_PB]
-    plot_together([ARC_Ball_code]) # , ITER_LL, EU_DEMO_PB]
+    plot_together([ARC_Sorbom, ARC_Ball_code, Emma_FLiBe, Emma_LL, ]) # , ITER_LL, EU_DEMO_PB]
 
 
 def plot_separate(reactors_to_plot, n=10000):

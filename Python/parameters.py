@@ -17,11 +17,11 @@ Nominal values used by Emma and Patrick + reasons
 FERTILE_BULK_DENSITY_KGM3 = [0, 0.03, 0.3, 0.6, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150]
 
 DENSITY_FLIBE = 1.94 # g/cm3
-ENRICH_FLIBE  = 7.5
+ENRICH_FLIBE  = 7.5  # wt%
 
 DENSITY_UF4   = 6.7 # g/cm3
 ENRICH_U  = 0.71  # wt% 
-TEMP_K = 294 # 900 # 294 K # ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
+TEMP_K = 900 # 900 # 294 K # ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
 
 DENSITY_BISO = 6.93759 # g/cc for UO2 BISO
 
@@ -90,8 +90,8 @@ LL_IM_O_CM =   8.0   # cm -      inner manifold
 #----Inboard Layers----
 LL_IM_I_CM =   8.0   # cm -      inner manifold 
 
-LL_BR_VOL =  427.3  # m^3 - analytic vol from plot_miller_models.py
-#Check this value why is it so low?? -ezoccoli
+LL_BR_VOL =  427.3   # m^3 - analytic vol from plot_miller_models.py
+
 
 
 """ Parameters for tokamak with PB Breeder """

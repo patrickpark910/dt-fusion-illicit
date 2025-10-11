@@ -47,7 +47,18 @@ class LL(Reactor):
 
         self.firstwall = openmc.Material(name='firstwall', temperature=self.temp_k)
         self.firstwall.depletable = False
-        self.firstwall.add_element('W',1)
+        self.firstwall.add_element('O',5/1e6,percent_type='wo')
+        self.firstwall.add_element('N',5/1e6,percent_type='wo')
+        self.firstwall.add_element('C',5/1e6,percent_type='wo')
+        self.firstwall.add_element('Na',4/1e6,percent_type='wo')
+        self.firstwall.add_element('K',2.5/1e6,percent_type='wo')
+        self.firstwall.add_element('Al',3/1e6,percent_type='wo')
+        self.firstwall.add_element('Ca',0.5/1e6,percent_type='wo')
+        self.firstwall.add_element('Cr',0.5/1e6,percent_type='wo')
+        self.firstwall.add_element('Cu',0.5/1e6,percent_type='wo')
+        self.firstwall.add_element('Fe',5/1e6,percent_type='wo')
+        self.firstwall.add_element('W',1-(5+5+5+4+2.5+3+0.5+0.5+0.5+5)/1e6,percent_type='wo')
+        # self.firstwall.add_element('W',1)
         self.firstwall.set_density('g/cm3',19.3)
         # The original first wall specs we were using from Ball 25 is 99.9969 wt% W 
         # and the rest O, N ,C, Na, K, Al, Ca, Cr, Cu, Fe impurities...
@@ -114,7 +125,7 @@ class LL(Reactor):
         self.breeder = openmc.Material(name='breeder', temperature=self.temp_k)
         self.breeder.set_density('g/cm3', self.breeder_density)
         self.breeder.add_element('Pb', 0.83, percent_type='ao') 
-        self.breeder.add_element('Li', 0.17, percent_type='ao', enrichment_target='Li6', enrichment_type='ao', enrichment=self.breeder_enrich) # Li-6 enrichment to 90% 
+        self.breeder.add_element('Li', 0.17, percent_type='ao', enrichment_target='Li6', enrichment_type='wo', enrichment=self.breeder_enrich) # Li-6 enrichment to 90% 
 
         # ------------------------------------------------------------------
         # Divider material
