@@ -106,57 +106,17 @@ class FLiBe(Reactor):
                                                enrichment_type='wo', 
                                                enrichment=self.breeder_enrich)
 
-        # ------------------------------------------------------------------
-        # Fertile material
-        # ------------------------------------------------------------------
-
-        self.fertile = openmc.Material(name='fertile', temperature=self.temp_k)
-
-        if self.breeder_name in ['FLiBe','ARC']:
-            if self.fertile_element == 'U':
-                self.fertile.add_elements_from_formula('UF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
-                self.fertile.set_density('g/cm3', DENSITY_UF4) 
-            elif self.fertile_element == 'Th':
-                self.fertile.add_elements_from_formula('ThF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
-                self.fertile.set_density('g/cm3', DENSITY_ThF4) 
-
-        elif self.breeder_name in ['LL', 'PB']:
-           if self.fertile_element == 'U':
-                # UO2 kernel (enriched uranium)
-                uo2 = openmc.Material(name='UO2')
-                uo2.add_elements_from_formula('UO2', enrichment=ENRICH_U)
-                uo2.set_density('g/cm3', 10.5)  # nominal UO2 density
-
-                # SiC coating
-                sic = openmc.Material(name='SiC')
-                sic.add_elements_from_formula('SiC')
-                sic.set_density('g/cm3', 3.2)
-
-                # Glaser & Goldston BISO particles used for simplicity
-                # and to validate our results with their model
-                # BISO particles include our fuel pellet coated in one layer of SiC
-
-                r_uo2 = 400e-4  # r = 400 μm = 0.0400 cm // "800 μm kernel"
-                r_sic = 500e-4  # 500 μm = 0.0500 cm // "100 μm thickness"
-                V_biso_particle = (4 / 3) * np.pi * (r_sic)**3     # volume of single BISO particle
-                V_uo2_in_biso   = (4 / 3) * np.pi * (r_uo2)**3     # volume of UO2 in single BISO particle
-                Vf_uo2_in_biso  = V_uo2_in_biso / V_biso_particle  # vol frac UO2 in single BISO
-                Vf_sic_in_biso  = 1.0 - Vf_uo2_in_biso             # vol frac SiC in single BISO
-
-                biso = openmc.Material.mix_materials([uo2, sic], [Vf_uo2_in_biso, Vf_sic_in_biso], 'vo')
-                biso.set_density('g/cm3', DENSITY_BISO)  
-
-                self.fertile = biso
-
-        #     elif self.fertile_element == 'Th':
-        #         pass  # ThO2 pebbles
-
-
+        
         # ------------------------------------------------------------------
         # Breeder and fertile material mixed in the blanket breeding regions 
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------------        
 
-        if self.breeder_name  in ['FLiBe','ARC']:
+        if self.fertile_element == 'U':
+
+            self.fertile = openmc.Material(name='fertile', temperature=self.temp_k)
+            self.fertile.add_elements_from_formula('UF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
+            self.fertile.set_density('g/cm3', DENSITY_UF4) 
+
             breeder_mass_frac, fertile_compound_mass_frac = calc_blanket_mass_fracs(self.fertile_bulk_density_kgm3, 
                                                                                     self.breeder_volume,
                                                                                     fertile_element=self.fertile_element, 
@@ -164,15 +124,19 @@ class FLiBe(Reactor):
                                                                                     breeder_density_kgm3=DENSITY_FLIBE*1e3)
             self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [breeder_mass_frac, fertile_compound_mass_frac], 'wo') # fractions in 'mix_materials' MUST add up to 1
             self.blanket.name, self.blanket.temperature = self.name, self.temp_k
-            
 
-        elif self.breeder_name in ['LL']:
-            breeder_mass_frac, fertile_compound_mass_frac = calc_biso_blanket_mass_fracs(self.fertile_bulk_density_kgm3,
-                                                                        self.breeder_volume,
-                                                                        fertile_element=self.fertile_element,
-                                                                        fertile_enrich=ENRICH_U,
-                                                                        breeder_density_kgm3=DENSITY_LL*1e3)
-            self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [breeder_mass_frac, fertile_compound_mass_frac], 'wo')
+        elif self.fertile_element == 'Th':
+
+            self.fertile = openmc.Material(name='fertile', temperature=self.temp_k)
+            self.fertile.add_elements_from_formula('ThF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
+            self.fertile.set_density('g/cm3', DENSITY_ThF4) 
+
+            breeder_mass_frac, fertile_compound_mass_frac = calc_blanket_mass_fracs(self.fertile_bulk_density_kgm3, 
+                                                                                    self.breeder_volume,
+                                                                                    fertile_element=self.fertile_element, 
+                                                                                    fertile_enrich=100, 
+                                                                                    breeder_density_kgm3=DENSITY_FLIBE*1e3)
+            self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [breeder_mass_frac, fertile_compound_mass_frac], 'wo') # fractions in 'mix_materials' MUST add up to 1
             self.blanket.name, self.blanket.temperature = self.name, self.temp_k
 
 
