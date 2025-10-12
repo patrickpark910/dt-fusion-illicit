@@ -108,30 +108,36 @@ class ARCBall(Reactor):
 
 
         # ------------------------------------------------------------------
-        # Fertile material
-        # ------------------------------------------------------------------
-
-        self.fertile = openmc.Material(name='fertile', temperature=self.temp_k)
+        # Breeder and fertile material mixed in the blanket breeding regions 
+        # ------------------------------------------------------------------        
 
         if self.fertile_element == 'U':
+
+            self.fertile = openmc.Material(name='fertile', temperature=self.temp_k)
             self.fertile.add_elements_from_formula('UF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
             self.fertile.set_density('g/cm3', DENSITY_UF4) 
+
+            breeder_mass_frac, fertile_compound_mass_frac = calc_blanket_mass_fracs(self.fertile_bulk_density_kgm3, 
+                                                                                    self.breeder_volume,
+                                                                                    fertile_element=self.fertile_element, 
+                                                                                    fertile_enrich=ENRICH_U, 
+                                                                                    breeder_density_kgm3=DENSITY_FLIBE*1e3)
+            self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [breeder_mass_frac, fertile_compound_mass_frac], 'wo') # fractions in 'mix_materials' MUST add up to 1
+            self.blanket.name, self.blanket.temperature = self.name, self.temp_k
+
         elif self.fertile_element == 'Th':
+
+            self.fertile = openmc.Material(name='fertile', temperature=self.temp_k)
             self.fertile.add_elements_from_formula('ThF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
             self.fertile.set_density('g/cm3', DENSITY_ThF4) 
 
-
-        # ------------------------------------------------------------------
-        # Breeder and fertile material mixed in the blanket breeding regions 
-        # ------------------------------------------------------------------
-
-        breeder_mass_frac, fertile_compound_mass_frac = calc_blanket_mass_fracs(self.fertile_bulk_density_kgm3, 
-                                                                                self.breeder_volume,
-                                                                                fertile_element=self.fertile_element, 
-                                                                                fertile_enrich=ENRICH_U, 
-                                                                                breeder_density_kgm3=DENSITY_FLIBE*1e3)
-        self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [breeder_mass_frac, fertile_compound_mass_frac], 'wo') # fractions in 'mix_materials' MUST add up to 1
-        self.blanket.name, self.blanket.temperature = self.name, self.temp_k
+            breeder_mass_frac, fertile_compound_mass_frac = calc_blanket_mass_fracs(self.fertile_bulk_density_kgm3, 
+                                                                                    self.breeder_volume,
+                                                                                    fertile_element=self.fertile_element, 
+                                                                                    fertile_enrich=100, 
+                                                                                    breeder_density_kgm3=DENSITY_FLIBE*1e3)
+            self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [breeder_mass_frac, fertile_compound_mass_frac], 'wo') # fractions in 'mix_materials' MUST add up to 1
+            self.blanket.name, self.blanket.temperature = self.name, self.temp_k
 
 
         # ------------------------------------------------------------------

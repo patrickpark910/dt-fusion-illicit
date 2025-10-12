@@ -53,7 +53,7 @@ def main():
     elif run_type == 'tallies':
 
         for breeder in ['ARC','ARCBall','FLiBe','LL']: # make this match class name
-            for fertile_element in ['U']:
+            for fertile_element in ['U','Th']: # ,'Th']:
                 for fbd_kgm3 in FERTILE_BULK_DENSITY_KGM3: # [FERTILE_BULK_DENSITY_KGM3[0]]: # 
                     
                     current_run = build_reactor(breeder, breeder_name=breeder,
@@ -74,7 +74,8 @@ def main():
                     elif current_run.run_openmc:
                         current_run.extract_tallies()
 
-            collate_tallies(breeder, current_run.temp_k, current_run.breeder_volume)
+                print(f"Collating tallies for {breeder} {fertile_element} at {current_run.temp_k} and breeder vol {current_run.breeder_volume} m3")
+                collate_tallies(breeder, fertile_element, current_run.temp_k, current_run.breeder_volume)
 
 
 
@@ -92,33 +93,46 @@ def build_reactor(breeder:str, **kwargs):
     return reactor
 
 
-def collate_tallies(breeder,temp_k,vol_m3):
+def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
 
-    df_all = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'tbr','Pu239_kg/yr'])
+    if fertile_element == 'U':
+        df_all = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'Li6(n,t)', 'Li7(n,Xt)','U238(n,g)','tbr','Pu239_kg/yr'])
+    elif fertile_element == 'Th':
+        df_all = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'Li6(n,t)', 'Li7(n,Xt)','Th232(n,g)','tbr','Pu239_kg/yr'])
     
-    tally_folders = [x for x in os.listdir("./OpenMC/") if x.startswith(f"tallies_{breeder}_{temp_k}K")]
+    tally_folders = [x for x in os.listdir("./OpenMC/") if (x.startswith(f"tallies_{breeder}_{temp_k}K")) and x.split("_")[-1].startswith(fertile_element)]
 
     for folder in tally_folders:
 
         # Extract the fertile loading
-        for part in folder.split("_"):
-            if part.startswith("U") or part.startswith("Th"):
-                fertile = float(part.replace("kgm3", "").lstrip("UTh"))
-                mt = fertile*vol_m3/1e3 # metric tons of fertile isotope
+        part = folder.split("_")[-1]
+        fertile = float(part.replace("kgm3", "").lstrip(fertile_element))
+        mt = fertile*vol_m3/1e3 # metric tons of fertile isotope
 
         tally_summary = f"./OpenMC/{folder}/tallies_summary.csv"
-        df = pd.read_csv(tally_summary)
+        
+        try:
+            df = pd.read_csv(tally_summary)
+        except:
+            print(f"{Colors.YELLOW}Warning.{Colors.END} File 'tallies_summary.csv' not found in {folder}, skipping...")
+            continue
 
-        tbr = df[ df['cell']=='total' ]['tbr'].values[0]
-        pu  = df[ df['cell']=='total' ]['Pu239_kg/yr'].values[0]
+        li6  = df[ df['cell']=='total' ]['Li6(n,t)'].values[0]
+        li7  = df[ df['cell']=='total' ]['Li7(n,t)'].values[0]
+        u238 = df[ df['cell']=='total' ]['U238(n,g)'].values[0]
+        tbr  = df[ df['cell']=='total' ]['tbr'].values[0]
+        pu   = df[ df['cell']=='total' ]['Pu239_kg/yr'].values[0]
 
         df_all.loc[len(df_all)] = {'filename': folder,
                               'fertile_kg/m3': fertile,
                                  'fertile_mt': mt,
+                                   'Li6(n,t)': li6,
+                                  'Li7(n,Xt)': li7,
+                                  'U238(n,g)': u238,
                                         'tbr': tbr,
                                 'Pu239_kg/yr': pu }
 
-    dst = f"./Figures/Data/{breeder}_total_rxns_{temp_k}K.csv"
+    dst = f"./Figures/Data/{breeder}_{fertile_element}_rxns_{temp_k}K.csv"
     df_all.to_csv(dst, index=False)
     print(f"{Colors.GREEN}Comment.{Colors.END} Collated tallies for {breeder} at {temp_k} K to: {dst}")
                           
