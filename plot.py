@@ -37,9 +37,10 @@ class Plot:
         self.pbli_th_rr_df  = pd.read_csv('./Figures/Data/LL_Th_rxns_900K.csv')
         # self.pebble_rr_df   = pd.read_csv('./Figures/Data/PB_U_rxns_900K.csv')
 
-        # self.flibe_u_eb_df  = pd.read_csv('./Figures/data/FLiBe_U_FW4cm_Li07.5_900K_2025-07-22_U238_n-gamma_Ebins.csv')
-        # self.flibe_th_eb_df = pd.read_csv('./Figures/data/FLiBe_Th_FW4cm_Li07.5_900K_2025-07-22_Th232_n-gamma_Ebins.csv')
-        # self.pbli_u_eb_df   = pd.read_csv('./Figures/data/DCLL_FW4cm_Li90_900K_2025-07-22_U238_n-gamma_Ebins.csv')
+        self.flibe_u_eb_df  = pd.read_csv('./Figures/data/FLiBe_U238_n-gamma_Ebins.csv')
+        self.flibe_th_eb_df = pd.read_csv('./Figures/data/FLiBe_Th232_n-gamma_Ebins.csv')
+        self.pbli_u_eb_df   = pd.read_csv('./Figures/data/LL_U238_n-gamma_Ebins.csv')
+        self.pbli_th_eb_df  = pd.read_csv('./Figures/data/LL_U238_n-gamma_Ebins.csv')
         # self.pebble_eb_df   = pd.read_csv('./Figures/data/HCPB_FW4cm_Li60_900K_2025-07-22_U238_n-gamma_Ebins.csv') 
 
         self.save, self.show = save, show
@@ -222,10 +223,10 @@ class Plot:
         """
         print(f"\nPlotting cumulative, normalized fissile production vs. energy...")
 
-        fig, axes = plt.subplots(2, 2, figsize=(15,10)) # sharex='col', sharey='row', 
+        fig, axes = plt.subplots(3, 2, figsize=(3*7.5,10)) # sharex='col', sharey='row', 
 
         titles = [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$", r"LL-UO$_2$", r"PB-UO$_2$"]
-        dfs    = [self.flibe_u_eb_df, self.flibe_th_eb_df, self.pbli_u_eb_df, self.pebble_eb_df]
+        dfs    = [self.flibe_u_eb_df, self.flibe_th_eb_df, self.pbli_u_eb_df, self.pbli_th_eb_df]
 
         for ax, df, title in zip(axes.flatten(), dfs, titles):
 
