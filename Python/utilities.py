@@ -120,7 +120,7 @@ def calc_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertil
         breeder_mass_kg       =  breeder_density_kgm3 * breeder_volume_m3
         blanket_mass_kg       = uf4_mass_kg + breeder_mass_kg
         uf4_mass_frac         = uf4_mass_kg / blanket_mass_kg
-        breeder_mass_frac     = breeder_mass_kg /blanket_mass_kg
+        breeder_mass_frac     = breeder_mass_kg / blanket_mass_kg
         return breeder_mass_frac, uf4_mass_frac
 
     elif fertile_element == 'Th':
@@ -129,7 +129,7 @@ def calc_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertil
         breeder_mass_kg        =  breeder_density_kgm3 * breeder_volume_m3
         blanket_mass_kg        = thf4_mass_kg + breeder_mass_kg
         thf4_mass_frac         = thf4_mass_kg / blanket_mass_kg
-        breeder_mass_frac      = breeder_mass_kg /blanket_mass_kg
+        breeder_mass_frac      = breeder_mass_kg / blanket_mass_kg
         return breeder_mass_frac, thf4_mass_frac
 
 
