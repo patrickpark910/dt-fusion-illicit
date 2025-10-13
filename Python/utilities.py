@@ -132,6 +132,7 @@ def calc_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertil
         breeder_mass_frac      = breeder_mass_kg /blanket_mass_kg
         return breeder_mass_frac, thf4_mass_frac
 
+
 def calc_biso_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertile_element='U', fertile_enrich=0.71, breeder_density_kgm3=9.4e3):
     """
     Calculate mass fractions of PbLi and BISO particles.

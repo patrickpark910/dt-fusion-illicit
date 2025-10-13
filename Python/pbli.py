@@ -214,8 +214,29 @@ class LL(Reactor):
 
             self.fertile = biso
 
-        #     elif self.fertile_element == 'Th':
-        #         pass  # ThO2 pebbles
+        if self.fertile_element == 'Th':
+            # ThO2 kernel
+            kernel = openmc.Material(name='ThO2')
+            kernel.add_elements_from_formula('ThO2')
+            kernel.set_density('g/cm3', 10.0)  # nominal UO2 density
+
+            # SiC coating
+            sic = openmc.Material(name='SiC')
+            sic.add_elements_from_formula('SiC')
+            sic.set_density('g/cm3', 3.2)
+
+            # BISO = UO2/ThO2 kernel + 1 SiC coat
+            r_kernel = 400e-4  # r = 400 μm = 0.0400 cm // "800 μm kernel"
+            r_sic = 500e-4     # r = 500 μm = 0.0500 cm // "100 μm thickness"
+            V_biso_particle = (4 / 3) * np.pi * (r_sic)**3           # volume of single BISO particle
+            V_kernel_in_biso   = (4 / 3) * np.pi * (r_kernel)**3     # volume of UO2/ThO2 kernel in single BISO particle
+            Vf_kernel_in_biso  = V_kernel_in_biso / V_biso_particle  # vol frac kernel in single BISO
+            Vf_sic_in_biso     = 1.0 - Vf_kernel_in_biso             # vol frac SiC in single BISO
+
+            biso = openmc.Material.mix_materials([kernel, sic], [Vf_kernel_in_biso, Vf_sic_in_biso], 'vo')
+            # biso.set_density('g/cm3', DENSITY_BISO_ThO2)  
+
+            self.fertile = biso
 
 
         # ------------------------------------------------------------------
