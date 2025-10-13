@@ -17,13 +17,15 @@ Nominal values used by Emma and Patrick + reasons
 FERTILE_BULK_DENSITY_KGM3 = [0, 0.03, 0.3, 0.6, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150]
 
 DENSITY_FLIBE = 1.94 # g/cm3
-ENRICH_FLIBE  = 7.5
+ENRICH_FLIBE  = 7.5  # wt%
 
 DENSITY_UF4   = 6.7 # g/cm3
 ENRICH_U  = 0.71  # wt% 
-TEMP_K = 900 # K
+TEMP_K = 900 # 900 # 294 K # ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
 
-DENSITY_BISO = 6.93759 #g/cc
+DENSITY_BISO = 6.93759 # g/cc for UO2 BISO
+
+BREEDERS = ['ARC','ARCBall','FLiBe','LL']
 
 
 """ Parameters for ARC-class tokamak with FLiBe Breeder """
@@ -31,6 +33,13 @@ ARC_R0    = 400  # cm - major radius
 ARC_A     = 100  # cm - minor radius
 ARC_KAPPA = 1.6  #    - elongation
 ARC_DELTA = 0.5  #    - triangularity
+ARC_BR_VOL = 291.1  # m^3 - analytic vol from plot_miller_models.py
+
+BALL_R0    = 400    # cm  - major radius
+BALL_A     = 120    # cm  - minor radius
+BALL_KAPPA = 1.5    #     - elongation
+BALL_DELTA = 0.5    #     - triangularity
+BALL_BR_VOL = 320   # m^3 - analytic vol from plot_miller_models.py
 
 ARC_FW_CM  =   0.3  # cm - first wall
 ARC_ST1_CM =   1.0  # cm - structural region 1
@@ -38,8 +47,6 @@ ARC_BR1_CM =   2.0  # cm -   breeding region 1
 ARC_ST2_CM =   3.0  # cm - structural region 2
 ARC_BR2_CM = 100.0  # cm -   breeding region 2
 ARC_ST3_CM =   3.0  # cm - structural region 3
-
-ARC_BR_VOL = 291.1 # m^3 - analytic vol from plot_miller_models.py
 
 
 
@@ -61,7 +68,6 @@ FLIBE_BR_VOL = 771.8 # m^3 - analytic vol from plot_miller_models.py
 
 """ Parameters for tokamak with LL Breeder """
 
-
 DENSITY_LL  =  9.4 # g/cm3
 ENRICH_LL   = 90.0 
 
@@ -77,24 +83,37 @@ LL_FWB_O_CM =   0.4  # cm -     first wall back
 LL_BR1_O_CM =  22.5  # cm -   breeding region 1
 LL_D1_O_CM  =   3.2  # cm -           divider 1
 LL_BR2_O_CM =  21.0  # cm -   breeding region 2
-LL_D2_O_CM =   3.2  # cm -           divider 2
+LL_D2_O_CM =   3.2   # cm -           divider 2
 LL_BR3_O_CM =  21.0  # cm -   breeding region 3
-LL_IM_O_CM =   8.0  # cm -      inner manifold 
-#addititional F2H8 back plate
+LL_IM_O_CM =   8.0   # cm -      inner manifold 
+# addititional F2H8 back plate
+#----Inboard Layers----
+LL_IM_I_CM =   8.0   # cm -      inner manifold 
+
+LL_BR_VOL =  427.3   # m^3 - analytic vol from plot_miller_models.py
+
+
+
+""" Parameters for tokamak with PB Breeder """
+
+ENRICH_PB   = 60.0 
+
+PB_R0    = 907.2  # cm - major radius
+PB_A     = 292.7  # cm - minor radius
+PB_KAPPA = 1.59 #      - elongation
+PB_DELTA = 0.33  #     - triangularity
+#----Outboard Layers----
+PB_FW_CM     =   0.2  # cm -           first wall
+PB_ST1_CM    =   2.5  # cm -  structural region 1
+PB_BR1_O_CM  =  82.0  # cm -    breeding region 1
+PB_ST2_CM    =   3.0  # cm -  structural region 2
 
 #----Inboard Layers----
-# LL_FW_I_CM  =   0.2  # cm -          first wall
-# LL_FWF_I_CM =   0.4  # cm -    first wall front
-# LL_FWC_I_CM =   2.0  # cm -  first wall cooling
-# LL_FWB_I_CM =   0.4  # cm -     first wall back
-# LL_BR1_I_CM =  22.5  # cm -   breeding region 1
-# LL_D1_I_CM  =   3.2  # cm -           divider 1
-# LL_BR2_I_CM =  21.0  # cm -   breeding region 2
-LL_IM_I_CM =   8.0  # cm -      inner manifold 
+PB_BR1_CM    =  45.0  # cm -    breeding region 1
 
-LL_BR_VOL =  440.3757# m^3 - analytic vol from plot_miller_models.py
-#Check this value why is it so low?? -ezoccoli
 
+PB_BR_VOL =  973.8489# m^3 ?????
+#This is not accurate - Emma
 
 
 
