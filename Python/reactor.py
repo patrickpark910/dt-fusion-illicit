@@ -388,6 +388,8 @@ class Reactor(ABC):
         df = pd.concat([df, pd.DataFrame([totals])], ignore_index=True)
         
         df.to_csv(f'./{self.path}/tallies_summary.csv', index=False)
+        
+        U238_ng_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_n-gamma_Ebins.csv', index=False)
 
 
 
