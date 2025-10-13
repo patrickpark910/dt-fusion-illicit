@@ -36,7 +36,7 @@ SEC_PER_YR = 3600 * 24 * 365
 Fusion parameters - from JL Ball 24
 """
 N_PER_MJ = 3.546e17 # 17.6 MeV
-P_FUS_MW = 500
+P_FUS_MW = 1000
 NPS_FUS  = P_FUS_MW * N_PER_MJ # n/s
 
 
@@ -124,13 +124,14 @@ def calc_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertil
         return breeder_mass_frac, uf4_mass_frac
 
     elif fertile_element == 'Th':
-        thf4_bulk_density_kgm3 = fertile_bulk_density_kgm3 / (1-fertile_enrich) * AMU_ThF4 / AMU_Th
+        thf4_bulk_density_kgm3 = fertile_bulk_density_kgm3 * AMU_ThF4 / AMU_Th
         thf4_mass_kg           = thf4_bulk_density_kgm3 * breeder_volume_m3
         breeder_mass_kg        =  breeder_density_kgm3 * breeder_volume_m3
         blanket_mass_kg        = thf4_mass_kg + breeder_mass_kg
         thf4_mass_frac         = thf4_mass_kg / blanket_mass_kg
         breeder_mass_frac      = breeder_mass_kg / blanket_mass_kg
         return breeder_mass_frac, thf4_mass_frac
+
 
 def calc_biso_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertile_element='U', fertile_enrich=0.71, breeder_density_kgm3=9.4e3):
     """
@@ -339,11 +340,12 @@ def has_statepoint(directory_path):
     Returns:
         bool: True if a file starting with 'statepoint' is found, False otherwise
     """
+    found = False
     for filename in os.listdir(directory_path):
         if filename.startswith("statepoint"):
-            return True
-        else:
-            return False
+            found = True
+    return found
+            
 
 
 if __name__ == "__main__":
