@@ -97,8 +97,13 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
 
     if fertile_element == 'U':
         df_all = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'Li6(n,t)', 'Li7(n,Xt)','U238(n,g)','tbr','Pu239_kg/yr'])
+        fertile_isotope = 'U238'
+        fissile_isotope = 'Pu239'
+
     elif fertile_element == 'Th':
         df_all = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'Li6(n,t)', 'Li7(n,Xt)','Th232(n,g)','tbr','Pu239_kg/yr'])
+        fertile_isotope = 'Th232'
+        fissile_isotope =  'U233'
     
     tally_folders = [x for x in os.listdir("./OpenMC/") if (x.startswith(f"tallies_{breeder}_{temp_k}K")) and x.split("_")[-1].startswith(fertile_element)]
 
@@ -119,18 +124,18 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
 
         li6  = df[ df['cell']=='total' ]['Li6(n,t)'].values[0]
         li7  = df[ df['cell']=='total' ]['Li7(n,t)'].values[0]
-        u238 = df[ df['cell']=='total' ]['U238(n,g)'].values[0]
+        u238 = df[ df['cell']=='total' ][f'{fertile_isotope}(n,g)'].values[0]
         tbr  = df[ df['cell']=='total' ]['tbr'].values[0]
-        pu   = df[ df['cell']=='total' ]['Pu239_kg/yr'].values[0]
+        pu   = df[ df['cell']=='total' ][f'{fissile_isotope}_kg/yr'].values[0]
 
         df_all.loc[len(df_all)] = {'filename': folder,
                               'fertile_kg/m3': fertile,
                                  'fertile_mt': mt,
                                    'Li6(n,t)': li6,
                                   'Li7(n,Xt)': li7,
-                                  'U238(n,g)': u238,
+                    f'{fertile_isotope}(n,g)': u238,
                                         'tbr': tbr,
-                                'Pu239_kg/yr': pu }
+                   f'{fissile_isotope}_kg/yr': pu }
 
     dst = f"./Figures/Data/{breeder}_{fertile_element}_rxns_{temp_k}K.csv"
     df_all.to_csv(dst, index=False)

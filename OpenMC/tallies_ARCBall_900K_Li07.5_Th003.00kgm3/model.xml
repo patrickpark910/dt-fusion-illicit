@@ -1522,9 +1522,9 @@
       <filters>45</filters>
       <scores>flux</scores>
     </tally>
-    <tally id="269" name="U rxn rates">
+    <tally id="269" name="Th rxn rates">
       <filters>45</filters>
-      <nuclides>U238 U235</nuclides>
+      <nuclides>Th232</nuclides>
       <scores>(n,gamma) fission elastic</scores>
     </tally>
     <tally id="271" name="Li rxn rates">
@@ -1546,9 +1546,9 @@
       <filters>45 46</filters>
       <scores>flux</scores>
     </tally>
-    <tally id="270" name="U rxn rates spectrum">
+    <tally id="270" name="Th rxn rates spectrum">
       <filters>45 46</filters>
-      <nuclides>U238 U235</nuclides>
+      <nuclides>Th232</nuclides>
       <scores>(n,gamma) fission elastic</scores>
     </tally>
     <tally id="272" name="Li rxn rates spectrum">
