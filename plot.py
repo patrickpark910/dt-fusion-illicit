@@ -37,10 +37,10 @@ class Plot:
         self.pbli_th_rr_df  = pd.read_csv('./Figures/Data/LL_Th_rxns_900K.csv')
         # self.pebble_rr_df   = pd.read_csv('./Figures/Data/PB_U_rxns_900K.csv')
 
-        self.flibe_u_eb_df  = pd.read_csv('./Figures/data/FLiBe_U238_n-gamma_Ebins.csv')
-        self.flibe_th_eb_df = pd.read_csv('./Figures/data/FLiBe_Th232_n-gamma_Ebins.csv')
-        self.pbli_u_eb_df   = pd.read_csv('./Figures/data/LL_U238_n-gamma_Ebins.csv')
-        self.pbli_th_eb_df  = pd.read_csv('./Figures/data/LL_U238_n-gamma_Ebins.csv')
+        self.flibe_u_eb_df  = pd.read_csv('./Figures/Data/FLiBe_U_n-gamma_900K.csv')
+        self.flibe_th_eb_df = pd.read_csv('./Figures/Data/FLiBe_Th_n-gamma_900K.csv')
+        self.pbli_u_eb_df   = pd.read_csv('./Figures/Data/LL_U_n-gamma_900K.csv')
+        self.pbli_th_eb_df  = pd.read_csv('./Figures/Data/LL_Th_n-gamma_900K.csv')
         # self.pebble_eb_df   = pd.read_csv('./Figures/data/HCPB_FW4cm_Li60_900K_2025-07-22_U238_n-gamma_Ebins.csv') 
 
         self.save, self.show = save, show
@@ -231,12 +231,12 @@ class Plot:
         for ax, df, title in zip(axes.flatten(), dfs, titles):
 
             # Filter out MT_fertile loadings we want to plot 
-            df = df[df["fertile_mt"].isin([10, 20, 30, 40, 50])]
+            df = df[df["fertile_kg/m3"].isin([30,60,90,120,150])]
 
             # Compute sum of 'mean' for each MT_fertile. 
-            df_mean = df.groupby("MT_fertile")["mean"].sum().to_frame() # pd.DataFrame(, columns=["MT_fertile","sum"]) # 2-col df, colA = MT_fertile values, colB = sum of 'mean'
-            df_mean.columns = ["sum"]
-            df = df.merge(df_mean, on="MT_fertile", how="left") # adds sum as column to df
+            df_mean = df.groupby("fertile_kg/m3")["mean"].sum().to_frame() # pd.DataFrame(, columns=["MT_fertile","sum"]) # 2-col df, colA = MT_fertile values, colB = sum of 'mean'
+            df_mean.columns = ["sum"]   
+            df = df.merge(df_mean, on="fertile_kg/m3", how="left") # adds sum as column to df
 
             df['norm_mean'] = df['mean'] / df['sum']
 
@@ -247,23 +247,23 @@ class Plot:
             edges = np.unique(np.concatenate([df['energy low [eV]'].values, df['energy high [eV]'].values]))
             bins  = np.sort(df['energy mid [eV]'].unique())
 
-            sub   = df[df['MT_fertile'] == 10]
+            sub   = df[df['fertile_kg/m3'] == 30]
             label = int(round(sub['fertile_kg/m3'].iloc[0], -1))
             ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#ff1f5b', label=fr'{label} kg$/$m$^3$')
 
-            sub = df[df['MT_fertile'] == 20]
+            sub = df[df['fertile_kg/m3'] == 60]
             label = int(round(sub['fertile_kg/m3'].iloc[0], -1))
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#f48628', label=fr'{label} kg$/$m$^3$')
+            ax.hist(sub['energy fertile_kg [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#f48628', label=fr'{label} kg$/$m$^3$')
 
-            sub = df[df['MT_fertile'] == 30]
+            sub = df[df['fertile_kg/m3'] == 90]
             label = int(round(sub['fertile_kg/m3'].iloc[0], -1))
             ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#04cc6c', label=fr'{label} kg$/$m$^3$')
 
-            sub = df[df['MT_fertile'] == 40]
+            sub = df[df['fertile_kg/m3'] == 120]
             label = int(round(sub['fertile_kg/m3'].iloc[0], -1))
             ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#0c9edd', label=fr'{label} kg$/$m$^3$')
 
-            sub = df[df['MT_fertile'] == 50]
+            sub = df[df['fertile_kg/m3'] == 150]
             label = int(round(sub['fertile_kg/m3'].iloc[0], -1))
             ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#b367bd', label=fr'{label} kg$/$m$^3$')
             
