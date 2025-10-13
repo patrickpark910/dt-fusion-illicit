@@ -19,9 +19,9 @@ def plot_all():
     combined_plot = Plot(save=True, show=True)
     
     """ Pick which one to plot by uncommenting """
-    combined_plot.plot_tbr()
-    combined_plot.plot_pu_per_yr()
-    # combined_plot.plot_cum_norm_histogram()
+    # combined_plot.plot_tbr()
+    # combined_plot.plot_pu_per_yr()
+    combined_plot.plot_cum_norm_histogram()
 
     print("All plots completed and saved.")
 
@@ -231,7 +231,7 @@ class Plot:
         for ax, df, title in zip(axes.flatten(), dfs, titles):
 
             # Filter out MT_fertile loadings we want to plot 
-            df = df[df["MT_fertile"].isin([10, 20, 30, 40, 50])]
+            df = df[df["fertile_mt"].isin([10, 20, 30, 40, 50])]
 
             # Compute sum of 'mean' for each MT_fertile. 
             df_mean = df.groupby("MT_fertile")["mean"].sum().to_frame() # pd.DataFrame(, columns=["MT_fertile","sum"]) # 2-col df, colA = MT_fertile values, colB = sum of 'mean'
