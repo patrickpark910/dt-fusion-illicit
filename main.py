@@ -136,7 +136,16 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
         tbr  = df[ df['cell']=='total' ]['tbr'].values[0]
         pu   = df[ df['cell']=='total' ][f'{fissile_isotope}_kg/yr'].values[0]
 
-        Ebins = df_bins.groupby('energy mid [eV]')['mean'].sum().reset_index()
+        print(df_bins)
+        cols = ["energy low [eV]", "energy high [eV]", "energy mid [eV]", "mean"]       
+        Ebins = (df_ebins[cols]
+           .groupby("energy mid [eV]", as_index=False)
+           .agg(**{
+               "energy low [eV]": ("energy low [eV]", "first"),
+               "energy high [eV]": ("energy high [eV]", "first"),
+               "mean": ("mean", "sum"),
+           }))
+        print(Ebins)
         Ebins['filename']      = folder
         Ebins['fertile_kg/m3'] = fertile
         Ebins['fertile_mt']    = mt
