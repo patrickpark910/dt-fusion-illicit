@@ -96,7 +96,7 @@ def build_reactor(breeder:str, **kwargs):
 def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
 
     if fertile_element == 'U':
-        df_all = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'Li6(n,t)', 'Li7(n,Xt)','U238(n,g)','tbr','Pu239_kg/yr'])
+        df_all   = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'Li6(n,t)', 'Li7(n,Xt)','U238(n,g)','tbr','Pu239_kg/yr'])
         fertile_isotope = 'U238'
         fissile_isotope = 'Pu239'
 
@@ -104,7 +104,8 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
         df_all = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'Li6(n,t)', 'Li7(n,Xt)','Th232(n,g)','tbr','Pu239_kg/yr'])
         fertile_isotope = 'Th232'
         fissile_isotope =  'U233'
-    
+
+    df_ebins = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'energy mid [eV]', 'mean'])
     tally_folders = [x for x in os.listdir("./OpenMC/") if (x.startswith(f"tallies_{breeder}_{temp_k}K")) and x.split("_")[-1].startswith(fertile_element)]
 
     for folder in tally_folders:
@@ -115,6 +116,7 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
         mt = fertile*vol_m3/1e3 # metric tons of fertile isotope
 
         tally_summary = f"./OpenMC/{folder}/tallies_summary.csv"
+        tally_Ebins   = f"./OpenMC/{folder}/{fertile_isotope}_n-gamma_Ebins.csv"
         
         try:
             df = pd.read_csv(tally_summary)
@@ -122,11 +124,24 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
             print(f"{Colors.YELLOW}Warning.{Colors.END} File 'tallies_summary.csv' not found in {folder}, skipping...")
             continue
 
+        try:
+            df_bins = pd.read_csv(tally_Ebins)
+        except:
+            print(f"{Colors.YELLOW}Warning.{Colors.END} File '{fertile_isotope}_n-gamma_Ebins.csv' not found in {folder}, skipping...")
+            continue
+
         li6  = df[ df['cell']=='total' ]['Li6(n,t)'].values[0]
         li7  = df[ df['cell']=='total' ]['Li7(n,t)'].values[0]
         u238 = df[ df['cell']=='total' ][f'{fertile_isotope}(n,g)'].values[0]
         tbr  = df[ df['cell']=='total' ]['tbr'].values[0]
         pu   = df[ df['cell']=='total' ][f'{fissile_isotope}_kg/yr'].values[0]
+
+        Ebins = df_bins.groupby('energy mid [eV]')['mean'].sum().reset_index()
+        Ebins['filename']      = folder
+        Ebins['fertile_kg/m3'] = fertile
+        Ebins['fertile_mt']    = mt
+        df_ebins = pd.concat([df_ebins, Ebins])
+        df_ebins.to_csv(f"./Figures/Data/{breeder}_{fertile_element}_n-gamma_{temp_k}K.csv",index=False)
 
         df_all.loc[len(df_all)] = {'filename': folder,
                               'fertile_kg/m3': fertile,
@@ -138,8 +153,8 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
                    f'{fissile_isotope}_kg/yr': pu }
 
     dst = f"./Figures/Data/{breeder}_{fertile_element}_rxns_{temp_k}K.csv"
-    df_all.to_csv(dst, index=False)
-    print(f"{Colors.GREEN}Comment.{Colors.END} Collated tallies for {breeder} at {temp_k} K to: {dst}")
+    # df_all.to_csv(dst, index=False)
+    # print(f"{Colors.GREEN}Comment.{Colors.END} Collated tallies for {breeder} at {temp_k} K to: {dst}")
                           
 
 
