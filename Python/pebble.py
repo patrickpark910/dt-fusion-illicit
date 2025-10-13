@@ -6,18 +6,17 @@ from Python.parameters import *
 from Python.utilities  import *
 
 
-class LL(Reactor):
+class PB(Reactor):
 
     def initialize(self):
 
         self.temp_k          = TEMP_K
         self.breeder_name    = 'PB'
-        self.breeder_density = DENSITY_PB # g/cm^3
         self.breeder_enrich  = ENRICH_PB  # wt% 
         self.breeder_volume  = PB_BR_VOL  
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
-        self.name = f"{self.run_type}_{self.breeder_name}_{self.fertile_element}{self.fertile_bulk_density_kgm3:06.2f}kgm3_Li{self.breeder_enrich:04.1f}_{self.temp_k}K"         
+        self.name = f"{self.run_type}_{self.breeder_name}_{self.fertile_element}{self.fertile_bulk_density_kgm3:06.2f}kgm3_Li{self.breeder_enrich:04.1f}_{self.temp_k}K_9_46_run"         
         self.path = f"./OpenMC/{self.name}"
         
         os.makedirs(self.path, exist_ok=True)
@@ -59,11 +58,6 @@ class LL(Reactor):
         self.firstwall.add_element('W',1-(5+5+5+4+2.5+3+0.5+0.5+0.5+5)/1e6,percent_type='wo')
         # self.firstwall.add_element('W',1)
         self.firstwall.set_density('g/cm3',19.3)
-        # The original first wall specs we were using from Ball 25 is 99.9969 wt% W 
-        # and the rest O, N ,C, Na, K, Al, Ca, Cr, Cu, Fe impurities...
-        # I think we can just set it to be W to save compute time loading nuclide data
-        
-
         # ------------------------------------------------------------------
         # Structure 
         # ------------------------------------------------------------------
@@ -100,7 +94,7 @@ class LL(Reactor):
         self.breeder = openmc.Material(name='breeder', temperature=self.temp_k)
         self.lithium_ceramic = openmc.Material(name='LithiumCeramic') 
         self.lithium_ceramic.set_density('g/cm3', 2.42) 
-        self.lithium_ceramic.add_element('Li', 22.415, percent_type='wo', enrichment_target='Li6', enrichment_type='wo', enrichment=ENRICH_PB) 
+        self.lithium_ceramic.add_element('Li', 22.415, percent_type='wo', enrichment_target='Li6', enrichment_type='ao', enrichment=ENRICH_PB) 
         self.lithium_ceramic.add_element('Si', 24.077, percent_type='wo') 
         self.lithium_ceramic.add_element('O', 53.39, percent_type='wo') 
         self.lithium_ceramic.add_element('Al', 0.003, percent_type='wo') 
@@ -150,7 +144,7 @@ class LL(Reactor):
         vf_euro = 0.1176 #volume fractions from EU Activation Analysis Table 2 
         vf_he = 1 - (vf_lic + vf_be + vf_euro) 
         self.breeder = openmc.Material.mix_materials([self.lithium_ceramic, self.he, self.eurofer, self.beryllium],[vf_lic, vf_he, vf_euro, vf_be],'vo') 
-        self.breeder_density = self.breeder.get_density()
+        self.breeder_density = self.breeder.density
 
         # ------------------------------------------------------------------
         # Fertile material
@@ -280,19 +274,19 @@ class LL(Reactor):
         # Cells | 10: vc, fw | 2X: structure | 3X: breeding
         # ------------------------------------------------------------------
 
-        cell_vc   = openmc.Cell(cell_id=10, region= -self.surface_vc)
+        cell_vc   = openmc.Cell(cell_id=40, region= -self.surface_vc)
         cell_vc.importance = {'neutron':1}
 
-        cell_fw    = openmc.Cell(cell_id=11, region= +self.surface_vc  & -self.surface_fw,  fill=self.firstwall)
-        cell_st1   = openmc.Cell(cell_id=21, region= +self.surface_fw  & -self.surface_st1, fill=self.eurofer)
-        cell_br1   = openmc.Cell(cell_id=31, region= -dividing_cylinder & +self.surface_st1 & -self.surface_br1, fill=self.blanket)
-        cell_st2   = openmc.Cell(cell_id=22, region= -dividing_cylinder & +self.surface_br1 & -self.surface_st2, fill=self.eurofer)
-        cell_br1_o = openmc.Cell(cell_id=32, region= +dividing_cylinder & +self.surface_st1 & -self.surface_br1_o, fill=self.blanket)
-        cell_st2_o = openmc.Cell(cell_id=23, region= +dividing_cylinder & +self.surface_br1_o & -self.surface_st2_o,  fill=self.eurofer)
+        cell_fw    = openmc.Cell(cell_id=41, region= +self.surface_vc  & -self.surface_fw,  fill=self.firstwall)
+        cell_st1   = openmc.Cell(cell_id=51, region= +self.surface_fw  & -self.surface_st1, fill=self.eurofer)
+        cell_br1   = openmc.Cell(cell_id=61, region= -dividing_cylinder & +self.surface_st1 & -self.surface_br1, fill=self.blanket)
+        cell_st2   = openmc.Cell(cell_id=52, region= -dividing_cylinder & +self.surface_br1 & -self.surface_st2, fill=self.eurofer)
+        cell_br1_o = openmc.Cell(cell_id=62, region= +dividing_cylinder & +self.surface_st1 & -self.surface_br1_o, fill=self.blanket)
+        cell_st2_o = openmc.Cell(cell_id=53, region= +dividing_cylinder & +self.surface_br1_o & -self.surface_st2_o,  fill=self.eurofer)
         
         # Void cells
-        cell_void_i = openmc.Cell(cell_id=99, region= +self.surface_st2 & -dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane)
-        cell_void_o = openmc.Cell(cell_id=98, region= +self.surface_st2_o & +dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane)
+        cell_void_i = openmc.Cell(cell_id=97, region= +self.surface_st2 & -dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane)
+        cell_void_o = openmc.Cell(cell_id=96, region= +self.surface_st2_o & +dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane)
         cell_void_i.importance = {'neutron': 0}
         cell_void_o.importance = {'neutron': 0}
 
