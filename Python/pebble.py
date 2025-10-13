@@ -16,7 +16,7 @@ class PB(Reactor):
         self.breeder_volume  = PB_BR_VOL  
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
-        self.name = f"{self.run_type}_{self.breeder_name}_{self.fertile_element}{self.fertile_bulk_density_kgm3:06.2f}kgm3_Li{self.breeder_enrich:04.1f}_{self.temp_k}K_9_46_run"         
+        self.name = f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_element}{self.fertile_bulk_density_kgm3:06.2f}kgm3"         
         self.path = f"./OpenMC/{self.name}"
         
         os.makedirs(self.path, exist_ok=True)
@@ -58,33 +58,35 @@ class PB(Reactor):
         self.firstwall.add_element('W',1-(5+5+5+4+2.5+3+0.5+0.5+0.5+5)/1e6,percent_type='wo')
         # self.firstwall.add_element('W',1)
         self.firstwall.set_density('g/cm3',19.3)
+
+
         # ------------------------------------------------------------------
         # Structure 
         # ------------------------------------------------------------------
 
-        self.eurofer = openmc.Material(name='Eurofer', temperature=self.temp_k)
-        self.eurofer.depletable = False
-        self.eurofer.set_density('g/cm3', 7.8)
-        self.eurofer.add_element('Fe', 89.0026, percent_type='wo')
-        self.eurofer.add_element('B', 0.001, percent_type='wo')
-        self.eurofer.add_element('C', 0.1049, percent_type='wo')
-        self.eurofer.add_element('N', 0.04, percent_type='wo')
-        self.eurofer.add_element('O', 0.001, percent_type='wo')
-        self.eurofer.add_element('Al', 0.004, percent_type='wo')
-        self.eurofer.add_element('Si', 0.026, percent_type='wo')
-        self.eurofer.add_element('P', 0.002, percent_type='wo')
-        self.eurofer.add_element('S', 0.003, percent_type='wo')
-        self.eurofer.add_element('Ti', 0.001, percent_type='wo')
-        self.eurofer.add_element('V', 0.01963, percent_type='wo')
-        self.eurofer.add_element('Cr', 9.00, percent_type='wo')
-        self.eurofer.add_element('Mn', 0.55, percent_type='wo')
-        self.eurofer.add_element('Co', 0.005, percent_type='wo')
-        self.eurofer.add_element('Ni', 0.01, percent_type='wo')
-        self.eurofer.add_element('Cu', 0.003, percent_type='wo')
-        self.eurofer.add_element('Nb', 0.005, percent_type='wo')
-        self.eurofer.add_element('Mo', 0.003, percent_type='wo')
-        self.eurofer.add_element('Ta', 0.12, percent_type='wo')
-        self.eurofer.add_element('W', 1.0987, percent_type='wo')
+        self.structure = openmc.Material(name='Eurofer', temperature=self.temp_k)
+        self.structure.depletable = False
+        self.structure.set_density('g/cm3', 7.8)
+        self.structure.add_element('Fe', 89.0026, percent_type='wo')
+        self.structure.add_element('B', 0.001, percent_type='wo')
+        self.structure.add_element('C', 0.1049, percent_type='wo')
+        self.structure.add_element('N', 0.04, percent_type='wo')
+        self.structure.add_element('O', 0.001, percent_type='wo')
+        self.structure.add_element('Al', 0.004, percent_type='wo')
+        self.structure.add_element('Si', 0.026, percent_type='wo')
+        self.structure.add_element('P', 0.002, percent_type='wo')
+        self.structure.add_element('S', 0.003, percent_type='wo')
+        self.structure.add_element('Ti', 0.001, percent_type='wo')
+        self.structure.add_element('V', 0.01963, percent_type='wo')
+        self.structure.add_element('Cr', 9.00, percent_type='wo')
+        self.structure.add_element('Mn', 0.55, percent_type='wo')
+        self.structure.add_element('Co', 0.005, percent_type='wo')
+        self.structure.add_element('Ni', 0.01, percent_type='wo')
+        self.structure.add_element('Cu', 0.003, percent_type='wo')
+        self.structure.add_element('Nb', 0.005, percent_type='wo')
+        self.structure.add_element('Mo', 0.003, percent_type='wo')
+        # self.structure.add_element('Ta', 0.12, percent_type='wo')
+        self.structure.add_element('W', 1.0987, percent_type='wo')
 
 
         # ------------------------------------------------------------------
@@ -113,6 +115,7 @@ class PB(Reactor):
         self.lithium_ceramic.add_element('Ti', 0.0005, percent_type='wo') 
         self.lithium_ceramic.add_element('Zn', 0.0002, percent_type='wo') 
         self.lithium_ceramic.add_element('Zr', 0.0001, percent_type='wo') 
+        
         # Beryllium 
         self.beryllium = openmc.Material(name='Beryllium') 
         self.beryllium.set_density('g/cm3', 1.85) 
@@ -133,7 +136,7 @@ class PB(Reactor):
         self.beryllium.add_element('Nb', 0.001, percent_type='wo') 
         self.beryllium.add_element('Ni', 0.0005, percent_type='wo') 
         self.beryllium.add_element('Pb', 0.0005, percent_type='wo') 
-        self.beryllium.add_element('Ta', 0.002, percent_type='wo') 
+        # self.beryllium.add_element('Ta', 0.002, percent_type='wo') 
 
         self.he = openmc.Material(name='Helium') 
         self.he.set_density('g/cm3', 0.004279) #Helium density at 900k ~80bar 
@@ -143,7 +146,7 @@ class PB(Reactor):
         vf_be = 0.379 
         vf_euro = 0.1176 #volume fractions from EU Activation Analysis Table 2 
         vf_he = 1 - (vf_lic + vf_be + vf_euro) 
-        self.breeder = openmc.Material.mix_materials([self.lithium_ceramic, self.he, self.eurofer, self.beryllium],[vf_lic, vf_he, vf_euro, vf_be],'vo') 
+        self.breeder = openmc.Material.mix_materials([self.lithium_ceramic, self.he, self.structure, self.beryllium],[vf_lic, vf_he, vf_euro, vf_be],'vo') 
         self.breeder_density = self.breeder.density
 
         # ------------------------------------------------------------------
@@ -221,7 +224,7 @@ class PB(Reactor):
         # Add materials 
         # ------------------------------------------------------------------
 
-        self.materials = openmc.Materials([self.firstwall, self.eurofer, self.blanket]) 
+        self.materials = openmc.Materials([self.firstwall, self.structure, self.blanket]) 
 
 
     def geometry(self):
@@ -277,16 +280,16 @@ class PB(Reactor):
         cell_vc   = openmc.Cell(cell_id=40, region= -self.surface_vc)
         cell_vc.importance = {'neutron':1}
 
-        cell_fw    = openmc.Cell(cell_id=41, region= +self.surface_vc  & -self.surface_fw,  fill=self.firstwall)
-        cell_st1   = openmc.Cell(cell_id=51, region= +self.surface_fw  & -self.surface_st1, fill=self.eurofer)
-        cell_br1   = openmc.Cell(cell_id=61, region= -dividing_cylinder & +self.surface_st1 & -self.surface_br1, fill=self.blanket)
-        cell_st2   = openmc.Cell(cell_id=52, region= -dividing_cylinder & +self.surface_br1 & -self.surface_st2, fill=self.eurofer)
-        cell_br1_o = openmc.Cell(cell_id=62, region= +dividing_cylinder & +self.surface_st1 & -self.surface_br1_o, fill=self.blanket)
-        cell_st2_o = openmc.Cell(cell_id=53, region= +dividing_cylinder & +self.surface_br1_o & -self.surface_st2_o,  fill=self.eurofer)
+        cell_fw    = openmc.Cell(cell_id=11, region= +self.surface_vc  & -self.surface_fw,  fill=self.firstwall)
+        cell_st1   = openmc.Cell(cell_id=21, region= +self.surface_fw  & -self.surface_st1, fill=self.structure)
+        cell_br1   = openmc.Cell(cell_id=31, region= -dividing_cylinder & +self.surface_st1 & -self.surface_br1, fill=self.blanket)
+        cell_st2   = openmc.Cell(cell_id=22, region= -dividing_cylinder & +self.surface_br1 & -self.surface_st2, fill=self.structure)
+        cell_br1_o = openmc.Cell(cell_id=32, region= +dividing_cylinder & +self.surface_st1 & -self.surface_br1_o, fill=self.blanket)
+        cell_st2_o = openmc.Cell(cell_id=23, region= +dividing_cylinder & +self.surface_br1_o & -self.surface_st2_o,  fill=self.structure)
         
         # Void cells
-        cell_void_i = openmc.Cell(cell_id=97, region= +self.surface_st2 & -dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane)
-        cell_void_o = openmc.Cell(cell_id=96, region= +self.surface_st2_o & +dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane)
+        cell_void_i = openmc.Cell(cell_id=98, region= +self.surface_st2 & -dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane)
+        cell_void_o = openmc.Cell(cell_id=97, region= +self.surface_st2_o & +dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane)
         cell_void_i.importance = {'neutron': 0}
         cell_void_o.importance = {'neutron': 0}
 

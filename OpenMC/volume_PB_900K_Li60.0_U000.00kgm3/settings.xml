@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<settings>
+  <run_mode>eigenvalue</run_mode>
+  <volume_calc>
+    <domain_type>cell</domain_type>
+    <domain_ids>40 41 51 61 52 62 53 97 96</domain_ids>
+    <samples>100000000</samples>
+    <lower_left>-1545.1200000000001 -1545.1200000000001 -663.7116000000001</lower_left>
+    <upper_right>1545.1200000000001 1545.1200000000001 663.7116000000001</upper_right>
+  </volume_calc>
+</settings>

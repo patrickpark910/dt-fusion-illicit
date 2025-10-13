@@ -5,13 +5,14 @@ import numpy as np
 import pandas as pd
 
 # Import helper functions
-from Python.reactor import *
-from Python.arc     import *
-from Python.ball     import *
-from Python.flibe   import *
-from Python.pbli    import *
+from Python.reactor    import *
+from Python.arc        import *
+from Python.ball       import *
+from Python.flibe      import *
+from Python.pbli       import *
+from Python.pebble     import *
 from Python.parameters import *
-from Python.utilities import *
+from Python.utilities  import *
 
 
 @timer
@@ -29,7 +30,7 @@ def main():
 
 
     if run_type == 'plot':
-        for breeder in ['ARC','ARCBall','FLiBe','LL']: # make this match class name
+        for breeder in ['ARC','ARCBall','FLiBe','LL', 'PB']: # make this match class name
             
             current_run = build_reactor(breeder, breeder_name=breeder, run_type='plot', run_openmc=True)
 
@@ -40,7 +41,7 @@ def main():
 
 
     elif run_type == 'volume':
-        for breeder in ['ARC','ARCBall','FLiBe','LL']: # make this match class name
+        for breeder in ['ARC','ARCBall','FLiBe','LL', 'PB']: # make this match class name
 
             current_run = build_reactor(breeder, breeder_name=breeder, run_type='volume', run_openmc=True)
             
@@ -52,7 +53,7 @@ def main():
 
     elif run_type == 'tallies':
 
-        for breeder in ['ARC','ARCBall','FLiBe','LL']: # make this match class name
+        for breeder in ['ARC','ARCBall','FLiBe','LL', 'PB']: # make this match class name
             for fertile_element in ['U','Th']: # ,'Th']:
                 for fbd_kgm3 in FERTILE_BULK_DENSITY_KGM3: # [FERTILE_BULK_DENSITY_KGM3[0]]: # 
                     
@@ -74,8 +75,8 @@ def main():
                     elif current_run.run_openmc:
                         current_run.extract_tallies()
 
-                print(f"Collating tallies for {breeder} {fertile_element} at {current_run.temp_k} and breeder vol {current_run.breeder_volume} m3")
-                collate_tallies(breeder, fertile_element, current_run.temp_k, current_run.breeder_volume)
+                # print(f"Collating tallies for {breeder} {fertile_element} at {current_run.temp_k} and breeder vol {current_run.breeder_volume} m3")
+                # collate_tallies(breeder, fertile_element, current_run.temp_k, current_run.breeder_volume)
 
 
 

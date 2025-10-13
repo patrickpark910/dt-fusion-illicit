@@ -238,7 +238,7 @@ class Reactor(ABC):
         settings_plot = openmc.Settings()
         settings_plot.run_mode = 'plot'
 
-        if self.breeder_name in ['ARC', 'FLiBe']:
+        if self.breeder_name in ['ARC', 'ARCBall', 'FLiBe']:
             colors = {self.firstwall: (30, 27, 41),    # very dark gray
                       self.structure: (109, 110, 113), # gray
                       self.blanket: (129, 204, 185),   # teal
@@ -252,6 +252,13 @@ class Reactor(ABC):
                       self.blanket: (129, 204, 185),          # teal
                       self.divider: (109, 110, 113),          # gray
                       self.inner_manifold:(176, 123, 76),     # wood-color
+                      # Void regions will be white by default
+                      }
+
+        elif self.breeder_name in ['PB']:
+            colors = {self.firstwall: (30, 27, 41),           # very dark gray
+                      self.structure: (109, 110, 113),        # gray
+                      self.blanket: (129, 204, 185),          # teal
                       # Void regions will be white by default
                       }
 
