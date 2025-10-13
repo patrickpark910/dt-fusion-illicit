@@ -27,5 +27,25 @@ def rename_tally_folders(directory="."):
         else:
             print(f"Skipped (no match): {folder}")
 
+
+def delete_target_files(root_dir, target_name="fertile_n-gamma.csv"):
+    """
+    Recursively delete all files named 'fertile_n-gamma.csv' under root_dir.
+    Prints each deletion and a summary.
+    """
+    deleted = 0
+    for dirpath, dirnames, filenames in os.walk(root_dir):
+        if target_name in filenames:
+            full_path = os.path.join(dirpath, target_name)
+            try:
+                os.remove(full_path)
+                print(f"Deleted: {full_path}")
+                deleted += 1
+            except Exception as e:
+                print(f"Could not delete {full_path}: {e}")
+    print(f"\nDeleted {deleted} file(s) named '{target_name}'.")
+
+
 if __name__ == "__main__":
-    rename_tally_folders(".")
+    # rename_tally_folders(".")
+    delete_target_files(".")
