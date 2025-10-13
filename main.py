@@ -105,7 +105,7 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
         fertile_isotope = 'Th232'
         fissile_isotope =  'U233'
 
-    df_ebins = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'energy mid [eV]', 'mean'])
+    df_ebins = pd.DataFrame(columns=['filename','br_vol_m3','fertile_kg/m3', 'fertile_mt', 'energy mid [eV]', 'mean'])
     tally_folders = [x for x in os.listdir("./OpenMC/") if (x.startswith(f"tallies_{breeder}_{temp_k}K")) and x.split("_")[-1].startswith(fertile_element)]
 
     for folder in tally_folders:
@@ -140,6 +140,7 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
         Ebins['filename']      = folder
         Ebins['fertile_kg/m3'] = fertile
         Ebins['fertile_mt']    = mt
+        Ebins['br_vol_m3']     = vol_m3
         df_ebins = pd.concat([df_ebins, Ebins])
         df_ebins.to_csv(f"./Figures/Data/{breeder}_{fertile_element}_n-gamma_{temp_k}K.csv",index=False)
 
