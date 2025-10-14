@@ -5,13 +5,14 @@ import numpy as np
 import pandas as pd
 
 # Import helper functions
-from Python.reactor import *
-from Python.arc     import *
-from Python.ball     import *
-from Python.flibe   import *
-from Python.pbli    import *
+from Python.reactor    import *
+from Python.arc        import *
+from Python.ball       import *
+from Python.flibe      import *
+from Python.pbli       import *
+from Python.pebble     import *
 from Python.parameters import *
-from Python.utilities import *
+from Python.utilities  import *
 
 
 @timer
@@ -29,7 +30,7 @@ def main():
 
 
     if run_type == 'plot':
-        for breeder in ['ARC','ARCBall','FLiBe','LL']: # make this match class name
+        for breeder in ['ARC','ARCBall','FLiBe','LL', 'PB']: # make this match class name
             
             current_run = build_reactor(breeder, breeder_name=breeder, run_type='plot', run_openmc=True)
 
@@ -40,7 +41,7 @@ def main():
 
 
     elif run_type == 'volume':
-        for breeder in ['ARC','ARCBall','FLiBe','LL']: # make this match class name
+        for breeder in ['ARC','ARCBall','FLiBe','LL', 'PB']: # make this match class name
 
             current_run = build_reactor(breeder, breeder_name=breeder, run_type='volume', run_openmc=True)
             
@@ -52,7 +53,7 @@ def main():
 
     elif run_type == 'tallies':
 
-        for breeder in ['ARC','ARCBall','FLiBe','LL']: # make this match class name
+        for breeder in ['ARC','ARCBall','FLiBe','LL', 'PB']: # make this match class name
             for fertile_element in ['U','Th']: # ,'Th']:
                 for fbd_kgm3 in FERTILE_BULK_DENSITY_KGM3: # [FERTILE_BULK_DENSITY_KGM3[0]]: # 
                     
@@ -105,7 +106,7 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
         fertile_isotope = 'Th232'
         fissile_isotope =  'U233'
 
-    df_ebins = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'energy mid [eV]', 'mean'])
+    df_ebins = pd.DataFrame(columns=['filename','br_vol_m3','fertile_kg/m3', 'fertile_mt', 'energy mid [eV]', 'mean'])
     tally_folders = [x for x in os.listdir("./OpenMC/") if (x.startswith(f"tallies_{breeder}_{temp_k}K")) and x.split("_")[-1].startswith(fertile_element)]
 
     for folder in tally_folders:
@@ -136,10 +137,16 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
         tbr  = df[ df['cell']=='total' ]['tbr'].values[0]
         pu   = df[ df['cell']=='total' ][f'{fissile_isotope}_kg/yr'].values[0]
 
-        Ebins = df_bins.groupby('energy mid [eV]')['mean'].sum().reset_index()
+        cols = ["energy low [eV]", "energy high [eV]", "energy mid [eV]", "mean"]       
+        Ebins = (df_bins[cols].groupby("energy mid [eV]", as_index=False)
+                              .agg(**{"energy low [eV]" : ("energy low [eV]", "first"),
+                                      "energy high [eV]": ("energy high [eV]", "first"),
+                                                  "mean": ("mean", "sum"),} ) )
+
         Ebins['filename']      = folder
         Ebins['fertile_kg/m3'] = fertile
         Ebins['fertile_mt']    = mt
+        Ebins['br_vol_m3']     = vol_m3
         df_ebins = pd.concat([df_ebins, Ebins])
         df_ebins.to_csv(f"./Figures/Data/{breeder}_{fertile_element}_n-gamma_{temp_k}K.csv",index=False)
 
@@ -153,8 +160,8 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
                    f'{fissile_isotope}_kg/yr': pu }
 
     dst = f"./Figures/Data/{breeder}_{fertile_element}_rxns_{temp_k}K.csv"
-    # df_all.to_csv(dst, index=False)
-    # print(f"{Colors.GREEN}Comment.{Colors.END} Collated tallies for {breeder} at {temp_k} K to: {dst}")
+    df_all.to_csv(dst, index=False)
+    print(f"{Colors.GREEN}Comment.{Colors.END} Collated tallies for {breeder} at {temp_k} K to: {dst}")
                           
 
 
