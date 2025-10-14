@@ -75,8 +75,8 @@ def main():
                     elif current_run.run_openmc:
                         current_run.extract_tallies()
 
-                # print(f"Collating tallies for {breeder} {fertile_element} at {current_run.temp_k} and breeder vol {current_run.breeder_volume} m3")
-                # collate_tallies(breeder, fertile_element, current_run.temp_k, current_run.breeder_volume)
+                print(f"Collating tallies for {breeder} {fertile_element} at {current_run.temp_k} and breeder vol {current_run.breeder_volume} m3")
+                collate_tallies(breeder, fertile_element, current_run.temp_k, current_run.breeder_volume)
 
 
 
@@ -137,16 +137,12 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
         tbr  = df[ df['cell']=='total' ]['tbr'].values[0]
         pu   = df[ df['cell']=='total' ][f'{fissile_isotope}_kg/yr'].values[0]
 
-        print(df_bins)
         cols = ["energy low [eV]", "energy high [eV]", "energy mid [eV]", "mean"]       
-        Ebins = (df_ebins[cols]
-           .groupby("energy mid [eV]", as_index=False)
-           .agg(**{
-               "energy low [eV]": ("energy low [eV]", "first"),
-               "energy high [eV]": ("energy high [eV]", "first"),
-               "mean": ("mean", "sum"),
-           }))
-        print(Ebins)
+        Ebins = (df_bins[cols].groupby("energy mid [eV]", as_index=False)
+                              .agg(**{"energy low [eV]" : ("energy low [eV]", "first"),
+                                      "energy high [eV]": ("energy high [eV]", "first"),
+                                                  "mean": ("mean", "sum"),} ) )
+
         Ebins['filename']      = folder
         Ebins['fertile_kg/m3'] = fertile
         Ebins['fertile_mt']    = mt
@@ -164,8 +160,8 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
                    f'{fissile_isotope}_kg/yr': pu }
 
     dst = f"./Figures/Data/{breeder}_{fertile_element}_rxns_{temp_k}K.csv"
-    # df_all.to_csv(dst, index=False)
-    # print(f"{Colors.GREEN}Comment.{Colors.END} Collated tallies for {breeder} at {temp_k} K to: {dst}")
+    df_all.to_csv(dst, index=False)
+    print(f"{Colors.GREEN}Comment.{Colors.END} Collated tallies for {breeder} at {temp_k} K to: {dst}")
                           
 
 
