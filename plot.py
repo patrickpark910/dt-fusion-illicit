@@ -19,8 +19,8 @@ def plot_all():
     combined_plot = Plot(save=True, show=True)
     
     """ Pick which one to plot by uncommenting """
-    # combined_plot.plot_tbr()
-    # combined_plot.plot_pu_per_yr()
+    combined_plot.plot_tbr()
+    combined_plot.plot_pu_per_yr()
     combined_plot.plot_cum_norm_histogram()
 
     print("All plots completed and saved.")
