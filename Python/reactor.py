@@ -27,7 +27,7 @@ class Reactor(ABC):
 
         self.run_type    = run_type
         self.run_openmc  = run_openmc
-        self.n_particles = int(1e5)
+        self.n_particles = int(1e6)
         self.n_cycles    = 10
 
         # All class templates must define these variables:
