@@ -161,7 +161,7 @@ class Reactor(ABC):
         self.model.run(cwd=self.path)
 
 
-    def volumes(self, samples=int(1e8)):
+    def volumes(self, samples=int(1e10)):
         """
         Calculate volumes of all cells using OpenMC stochastic volume calculation.
         """

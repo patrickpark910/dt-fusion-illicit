@@ -98,22 +98,20 @@ LL_BR_VOL =  427.3   # m^3 - analytic vol from plot_miller_models.py
 
 ENRICH_PB   = 60.0 
 
-PB_R0    = 907.2  # cm - major radius
-PB_A     = 292.7  # cm - minor radius
-PB_KAPPA = 1.59 #      - elongation
-PB_DELTA = 0.33  #     - triangularity
+PB_R0    = 620  # 907.2  # cm - major radius
+PB_A     = 207  # 292.7  # cm - minor radius
+PB_KAPPA = 1.72 # 1.59 #      - elongation
+PB_DELTA = 0.4  # 0.33  #     - triangularity
 #----Outboard Layers----
 PB_FW_CM     =   0.2  # cm -           first wall
 PB_ST1_CM    =   2.5  # cm -  structural region 1
 PB_BR1_O_CM  =  82.0  # cm -    breeding region 1
 PB_ST2_CM    =   3.0  # cm -  structural region 2
-
 #----Inboard Layers----
 PB_BR1_CM    =  45.0  # cm -    breeding region 1
 
+PB_BR_VOL = 520.6 # 520.6121163 # 973.8489# m^3 ?????
 
-PB_BR_VOL =  973.8489# m^3 ?????
-#This is not accurate - Emma
 
 
 
