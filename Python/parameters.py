@@ -14,7 +14,7 @@ Nominal values used by Emma and Patrick + reasons
 """ Parameters for ALL models """
 
 
-FERTILE_BULK_DENSITY_KGM3 = [0, 0.03, 0.3, 0.6, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150]
+FERTILE_BULK_DENSITY_KGM3 = [0, 0.03, 0.3, 0.6, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150,    250, 500, 750, 1000]
 
 DENSITY_FLIBE = 1.94 # g/cm3
 ENRICH_FLIBE  = 7.5  # wt%
