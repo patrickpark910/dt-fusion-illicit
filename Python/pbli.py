@@ -210,7 +210,7 @@ class LL(Reactor):
             Vf_sic_in_biso  = 1.0 - Vf_uo2_in_biso             # vol frac SiC in single BISO
 
             biso = openmc.Material.mix_materials([uo2, sic], [Vf_uo2_in_biso, Vf_sic_in_biso], 'vo')
-            biso.set_density('g/cm3', DENSITY_BISO)  
+            # biso.set_density('g/cm3', DENSITY_BISO)  # turned off --ppark 2025-10-24
 
             self.fertile = biso
 
