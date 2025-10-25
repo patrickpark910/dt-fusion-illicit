@@ -5,6 +5,8 @@ import os, re, sys, time, functools
 import numpy as np
 
 from Python.parameters import *
+# from parameters import *
+
 
 """
 Nuclear constants -- from atom.kaeri.re.kr/nuchart/
@@ -133,7 +135,8 @@ def calc_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertil
         return breeder_mass_frac, thf4_mass_frac
 
 
-def calc_biso_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertile_element='U', fertile_enrich=0.71, breeder_density_kgm3=9.4e3):
+
+def calc_biso_blanket_vol_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertile_element='U', fertile_enrich=0.71):
     """
     Calculate mass fractions of PbLi and BISO particles.
     Following Glaser & Goldston (2012), we assume the BISO/TRISO particles are homogenized 
@@ -151,56 +154,47 @@ def calc_biso_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, f
     fertile_enrich = fertile_enrich*0.01 # OpenMC uses this in % but we want fraction
 
     if fertile_element == 'U':
-        uo2_bulk_density_kgm3 = fertile_bulk_density_kgm3 / (1-fertile_enrich) * AMU_UO2 / AMU_U
 
-        r_uo2 = 400e-4  # r = 400 μm = 0.0400 cm // "800 μm kernel"
-        r_sic = 500e-4  # 500 μm = 0.0500 cm // "100 μm thickness"
-        V_biso_particle = (4 / 3) * np.pi * (r_sic)**3     # volume of single BISO particle
-        V_uo2_in_biso   = (4 / 3) * np.pi * (r_uo2)**3     # volume of UO2 in single BISO particle
-        Vf_uo2_in_biso  = V_uo2_in_biso / V_biso_particle  # vol frac UO2 in single BISO
-        Vf_sic_in_biso  = 1.0 - Vf_uo2_in_biso  
-        # SiC mass per volume of UO2 (ratio inside a particle)
-        density_sic     = DENSITY_SIC * 10**3 #kg/m^3
-        density_uo2     = DENSITY_UO2 * 10**3#kg/m^3
-        m_sic_per_m_uo2 = (density_sic * Vf_sic_in_biso) / (density_uo2 * Vf_uo2_in_biso)
+        # Total mass of elemental uranium to be added to system [g]
+        U_mass_g = (fertile_bulk_density_kgm3*1e3 * breeder_volume_m3) / (1 - fertile_enrich)
 
-        sic_bulk_density_kgm3 = uo2_bulk_density_kgm3 * m_sic_per_m_uo2
+        # Total mass of UO2 [g]
+        U_molar_mass = (1 - fertile_enrich) * AMU_U238 + fertile_enrich * AMU_U235
+        UO2_mass_g = U_mass_g * ((U_molar_mass+2*AMU_O)/U_molar_mass)
 
-        uo2_mass_kg       = uo2_bulk_density_kgm3 * breeder_volume_m3
-        sic_mass_kg       = sic_bulk_density_kgm3 * breeder_volume_m3
-        biso_mass_kg      = uo2_mass_kg + sic_mass_kg   # total fertile particle mass
-        breeder_mass_kg   = breeder_density_kgm3 * breeder_volume_m3  # PbLi mass
-        blanket_mass_kg   = breeder_mass_kg + biso_mass_kg
-        breeder_mass_frac = breeder_mass_kg / blanket_mass_kg
-        biso_mass_frac    = biso_mass_kg / blanket_mass_kg
+        # Total volume of BISO [cm3] 
+        biso_vol_cm3 = UO2_mass_g / DENSITY_UO2 * BISO_RADIUS**3 / BISO_KERNEL_RADIUS**3
 
-        return breeder_mass_frac, biso_mass_frac
+        # Volume fractions
+        biso_vf    = biso_vol_cm3 / (breeder_volume_m3*1e6)
+        breeder_vf = 1 - biso_vf
 
-    elif fertile_element == 'Th':
-        tho2_bulk_density_kgm3 = fertile_bulk_density_kgm3 / (1-fertile_enrich) * AMU_ThO2 / AMU_Th
+        return breeder_vf, biso_vf
 
-        r_tho2 = 400e-4  # r = 400 μm = 0.0400 cm // "800 μm kernel"
-        r_sic = 500e-4  # 500 μm = 0.0500 cm // "100 μm thickness"
-        V_biso_particle = (4 / 3) * np.pi * (r_sic)**3     # volume of single BISO particle
-        V_tho2_in_biso   = (4 / 3) * np.pi * (r_tho2)**3     # volume of UO2 in single BISO particle
-        Vf_tho2_in_biso  = V_tho2_in_biso / V_biso_particle  # vol frac UO2 in single BISO
-        Vf_sic_in_biso  = 1.0 - Vf_tho2_in_biso  
-        # SiC mass per volume of UO2 (ratio inside a particle)
-        density_sic     = DENSITY_SIC * 10**3 #kg/m^3
-        density_tho2     = DENSITY_ThO2 * 10**3#kg/m^3
-        m_sic_per_m_tho2 = (density_sic * Vf_sic_in_biso) / (density_tho2 * Vf_tho2_in_biso)
 
-        sic_bulk_density_kgm3 = tho2_bulk_density_kgm3 * m_sic_per_m_tho2
+    if fertile_element == 'Th':
 
-        tho2_mass_kg       = tho2_bulk_density_kgm3 * breeder_volume_m3
-        sic_mass_kg       = sic_bulk_density_kgm3 * breeder_volume_m3
-        biso_mass_kg      = tho2_mass_kg + sic_mass_kg   # total fertile particle mass
-        breeder_mass_kg   = breeder_density_kgm3 * breeder_volume_m3  # PbLi mass
-        blanket_mass_kg   = breeder_mass_kg + biso_mass_kg
-        breeder_mass_frac = breeder_mass_kg / blanket_mass_kg
-        biso_mass_frac    = biso_mass_kg / blanket_mass_kg
+        # Total mass of elemental uranium to be added to system [g]
+        Th_mass_g = (fertile_bulk_density_kgm3*1e3 * breeder_volume_m3) # / (1 - fertile_enrich)
 
-        return breeder_mass_frac, biso_mass_frac
+        # Total mass of UO2 [g]
+        ThO2_mass_g = Th_mass_g * ((AMU_Th+2*AMU_O)/AMU_Th)
+
+        # Total volume of BISO [cm3] 
+        biso_vol_cm3 = ThO2_mass_g / DENSITY_ThO2 * BISO_RADIUS**3 / BISO_KERNEL_RADIUS**3
+
+        # Volume fractions
+        biso_vf    = biso_vol_cm3 / (breeder_volume_m3*1e6)
+        breeder_vf = 1 - biso_vf
+
+        return breeder_vf, biso_vf
+
+
+
+
+
+
+
 
 
 def extract_lie(path: str) -> float:
@@ -350,6 +344,8 @@ def has_statepoint(directory_path):
 
 if __name__ == "__main__":
     """ Use this to test any of the functions """
-    print(calc_blanket_mass_fracs(30, 291.1, fertile_element='U', fertile_enrich=0.71, breeder_density_kgm3=1.94e3))
+    # calc_biso_blanket_vol_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertile_element='U', fertile_enrich=0.71)
+    print(calc_biso_blanket_vol_fracs(1000, LL_BR_VOL, fertile_element='Th', fertile_enrich=0.71))
+    # for 1000, LL_BR_VOL, 'U', 0.71: (0.7874738114760764, 0.21252618852392352)
 
 
