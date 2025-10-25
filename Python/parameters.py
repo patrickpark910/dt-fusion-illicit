@@ -14,6 +14,13 @@ Nominal values used by Emma and Patrick + reasons
 """ Parameters for ALL models """
 
 
+# BISO particle parameters
+BISO_KERNEL_RADIUS = 0.04 # cm
+BISO_RADIUS        = 0.05 # cm
+DENSITY_UO2        = 10.5 # g/cm^3
+DENSITY_ThO2       = 10.0 # g/cm^3
+
+
 FERTILE_BULK_DENSITY_KGM3 = [0, 0.03, 0.3, 0.6, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150,    250, 500, 750, 1000]
 
 DENSITY_FLIBE = 1.94 # g/cm3
@@ -23,7 +30,7 @@ DENSITY_UF4   = 6.7 # g/cm3
 ENRICH_U  = 0.71  # wt% 
 TEMP_K = 900 # 900 # 294 K # ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
 
-DENSITY_BISO = 6.93759 # g/cc for UO2 BISO
+# DENSITY_BISO = 6.93759 # g/cc for UO2 BISO
 
 BREEDERS = ['ARC','ARCBall','FLiBe','LL']
 

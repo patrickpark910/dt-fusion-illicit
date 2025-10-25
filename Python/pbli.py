@@ -243,12 +243,11 @@ class LL(Reactor):
         # Breeder and fertile material mixed in the blanket breeding regions 
         # ------------------------------------------------------------------
 
-        breeder_mass_frac, fertile_compound_mass_frac = calc_biso_blanket_mass_fracs(self.fertile_bulk_density_kgm3,
-                                                                    self.breeder_volume,
-                                                                    fertile_element=self.fertile_element,
-                                                                    fertile_enrich=ENRICH_U if self.fertile_element == 'U' else 0.0,
-                                                                    breeder_density_kgm3=DENSITY_LL*1e3)
-        self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [breeder_mass_frac, fertile_compound_mass_frac], 'wo')
+        breeder_vol_frac, biso_vol_frac = calc_biso_blanket_vol_fracs(self.fertile_bulk_density_kgm3,
+                                                                      self.breeder_volume,
+                                                                      fertile_element=self.fertile_element,
+                                                                      fertile_enrich=ENRICH_U if self.fertile_element == 'U' else 0.0)
+        self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [breeder_vol_frac, biso_vol_frac], 'vo')
         self.blanket.name, self.blanket.temperature = self.name, self.temp_k
 
 
