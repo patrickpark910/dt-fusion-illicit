@@ -10,15 +10,18 @@ Nominal values used by Emma and Patrick + reasons
 """
 
 
-
 """ Parameters for ALL models """
 
 
 # BISO particle parameters
-BISO_KERNEL_RADIUS = 0.04 # cm
-BISO_RADIUS        = 0.05 # cm
+BISO_KERNEL_RADIUS = 0.04 # cm  # r = 400 μm = 0.0400 cm // "800 μm kernel"
+BISO_RADIUS        = 0.05 # cm  # r = 500 μm = 0.0500 cm // "100 μm thickness"
 DENSITY_UO2        = 10.5 # g/cm^3
 DENSITY_ThO2       = 10.0 # g/cm^3
+BISO_VOLUME        = (4 / 3) * 3.14159265359 * (BISO_RADIUS)**3            # volume of single BISO particle
+KERNEL_VOLUME      = (4 / 3) * 3.14159265359 * (BISO_KERNEL_RADIUS)**3     # volume of UO2/ThO2 kernel in single BISO particle
+BISO_KERNEL_VOL_FRAC = KERNEL_VOLUME / BISO_VOLUME  # vol frac kernel in single BISO
+BISO_COAT_VOL_FRAC   = 1.0 - BISO_KERNEL_VOL_FRAC
 
 
 FERTILE_BULK_DENSITY_KGM3 = [0, 0.03, 0.3, 0.6, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150,    250, 500, 750, 1000]
