@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<geometry>
+  <cell id="1" material="1" name="UO2_kernel" region="-1" universe="1"/>
+  <cell id="2" material="2" name="SiC_coating" region="1 -2" universe="1"/>
+  <cell id="3" material="3" name="PbLi_matrix" region="2 3 -4 5 -6 7 -8" universe="1"/>
+  <surface coeffs="0.0 0.0 0.0 0.04" id="1" type="sphere"/>
+  <surface coeffs="0.0 0.0 0.0 0.05" id="2" type="sphere"/>
+  <surface boundary="reflective" coeffs="-0.025" id="3" type="x-plane"/>
+  <surface boundary="reflective" coeffs="0.025" id="4" type="x-plane"/>
+  <surface boundary="reflective" coeffs="-0.025" id="5" type="y-plane"/>
+  <surface boundary="reflective" coeffs="0.025" id="6" type="y-plane"/>
+  <surface boundary="reflective" coeffs="-0.025" id="7" type="z-plane"/>
+  <surface boundary="reflective" coeffs="0.025" id="8" type="z-plane"/>
+</geometry>

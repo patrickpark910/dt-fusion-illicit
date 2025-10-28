@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<materials>
+  <cross_sections>/mnt/c/OpenMC/data/endfb-viii.0-hdf5/cross_sections.xml</cross_sections>
+  <material depletable="true" id="1" name="UO2" temperature="900">
+    <density units="g/cm3" value="10.97"/>
+    <nuclide ao="0.00045233054969570684" name="U234"/>
+    <nuclide ao="0.05060678291113408" name="U235"/>
+    <nuclide ao="0.9487090831661895" name="U238"/>
+    <nuclide ao="0.0002318033729806761" name="U236"/>
+    <nuclide ao="1.9952412" name="O16"/>
+    <nuclide ao="0.000758" name="O17"/>
+    <nuclide ao="0.0040008" name="O18"/>
+  </material>
+  <material id="2" name="SiC" temperature="900">
+    <density units="g/cm3" value="3.21"/>
+    <nuclide ao="0.9222968" name="Si28"/>
+    <nuclide ao="0.0468316" name="Si29"/>
+    <nuclide ao="0.0308716" name="Si30"/>
+    <nuclide ao="0.988922" name="C12"/>
+    <nuclide ao="0.011078" name="C13"/>
+  </material>
+  <material id="3" name="PbLi" temperature="900">
+    <density units="g/cm3" value="9.5"/>
+    <nuclide ao="0.01162" name="Pb204"/>
+    <nuclide ao="0.20002999999999999" name="Pb206"/>
+    <nuclide ao="0.18342999999999998" name="Pb207"/>
+    <nuclide ao="0.43492" name="Pb208"/>
+    <nuclide ao="0.15521423651478958" name="Li6"/>
+    <nuclide ao="0.014785763485210419" name="Li7"/>
+  </material>
+</materials>

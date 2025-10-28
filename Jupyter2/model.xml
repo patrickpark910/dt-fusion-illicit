@@ -1,0 +1,72 @@
+<?xml version='1.0' encoding='utf-8'?>
+<model>
+  <materials>
+    <cross_sections>/mnt/c/OpenMC/data/endfb-viii.0-hdf5/cross_sections.xml</cross_sections>
+    <material depletable="true" id="1" name="UO2" temperature="900">
+      <density units="g/cm3" value="10.97"/>
+      <nuclide ao="0.00045233054969570684" name="U234"/>
+      <nuclide ao="0.05060678291113408" name="U235"/>
+      <nuclide ao="0.9487090831661895" name="U238"/>
+      <nuclide ao="0.0002318033729806761" name="U236"/>
+      <nuclide ao="1.9952412" name="O16"/>
+      <nuclide ao="0.000758" name="O17"/>
+      <nuclide ao="0.0040008" name="O18"/>
+    </material>
+    <material id="2" name="SiC" temperature="900">
+      <density units="g/cm3" value="3.21"/>
+      <nuclide ao="0.9222968" name="Si28"/>
+      <nuclide ao="0.0468316" name="Si29"/>
+      <nuclide ao="0.0308716" name="Si30"/>
+      <nuclide ao="0.988922" name="C12"/>
+      <nuclide ao="0.011078" name="C13"/>
+    </material>
+    <material id="3" name="PbLi" temperature="900">
+      <density units="g/cm3" value="9.5"/>
+      <nuclide ao="0.01162" name="Pb204"/>
+      <nuclide ao="0.20002999999999999" name="Pb206"/>
+      <nuclide ao="0.18342999999999998" name="Pb207"/>
+      <nuclide ao="0.43492" name="Pb208"/>
+      <nuclide ao="0.15521423651478958" name="Li6"/>
+      <nuclide ao="0.014785763485210419" name="Li7"/>
+    </material>
+  </materials>
+  <geometry>
+    <cell id="1" material="1" name="UO2_kernel" region="-1" universe="1"/>
+    <cell id="2" material="2" name="SiC_coating" region="1 -2" universe="1"/>
+    <cell id="3" material="3" name="PbLi_matrix" region="2 3 -4 5 -6 7 -8" universe="1"/>
+    <surface coeffs="0.0 0.0 0.0 0.04" id="1" type="sphere"/>
+    <surface coeffs="0.0 0.0 0.0 0.05" id="2" type="sphere"/>
+    <surface boundary="reflective" coeffs="-0.025" id="3" type="x-plane"/>
+    <surface boundary="reflective" coeffs="0.025" id="4" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-0.025" id="5" type="y-plane"/>
+    <surface boundary="reflective" coeffs="0.025" id="6" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-0.025" id="7" type="z-plane"/>
+    <surface boundary="reflective" coeffs="0.025" id="8" type="z-plane"/>
+  </geometry>
+  <settings>
+    <run_mode>fixed source</run_mode>
+    <particles>10000</particles>
+    <batches>50</batches>
+  </settings>
+  <tallies>
+    <mesh id="1">
+      <dimension>500 1 1</dimension>
+      <lower_left>-0.025 -0.0125 -0.0125</lower_left>
+      <upper_right>0.025 0.0125 0.0125</upper_right>
+    </mesh>
+    <filter id="1" type="cell">
+      <bins>1 2 3</bins>
+    </filter>
+    <filter id="2" type="mesh">
+      <bins>1</bins>
+    </filter>
+    <tally id="1" name="flux_by_region">
+      <filters>1</filters>
+      <scores>flux</scores>
+    </tally>
+    <tally id="2" name="flux_centerline_x">
+      <filters>2</filters>
+      <scores>flux</scores>
+    </tally>
+  </tallies>
+</model>
