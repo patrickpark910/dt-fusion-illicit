@@ -36,37 +36,38 @@
     <cell id="3" material="3" name="PbLi_matrix" region="2 3 -4 5 -6 7 -8" universe="1"/>
     <surface coeffs="0.0 0.0 0.0 0.04" id="1" type="sphere"/>
     <surface coeffs="0.0 0.0 0.0 0.05" id="2" type="sphere"/>
-    <surface boundary="reflective" coeffs="-0.025" id="3" type="x-plane"/>
-    <surface boundary="reflective" coeffs="0.025" id="4" type="x-plane"/>
-    <surface boundary="reflective" coeffs="-0.025" id="5" type="y-plane"/>
-    <surface boundary="reflective" coeffs="0.025" id="6" type="y-plane"/>
-    <surface boundary="reflective" coeffs="-0.025" id="7" type="z-plane"/>
-    <surface boundary="reflective" coeffs="0.025" id="8" type="z-plane"/>
+    <surface boundary="reflective" coeffs="-0.187" id="3" type="x-plane"/>
+    <surface boundary="reflective" coeffs="0.187" id="4" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-0.187" id="5" type="y-plane"/>
+    <surface boundary="reflective" coeffs="0.187" id="6" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-0.187" id="7" type="z-plane"/>
+    <surface boundary="reflective" coeffs="0.187" id="8" type="z-plane"/>
   </geometry>
   <settings>
     <run_mode>fixed source</run_mode>
     <particles>10000</particles>
-    <batches>50</batches>
+    <batches>10</batches>
   </settings>
   <tallies>
-    <mesh id="1">
+    <mesh id="3">
       <dimension>500 1 1</dimension>
-      <lower_left>-0.025 -0.0125 -0.0125</lower_left>
-      <upper_right>0.025 0.0125 0.0125</upper_right>
+      <lower_left>-0.187 -0.0125 -0.0125</lower_left>
+      <upper_right>0.187 0.0125 0.0125</upper_right>
     </mesh>
-    <filter id="1" type="cell">
-      <bins>1 2 3</bins>
+    <filter id="3" type="mesh">
+      <bins>3</bins>
     </filter>
-    <filter id="2" type="mesh">
-      <bins>1</bins>
-    </filter>
-    <tally id="1" name="flux_by_region">
-      <filters>1</filters>
+    <tally id="5" name="flux_centerline_x">
+      <filters>3</filters>
       <scores>flux</scores>
     </tally>
-    <tally id="2" name="flux_centerline_x">
-      <filters>2</filters>
-      <scores>flux</scores>
+    <tally id="6" name="ng_mesh_1d_x">
+      <filters>3</filters>
+      <scores>(n,gamma)</scores>
+    </tally>
+    <tally id="7" name="total_mesh_1d_x">
+      <filters>3</filters>
+      <scores>total</scores>
     </tally>
   </tallies>
 </model>
