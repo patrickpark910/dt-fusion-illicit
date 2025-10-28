@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<tallies>
+  <mesh id="1">
+    <dimension>500 1 1</dimension>
+    <lower_left>-0.025 -0.0125 -0.0125</lower_left>
+    <upper_right>0.025 0.0125 0.0125</upper_right>
+  </mesh>
+  <filter id="1" type="cell">
+    <bins>1 2 3</bins>
+  </filter>
+  <filter id="2" type="mesh">
+    <bins>1</bins>
+  </filter>
+  <tally id="1" name="flux_by_region">
+    <filters>1</filters>
+    <scores>flux</scores>
+  </tally>
+  <tally id="2" name="flux_centerline_x">
+    <filters>2</filters>
+    <scores>flux</scores>
+  </tally>
+</tallies>
