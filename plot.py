@@ -11,6 +11,19 @@ from scipy.interpolate import PchipInterpolator
 from Python.utilities import *
 from Python.parameters import *
 
+def readtxtFile(path): 
+    energy, microxs = [], []
+
+    with open(path, 'r') as file:
+        file.readline()
+        file.readline()
+
+        for line in file:
+            values = line.split()
+            energy.append(float(values[0]))
+            microxs.append(float(values[1]))
+
+    return np.array(energy), np.log(np.array(microxs))
 
 
 def plot_all():
@@ -19,8 +32,8 @@ def plot_all():
     combined_plot = Plot(save=True, show=True)
     
     """ Pick which one to plot by uncommenting """
-    combined_plot.plot_tbr()
-    combined_plot.plot_pu_per_yr()
+    # combined_plot.plot_tbr()
+    # combined_plot.plot_pu_per_yr()
     combined_plot.plot_cum_norm_histogram()
 
     print("All plots completed and saved.")
@@ -138,6 +151,9 @@ class Plot:
         plt.close('all')
 
 
+        return 0
+    
+
     def plot_pu_per_yr(self):
       
         print(f"\nPlotting Pu-239 production per year for all fuels...")
@@ -236,8 +252,32 @@ class Plot:
 
         fig, axes = plt.subplots(3, 2, figsize=(15,15)) # sharex='col', sharey='row', 
 
+        # load in thorium and uranium background (n, gamma) cross section, shift to 0.1 and 0.9
+        u_path = "./Figures/XSPlot/U238gamma.txt"
+        th_path = "./Figures/XSPlot/Th232gamma.txt"
+        u238_energy, u238_mxs = readtxtFile(u_path) # cross sections are returned as log(microxs)
+        th232_energy, th232_mxs = readtxtFile(th_path)
+
+        u238_mxs_shifted = (u238_mxs - np.min(u238_mxs)) * 0.8 / (np.max(u238_mxs) - np.min(u238_mxs)) + 0.1
+        th232_mxs_shifted = (th232_mxs - np.min(th232_mxs)) * 0.8 / (np.max(th232_mxs) - np.min(th232_mxs)) + 0.1
+
         titles = [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$", r"PB-UO$_2$", r"PB-ThO$_2$", r"LL-UO$_2$", r"LL-ThO$_2$",]
         dfs    = [self.flibe_u_eb_df, self.flibe_th_eb_df, self.pb_u_eb_df, self.pb_th_eb_df, self.pbli_u_eb_df, self.pbli_th_eb_df,]
+
+        for i in range(3):
+            for j in range(2):
+                ax = axes[i, j]
+                if i == 2:
+                    ax.set_xlabel("Incident neutron energy [eV]")
+                if j == 0:
+                    ax.set_ylabel(r"Cumulative fraction of fertile $($n,$\gamma)$ rxns")
+                    uranium,  = ax.plot(u238_energy, u238_mxs_shifted, color='gray', linewidth=0.7, alpha=0.4, label=r'U238 (n, $\gamma$)')
+                    uranium_leg = ax.legend(handles=[uranium], loc='upper left', edgecolor='gray', frameon=True, framealpha=.75)
+                    ax.add_artist(uranium_leg)
+                if j == 1: 
+                    thorium,  = ax.plot(th232_energy, th232_mxs_shifted, color='gray', linewidth=0.7, alpha=0.4, label=r'Th232 (n, $\gamma$)')
+                    thorium_leg = ax.legend(handles=[thorium], loc='upper left', edgecolor='gray', frameon=True, framealpha=.75)
+                    ax.add_artist(thorium_leg)
 
         for ax, df, title in zip(axes.flatten(), dfs, titles):
 
@@ -260,25 +300,24 @@ class Plot:
 
             sub   = df[df['fertile_kg/m3'] == 30]
             label = int(round(sub['fertile_kg/m3'].iloc[0], -1))
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#ff1f5b', label=fr'{label} kg$/$m$^3$')
+            _, _, red = ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#ff1f5b', label=fr'{label} kg$/$m$^3$')
 
             sub = df[df['fertile_kg/m3'] == 60]
             label = int(round(sub['fertile_kg/m3'].iloc[0], -1))
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#f48628', label=fr'{label} kg$/$m$^3$')
+            _, _, orange= ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#f48628', label=fr'{label} kg$/$m$^3$')
 
             sub = df[df['fertile_kg/m3'] == 90]
             label = int(round(sub['fertile_kg/m3'].iloc[0], -1))
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#04cc6c', label=fr'{label} kg$/$m$^3$')
+            _, _, green= ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#04cc6c', label=fr'{label} kg$/$m$^3$')
 
             sub = df[df['fertile_kg/m3'] == 120]
             label = int(round(sub['fertile_kg/m3'].iloc[0], -1))
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#0c9edd', label=fr'{label} kg$/$m$^3$')
+            _, _, blue = ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#0c9edd', label=fr'{label} kg$/$m$^3$')
 
             sub = df[df['fertile_kg/m3'] == 150]
             label = int(round(sub['fertile_kg/m3'].iloc[0], -1))
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#b367bd', label=fr'{label} kg$/$m$^3$')
+            _, _, purple = ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#b367bd', label=fr'{label} kg$/$m$^3$')
             
-
             ax.xaxis.set_ticks_position('both')
             ax.yaxis.set_ticks_position('both')
             ax.yaxis.set_minor_locator(MultipleLocator(0.05))
@@ -290,16 +329,8 @@ class Plot:
             ax.set_ylim(-0.03, 1.03)
             fig.tight_layout()
 
-            leg = ax.legend(title=title, fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1, loc="lower right")
+            leg = ax.legend(handles=[red[0], orange[0], green[0], blue[0], purple[0]], title=title, fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1, loc="lower right")
             leg.get_frame().set_linewidth(0.5) 
-
-        for i in range(3):
-            for j in range(2):
-                ax = axes[i, j]
-                if i == 2:
-                    ax.set_xlabel("Incident neutron energy [eV]")
-                if j == 0:
-                    ax.set_ylabel(r"Cumulative fraction of fertile $($n,$\gamma)$ rxns")
 
         if self.save:
             plt.savefig(f'./Figures/pdf/fig_cum_norm_histogram.pdf', bbox_inches='tight', format='pdf')
