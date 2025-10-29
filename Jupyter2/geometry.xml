@@ -1,14 +1,14 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <geometry>
-  <cell id="1" material="1" name="UO2_kernel" region="-1" universe="1"/>
-  <cell id="2" material="2" name="SiC_coating" region="1 -2" universe="1"/>
-  <cell id="3" material="3" name="PbLi_matrix" region="2 3 -4 5 -6 7 -8" universe="1"/>
-  <surface coeffs="0.0 0.0 0.0 0.04" id="1" type="sphere"/>
-  <surface coeffs="0.0 0.0 0.0 0.05" id="2" type="sphere"/>
-  <surface boundary="reflective" coeffs="-0.187" id="3" type="x-plane"/>
-  <surface boundary="reflective" coeffs="0.187" id="4" type="x-plane"/>
-  <surface boundary="reflective" coeffs="-0.187" id="5" type="y-plane"/>
-  <surface boundary="reflective" coeffs="0.187" id="6" type="y-plane"/>
-  <surface boundary="reflective" coeffs="-0.187" id="7" type="z-plane"/>
-  <surface boundary="reflective" coeffs="0.187" id="8" type="z-plane"/>
+  <cell id="4" material="4" name="UO2_kernel" region="-9" universe="2"/>
+  <cell id="5" material="5" name="SiC_coating" region="9 -10" universe="2"/>
+  <cell id="6" material="6" name="PbLi_matrix" region="10 11 -12 13 -14 15 -16" universe="2"/>
+  <surface coeffs="0.0 0.0 0.0 0.04" id="9" type="sphere"/>
+  <surface coeffs="0.0 0.0 0.0 0.05" id="10" type="sphere"/>
+  <surface boundary="vacuum" coeffs="-0.051" id="11" type="x-plane"/>
+  <surface boundary="vacuum" coeffs="0.051" id="12" type="x-plane"/>
+  <surface boundary="vacuum" coeffs="-0.051" id="13" type="y-plane"/>
+  <surface boundary="vacuum" coeffs="0.051" id="14" type="y-plane"/>
+  <surface boundary="vacuum" coeffs="-0.051" id="15" type="z-plane"/>
+  <surface boundary="vacuum" coeffs="0.051" id="16" type="z-plane"/>
 </geometry>

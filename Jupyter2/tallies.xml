@@ -1,23 +1,23 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <tallies>
-  <mesh id="3">
-    <dimension>500 1 1</dimension>
-    <lower_left>-0.187 -0.0125 -0.0125</lower_left>
-    <upper_right>0.187 0.0125 0.0125</upper_right>
+  <mesh id="1">
+    <dimension>100 100 100</dimension>
+    <lower_left>-0.051 -0.051 -0.051</lower_left>
+    <upper_right>0.051 0.051 0.051</upper_right>
   </mesh>
-  <filter id="3" type="mesh">
-    <bins>3</bins>
+  <filter id="1" type="mesh">
+    <bins>1</bins>
   </filter>
-  <tally id="5" name="flux_centerline_x">
-    <filters>3</filters>
+  <tally id="1" name="flux_mesh_1d_x">
+    <filters>1</filters>
     <scores>flux</scores>
   </tally>
-  <tally id="6" name="ng_mesh_1d_x">
-    <filters>3</filters>
+  <tally id="2" name="ng_mesh_1d_x">
+    <filters>1</filters>
     <scores>(n,gamma)</scores>
   </tally>
-  <tally id="7" name="total_mesh_1d_x">
-    <filters>3</filters>
+  <tally id="3" name="total_mesh_1d_x">
+    <filters>1</filters>
     <scores>total</scores>
   </tally>
 </tallies>
