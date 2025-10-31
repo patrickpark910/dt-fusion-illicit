@@ -1,0 +1,89 @@
+<?xml version='1.0' encoding='utf-8'?>
+<model>
+  <materials>
+    <cross_sections>/mnt/c/OpenMC/data/endfb-viii.0-hdf5/cross_sections.xml</cross_sections>
+    <material depletable="true" id="1" name="UO2" temperature="900">
+      <density units="g/cm3" value="10.5"/>
+      <nuclide ao="6.426671313013586e-05" name="U234"/>
+      <nuclide ao="0.007190165691830529" name="U235"/>
+      <nuclide ao="0.992712633182619" name="U238"/>
+      <nuclide ao="3.2934412420228326e-05" name="U236"/>
+      <nuclide ao="1.9952412" name="O16"/>
+      <nuclide ao="0.000758" name="O17"/>
+      <nuclide ao="0.0040008" name="O18"/>
+    </material>
+    <material id="2" name="SiC" temperature="900">
+      <density units="g/cm3" value="3.2"/>
+      <nuclide ao="0.9222968" name="Si28"/>
+      <nuclide ao="0.0468316" name="Si29"/>
+      <nuclide ao="0.0308716" name="Si30"/>
+      <nuclide ao="0.988922" name="C12"/>
+      <nuclide ao="0.011078" name="C13"/>
+    </material>
+    <material id="3" name="PbLi" temperature="900">
+      <density units="g/cm3" value="9.5"/>
+      <nuclide ao="0.01162" name="Pb204"/>
+      <nuclide ao="0.20002999999999999" name="Pb206"/>
+      <nuclide ao="0.18342999999999998" name="Pb207"/>
+      <nuclide ao="0.43492" name="Pb208"/>
+      <nuclide ao="0.09130249206752328" name="Li6"/>
+      <nuclide ao="0.008697507932476718" name="Li7"/>
+    </material>
+    <material depletable="true" id="4" name="UO2(0.512)-SiC(0.488)">
+      <density units="g/cm3" value="6.9376000000000015"/>
+      <nuclide ao="9.29732330590416e-06" name="U234"/>
+      <nuclide ao="0.0010401853744193056" name="U235"/>
+      <nuclide ao="0.14361354192589526" name="U238"/>
+      <nuclide ao="4.764548632521622e-06" name="U236"/>
+      <nuclide ao="0.28864713326939306" name="O16"/>
+      <nuclide ao="0.00010965818419256777" name="O17"/>
+      <nuclide ao="0.0005787868909203497" name="O18"/>
+      <nuclide ao="0.26100844147503466" name="Si28"/>
+      <nuclide ao="0.013253263946901078" name="Si29"/>
+      <nuclide ao="0.008736610819684814" name="Si30"/>
+      <nuclide ao="0.27986326089429586" name="C12"/>
+      <nuclide ao="0.0031350553473246724" name="C13"/>
+    </material>
+    <material depletable="true" id="5" name="PbLi(0.99)-UO2(0.512)-SiC(0.488)(0.01)">
+      <density units="g/cm3" value="9.474376000000001"/>
+      <nuclide ao="0.012164280290496163" name="Pb204"/>
+      <nuclide ao="0.20939939642925534" name="Pb206"/>
+      <nuclide ao="0.19202185315711798" name="Pb207"/>
+      <nuclide ao="0.4552916337299992" name="Pb208"/>
+      <nuclide ao="0.09557909679261235" name="Li6"/>
+      <nuclide ao="0.009104898822673024" name="Li7"/>
+      <nuclide ao="2.4581045054495823e-07" name="U234"/>
+      <nuclide ao="2.750129549371629e-05" name="U235"/>
+      <nuclide ao="0.0037969755685212767" name="U238"/>
+      <nuclide ao="1.2596914267354373e-07" name="U236"/>
+      <nuclide ao="0.00763149559749122" name="O16"/>
+      <nuclide ao="2.899235271855024e-06" name="O17"/>
+      <nuclide ao="1.530245445334773e-05" name="O18"/>
+      <nuclide ao="0.006900760625832216" name="Si28"/>
+      <nuclide ao="0.0003504009352788863" name="Si29"/>
+      <nuclide ao="0.00023098586239965468" name="Si30"/>
+      <nuclide ao="0.0073992601943531034" name="C12"/>
+      <nuclide ao="8.288722915765217e-05" name="C13"/>
+    </material>
+  </materials>
+  <geometry>
+    <cell id="1" material="5" name="mixture" region="1 -2 3 -4 5 -6" universe="1"/>
+    <surface boundary="periodic" coeffs="-0.5" id="1" periodic_surface_id="2" type="x-plane"/>
+    <surface boundary="periodic" coeffs="0.5" id="2" periodic_surface_id="1" type="x-plane"/>
+    <surface boundary="periodic" coeffs="-0.5" id="3" periodic_surface_id="4" type="y-plane"/>
+    <surface boundary="periodic" coeffs="0.5" id="4" periodic_surface_id="3" type="y-plane"/>
+    <surface boundary="periodic" coeffs="-0.5" id="5" periodic_surface_id="6" type="z-plane"/>
+    <surface boundary="periodic" coeffs="0.5" id="6" periodic_surface_id="5" type="z-plane"/>
+  </geometry>
+  <settings>
+    <run_mode>fixed source</run_mode>
+    <particles>100000</particles>
+    <batches>10</batches>
+    <write_initial_source>true</write_initial_source>
+  </settings>
+  <tallies>
+    <tally id="2" name="total rxn rates">
+      <scores>absorption fission (n,gamma) (n,Xt)</scores>
+    </tally>
+  </tallies>
+</model>

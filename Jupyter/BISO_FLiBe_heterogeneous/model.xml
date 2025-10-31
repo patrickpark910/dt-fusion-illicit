@@ -1,0 +1,91 @@
+<?xml version='1.0' encoding='utf-8'?>
+<model>
+  <materials>
+    <cross_sections>/mnt/c/OpenMC/data/endfb-viii.0-hdf5/cross_sections.xml</cross_sections>
+    <material depletable="true" id="1" name="UO2" temperature="900">
+      <density units="g/cm3" value="10.5"/>
+      <nuclide ao="6.426671313013586e-05" name="U234"/>
+      <nuclide ao="0.007190165691830529" name="U235"/>
+      <nuclide ao="0.992712633182619" name="U238"/>
+      <nuclide ao="3.2934412420228326e-05" name="U236"/>
+      <nuclide ao="1.9952412" name="O16"/>
+      <nuclide ao="0.000758" name="O17"/>
+      <nuclide ao="0.0040008" name="O18"/>
+    </material>
+    <material id="2" name="SiC" temperature="900">
+      <density units="g/cm3" value="3.2"/>
+      <nuclide ao="0.9222968" name="Si28"/>
+      <nuclide ao="0.0468316" name="Si29"/>
+      <nuclide ao="0.0308716" name="Si30"/>
+      <nuclide ao="0.988922" name="C12"/>
+      <nuclide ao="0.011078" name="C13"/>
+    </material>
+    <material id="3" name="FLiBe" temperature="900">
+      <density units="g/cm3" value="1.94"/>
+      <nuclide ao="0.5714285714285714" name="F19"/>
+      <nuclide ao="0.024686086507471606" name="Li6"/>
+      <nuclide ao="0.2610281992068141" name="Li7"/>
+      <nuclide ao="0.14285714285714285" name="Be9"/>
+    </material>
+  </materials>
+  <geometry>
+    <cell id="1" material="1" name="UO2_kernel" region="-1" universe="1"/>
+    <cell id="2" material="2" name="SiC_coating" region="1 -2" universe="1"/>
+    <cell id="3" material="3" name="PbLi_matrix" region="2 3 -4 5 -6 7 -8" universe="1"/>
+    <surface coeffs="0.0 0.0 0.0 0.04" id="1" type="sphere"/>
+    <surface coeffs="0.0 0.0 0.0 0.05" id="2" type="sphere"/>
+    <surface boundary="periodic" coeffs="-0.18705509634091225" id="3" periodic_surface_id="4" type="x-plane"/>
+    <surface boundary="periodic" coeffs="0.18705509634091225" id="4" periodic_surface_id="3" type="x-plane"/>
+    <surface boundary="periodic" coeffs="-0.18705509634091225" id="5" periodic_surface_id="6" type="y-plane"/>
+    <surface boundary="periodic" coeffs="0.18705509634091225" id="6" periodic_surface_id="5" type="y-plane"/>
+    <surface boundary="periodic" coeffs="-0.18705509634091225" id="7" periodic_surface_id="8" type="z-plane"/>
+    <surface boundary="periodic" coeffs="0.18705509634091225" id="8" periodic_surface_id="7" type="z-plane"/>
+  </geometry>
+  <settings>
+    <run_mode>fixed source</run_mode>
+    <particles>10000</particles>
+    <batches>10</batches>
+    <source_point>
+      <batches>10</batches>
+      <write>true</write>
+    </source_point>
+    <write_initial_source>true</write_initial_source>
+  </settings>
+  <tallies>
+    <mesh id="1">
+      <dimension>100 100</dimension>
+      <lower_left>-0.18705509634091225 -0.18705509634091225</lower_left>
+      <upper_right>0.18705509634091225 0.18705509634091225</upper_right>
+    </mesh>
+    <mesh id="2" type="spherical">
+      <r_grid>0.0 0.009352754817045613 0.018705509634091226 0.02805826445113684 0.03741101926818245 0.04676377408522807 0.05611652890227368 0.06546928371931929 0.0748220385363649 0.08417479335341052 0.09352754817045614 0.10288030298750174 0.11223305780454736 0.12158581262159297 0.13093856743863858 0.1402913222556842 0.1496440770727298 0.15899683188977543 0.16834958670682104 0.17770234152386666 0.18705509634091225</r_grid>
+      <theta_grid>0.0 3.141592653589793</theta_grid>
+      <phi_grid>0.0 6.283185307179586</phi_grid>
+      <origin>0.0 0.0 0.0</origin>
+    </mesh>
+    <filter id="2" type="mesh">
+      <bins>1</bins>
+    </filter>
+    <filter id="3" type="mesh">
+      <bins>2</bins>
+    </filter>
+    <filter id="1" type="cell">
+      <bins>1 2 3</bins>
+    </filter>
+    <tally id="1" name="flux">
+      <filters>2</filters>
+      <scores>flux fission absorption (n,gamma) (n,Xt) (n,2n)</scores>
+    </tally>
+    <tally id="2" name="radial_flux_spherical">
+      <filters>3</filters>
+      <scores>flux</scores>
+    </tally>
+    <tally id="3" name="total rxn rates">
+      <scores>absorption fission (n,gamma) (n,Xt)</scores>
+    </tally>
+    <tally id="4" name="rxn rates by cell">
+      <filters>1</filters>
+      <scores>absorption fission (n,gamma) (n,Xt)</scores>
+    </tally>
+  </tallies>
+</model>
