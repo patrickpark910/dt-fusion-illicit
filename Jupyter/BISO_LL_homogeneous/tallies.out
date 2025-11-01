@@ -1,7 +1,19 @@
- ===================>     TALLY 2: TOTAL RXN RATES     <====================
+ ===================>     TALLY 6: TOTAL RXN RATES     <====================
 
  Total Material
-   Absorption Rate                      1.00927 +/- 0.000987434
-   Fission Rate                         0.00235138 +/- 2.84953e-06
-   (n,gamma)                            0.0529977 +/- 5.15906e-05
-   (n,Xt)                               0.953716 +/- 0.000941437
+   Absorption Rate                      1.71723 +/- 0
+   Fission Rate                         0.00563545 +/- 0
+   (n,gamma)                            0.0902997 +/- 0
+   (n,Xt)                               1.61896 +/- 0
+ =================>     TALLY 7: RXN RATES BY ISOTOPE     <=================
+
+ U238
+   Absorption Rate                      0.0225907 +/- 0
+   Fission Rate                         0.00466033 +/- 0
+   (n,gamma)                            0.0179301 +/- 0
+   (n,Xt)                               2.04136e-08 +/- 0
+ U235
+   Absorption Rate                      0.00119617 +/- 0
+   Fission Rate                         0.000972211 +/- 0
+   (n,gamma)                            0.000223956 +/- 0
+   (n,Xt)                               5.86779e-10 +/- 0
