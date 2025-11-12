@@ -53,7 +53,7 @@ def main():
 
     elif run_type == 'tallies':
 
-        for breeder in ['LL','PB','FLiBe', ]: # 'ARC','ARCBall', make this match class name
+        for breeder in ['LL','PB','FLiBe', ]: # 'ARC','ARCBall','PB', make this match class name
             for fertile_element in ['U','Th']: # ,'Th']:
                 for fbd_kgm3 in FERTILE_BULK_DENSITY_KGM3: # [FERTILE_BULK_DENSITY_KGM3[0]]: # 
                     
