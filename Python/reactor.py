@@ -27,15 +27,15 @@ class Reactor(ABC):
 
         self.run_type    = run_type
         self.run_openmc  = run_openmc
-        self.n_particles = int(1e5)
-        self.n_cycles    = 10
+        self.n_particles = N_PARTICLES # int(1e6)
+        self.n_cycles    = N_CYCLES    # 10
 
         # All class templates must define these variables:
         self.temp_k          = None # TEMP_K
         self.breeder_name    = None # 'ARC'
-        self.breeder_density = None # DENSITY_FLIBE # g/cm^3
+        self.breeder_density = None # DENSITY_FLIBE # g/cm³
         self.breeder_enrich  = None # ENRICH_FLIBE  # wt%
-        self.breeder_volume  = None # ARC_BR_VOL    # m^3
+        self.breeder_volume  = None # ARC_BR_VOL    # m³
         self.name = None # f"{run_type}_{breeder_name}_{self.fertile_element}{fertile_bulk_density_kgm3:3.2f}kgm3_Li{self.breeder_enrich:04.1f}_{self.temp_k}K"         
         self.path = None # f"./OpenMC/{self.name}"
 
@@ -161,7 +161,7 @@ class Reactor(ABC):
         self.model.run(cwd=self.path)
 
 
-    def volumes(self, samples=int(1e8)):
+    def volumes(self, samples=int(1e10)):
         """
         Calculate volumes of all cells using OpenMC stochastic volume calculation.
         """

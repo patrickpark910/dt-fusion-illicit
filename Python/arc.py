@@ -12,9 +12,9 @@ class ARC(Reactor):
 
         self.temp_k          = TEMP_K
         self.breeder_name    = 'ARC'
-        self.breeder_density = DENSITY_FLIBE # g/cm^3
+        self.breeder_density = DENSITY_FLIBE # g/cm³
         self.breeder_enrich  = ENRICH_FLIBE  # wt%
-        self.breeder_volume  = ARC_BR_VOL    # m^3
+        self.breeder_volume  = ARC_BR_VOL    # m³
         self.R0, self.a, self.kappa, self.delta = ARC_R0, ARC_A, ARC_KAPPA, ARC_DELTA 
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
@@ -47,19 +47,19 @@ class ARC(Reactor):
 
         self.firstwall = openmc.Material(name='firstwall', temperature=self.temp_k)
         self.firstwall.depletable = False
-        self.firstwall.add_element('O',5/1e6,percent_type='wo')
-        self.firstwall.add_element('N',5/1e6,percent_type='wo')
-        self.firstwall.add_element('C',5/1e6,percent_type='wo')
-        self.firstwall.add_element('Na',4/1e6,percent_type='wo')
-        self.firstwall.add_element('K',2.5/1e6,percent_type='wo')
-        self.firstwall.add_element('Al',3/1e6,percent_type='wo')
-        self.firstwall.add_element('Ca',0.5/1e6,percent_type='wo')
-        self.firstwall.add_element('Cr',0.5/1e6,percent_type='wo')
-        self.firstwall.add_element('Cu',0.5/1e6,percent_type='wo')
-        self.firstwall.add_element('Fe',5/1e6,percent_type='wo')
-        self.firstwall.add_element('W',1-(5+5+5+4+2.5+3+0.5+0.5+0.5+5)/1e6,percent_type='wo')
-        # self.firstwall.add_element('W',1)
-        self.firstwall.set_density('g/cm3',19.3)
+        # self.firstwall.add_element('O',5/1e6,percent_type='wo')
+        # self.firstwall.add_element('N',5/1e6,percent_type='wo')
+        # self.firstwall.add_element('C',5/1e6,percent_type='wo')
+        # self.firstwall.add_element('Na',4/1e6,percent_type='wo')
+        # self.firstwall.add_element('K',2.5/1e6,percent_type='wo')
+        # self.firstwall.add_element('Al',3/1e6,percent_type='wo')
+        # self.firstwall.add_element('Ca',0.5/1e6,percent_type='wo')
+        # self.firstwall.add_element('Cr',0.5/1e6,percent_type='wo')
+        # self.firstwall.add_element('Cu',0.5/1e6,percent_type='wo')
+        # self.firstwall.add_element('Fe',5/1e6,percent_type='wo')
+        # self.firstwall.add_element('W',1-(5+5+5+4+2.5+3+0.5+0.5+0.5+5)/1e6,percent_type='wo')
+        self.firstwall.add_element('W',1)
+        self.firstwall.set_density('g/cm3',19.0)
         # The original first wall specs we were using from Ball 25 is 99.9969 wt% W 
         # and the rest O, N ,C, Na, K, Al, Ca, Cr, Cu, Fe impurities...
         # I think we can just set it to be W to save compute time loading nuclide data
@@ -76,19 +76,19 @@ class ARC(Reactor):
         # cf. osti.gov/servlets/purl/10194461 --ppark 2025-07-22
         self.structure.add_element('Cr',0.04,percent_type='wo')
         self.structure.add_element('Ti',0.04,percent_type='wo')
-        self.structure.add_element('C',56/1e6,percent_type='wo')
-        self.structure.add_element('O',181/1e6,percent_type='wo')
-        self.structure.add_element('N',103/1e6,percent_type='wo')
-        self.structure.add_element('B',7/1e6,percent_type='wo')
-        self.structure.add_element('Na',17/1e6,percent_type='wo')
-        self.structure.add_element('Mg',0.5/1e6,percent_type='wo')
-        self.structure.add_element('Al',119/1e6,percent_type='wo')
-        self.structure.add_element('Si',280/1e6,percent_type='wo')
-        self.structure.add_element('Mn',0.5/1e6,percent_type='wo')
-        self.structure.add_element('Fe',80/1e6,percent_type='wo')
-        self.structure.add_element('Ni',13/1e6,percent_type='wo')
-        self.structure.add_element('Cu',4/1e6,percent_type='wo')
-        self.structure.add_element('V',0.919139,percent_type='wo')
+        # self.structure.add_element('C',56/1e6,percent_type='wo')
+        # self.structure.add_element('O',181/1e6,percent_type='wo')
+        # self.structure.add_element('N',103/1e6,percent_type='wo')
+        # self.structure.add_element('B',7/1e6,percent_type='wo')
+        # self.structure.add_element('Na',17/1e6,percent_type='wo')
+        # self.structure.add_element('Mg',0.5/1e6,percent_type='wo')
+        # self.structure.add_element('Al',119/1e6,percent_type='wo')
+        # self.structure.add_element('Si',280/1e6,percent_type='wo')
+        # self.structure.add_element('Mn',0.5/1e6,percent_type='wo')
+        # self.structure.add_element('Fe',80/1e6,percent_type='wo')
+        # self.structure.add_element('Ni',13/1e6,percent_type='wo')
+        # self.structure.add_element('Cu',4/1e6,percent_type='wo')
+        self.structure.add_element('V',0.92,percent_type='wo') # 0.919139
         # 1-0.04-0.04-(56+181+103+7+17+0.5+119+280+0.5+80+13+4)/1e6 = 0.919139
         self.structure.set_density('g/cm3',6.05) 
         # This density value is sus and needs a good source --jlball 
