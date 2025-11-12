@@ -25,11 +25,6 @@ AMU_ThF4 = AMU_Th + 4 * AMU_F19
 AMU_UO2 = AMU_U + 2 * AMU_O
 AMU_ThO2 = AMU_Th + 2 * AMU_O
 AMU_FLIBE = 98.89 # g/mol
-DENSITY_UF4 = 6.7 # g/cm3
-DENSITY_ThF4 = 6.3 # g/cm3
-DENSITY_UO2 = 10.5 # g/cm3
-DENSITY_ThO2 = 10.0 # g/cm3
-DENSITY_SIC = 3.2 # g/cm3
 AMU_PU239 = 239.0521634
 AMU_U233 = 233.039635207
 SEC_PER_YR = 3600 * 24 * 365
@@ -104,11 +99,11 @@ def calc_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertil
       after conversaion with J.L. Ball --ppark 2025-07-03
 
     Args:
-        fertile_bulk_density_kgm3 : float : desired bulk density kg/m^3 of U-238 or Th-232 in blanket
-        breeder_volume_m3    : float : total volume m^3 of breeding regions in tokamak
+        fertile_bulk_density_kgm3 : float : desired bulk density kg/m³ of U-238 or Th-232 in blanket
+        breeder_volume_m3    : float : total volume m³ of breeding regions in tokamak
         fertile_element      : 'U' or 'Th' : identifies U-238 or Th-232 as the fertile isotope
         fertile_enrich       : float : wt% enrichment of the fertile material
-        breeder_density_kgm3 : float : density of FLiBe in kg/m^3
+        breeder_density_kgm3 : float : density of FLiBe in kg/m³
 
     Returns:
         (breeder_mass_frac, uf4_mass_frac) : 2-ple of floats : mass fractions
@@ -138,18 +133,17 @@ def calc_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertil
 
 def calc_biso_blanket_vol_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertile_element='U', fertile_enrich=0.71):
     """
-    Calculate mass fractions of PbLi and BISO particles.
-    Following Glaser & Goldston (2012), we assume the BISO/TRISO particles are homogenized 
-    throughout the blanket, rather than resolving discrete particles. 
-    The kernel/coating geometry is used only to set the relative mass or 
-    volume fractions of fertile vs. coating material.
+    Calculate volume fractions of breeding material and BISO particles.
+    Per Glaser & Goldston (2012), we assume the BISO/TRISO particles are homogenized 
+    throughout the blanket. The kernel/coating geometry is used only to set the 
+    relative mass or volume fractions of fertile vs. coating material.
     
     Args:
-        fertile_bulk_density_kgm3 : desired bulk density of fertile isotope in blanket [kg/m3]
-        breeder_volume_m3         : breeding region volume [m3]
+        fertile_bulk_density_kgm3 : desired bulk density of fertile isotope in blanket [kg/m³]
+        breeder_volume_m3         : breeding region volume [m³]
         fertile_element           : 'U' or 'Th'
         fertile_enrich            : enrichment fraction of fertile isotope [wt%]
-        breeder_density_kgm3      : density of PbLi [kg/m3]
+        breeder_density_kgm3      : density of PbLi [kg/m³]
     """
     fertile_enrich = fertile_enrich*0.01 # OpenMC uses this in % but we want fraction
 
@@ -162,7 +156,7 @@ def calc_biso_blanket_vol_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fe
         U_molar_mass = (1 - fertile_enrich) * AMU_U238 + fertile_enrich * AMU_U235
         UO2_mass_g = U_mass_g * ((U_molar_mass+2*AMU_O)/U_molar_mass)
 
-        # Total volume of BISO [cm3] 
+        # Total volume of BISO [cm³] 
         biso_vol_cm3 = UO2_mass_g / DENSITY_UO2 * BISO_RADIUS**3 / BISO_KERNEL_RADIUS**3
 
         # Volume fractions
@@ -180,7 +174,7 @@ def calc_biso_blanket_vol_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fe
         # Total mass of UO2 [g]
         ThO2_mass_g = Th_mass_g * ((AMU_Th+2*AMU_O)/AMU_Th)
 
-        # Total volume of BISO [cm3] 
+        # Total volume of BISO [cm³] 
         biso_vol_cm3 = ThO2_mass_g / DENSITY_ThO2 * BISO_RADIUS**3 / BISO_KERNEL_RADIUS**3
 
         # Volume fractions
@@ -188,33 +182,6 @@ def calc_biso_blanket_vol_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fe
         breeder_vf = 1 - biso_vf
 
         return breeder_vf, biso_vf
-
-
-
-
-
-
-
-
-
-def extract_lie(path: str) -> float:
-    """
-    Extract the float value following 'Li' in the given path string.
-
-    Args:
-        path (str): A filename or identifier containing a substring like 'Li<value>'.
-
-    Returns:
-        float: The numeric value that immediately follows 'Li'.
-
-    Raises:
-        ValueError: If no valid 'Li<value>' pattern is found.
-    """
-    pattern = re.compile(r'Li([+-]?\d+(?:\.\d+)?)')
-    match = pattern.search(path)
-    if not match:
-        raise ValueError(f"No 'Li<value>' pattern found in: {path!r}")
-    return float(match.group(1))
 
 
 def set_xs_path():
