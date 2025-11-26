@@ -3,7 +3,7 @@
 
 # Run settings
 FERTILE_BULK_DENSITY_KGM3 = [0, 0.03, 0.3, 0.6, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 1000]
-BREEDERS = ['ARC','ARCBall','FLiBe','LL','PB']
+BREEDERS = ['ARC','ARCBall','FLiBe','DCLL','HCPB']
 BLANKET_COVERAGE = 0.8 # Assume blanket covers 80% of plasma surface, rest for divertor
 TEMP_K = 900 # [K] ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
 

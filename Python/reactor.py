@@ -245,7 +245,7 @@ class Reactor(ABC):
                       # Void regions will be white by default
                       }
 
-        elif self.breeder_name in ['LL']:
+        elif self.breeder_name in ['DCLL']:
             colors = {self.firstwall: (30, 27, 41),           # very dark gray
                       self.structure: (109, 110, 113),        # gray
                       self.coolant: (37, 150, 190), # cobalt blue 
@@ -255,7 +255,7 @@ class Reactor(ABC):
                       # Void regions will be white by default
                       }
 
-        elif self.breeder_name in ['PB']:
+        elif self.breeder_name in ['HCPB']:
             colors = {self.firstwall: (30, 27, 41),           # very dark gray
                       self.structure: (109, 110, 113),        # gray
                       self.blanket: (129, 204, 185),          # teal

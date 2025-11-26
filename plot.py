@@ -33,17 +33,17 @@ class Plot:
         # Dataframes of reaction rates (rr)
         self.flibe_u_rr_df  = pd.read_csv('./Figures/Data/FLiBe_U_rxns_900K.csv')
         self.flibe_th_rr_df = pd.read_csv('./Figures/Data/FLiBe_Th_rxns_900K.csv')
-        self.pbli_u_rr_df   = pd.read_csv('./Figures/Data/LL_U_rxns_900K.csv')
-        self.pbli_th_rr_df  = pd.read_csv('./Figures/Data/LL_Th_rxns_900K.csv')
-        self.pb_u_rr_df     = pd.read_csv('./Figures/Data/PB_U_rxns_900K.csv')
-        self.pb_th_rr_df    = pd.read_csv('./Figures/Data/PB_Th_rxns_900K.csv')
+        self.dcll_u_rr_df   = pd.read_csv('./Figures/Data/LL_U_rxns_900K.csv')
+        self.dcll_th_rr_df  = pd.read_csv('./Figures/Data/LL_Th_rxns_900K.csv')
+        self.hcpb_u_rr_df     = pd.read_csv('./Figures/Data/hcpb_U_rxns_900K.csv')
+        self.hcpb_th_rr_df    = pd.read_csv('./Figures/Data/hcpb_Th_rxns_900K.csv')
 
         self.flibe_u_eb_df  = pd.read_csv('./Figures/Data/FLiBe_U_n-gamma_900K.csv')
         self.flibe_th_eb_df = pd.read_csv('./Figures/Data/FLiBe_Th_n-gamma_900K.csv')
-        self.pbli_u_eb_df   = pd.read_csv('./Figures/Data/LL_U_n-gamma_900K.csv')
-        self.pbli_th_eb_df  = pd.read_csv('./Figures/Data/LL_Th_n-gamma_900K.csv')
-        self.pb_u_eb_df     = pd.read_csv('./Figures/data/PB_U_n-gamma_900K.csv') 
-        self.pb_th_eb_df    = pd.read_csv('./Figures/data/PB_Th_n-gamma_900K.csv') 
+        self.dcll_u_eb_df   = pd.read_csv('./Figures/Data/LL_U_n-gamma_900K.csv')
+        self.dcll_th_eb_df  = pd.read_csv('./Figures/Data/LL_Th_n-gamma_900K.csv')
+        self.hcpb_u_eb_df     = pd.read_csv('./Figures/data/hcpb_U_n-gamma_900K.csv') 
+        self.hcpb_th_eb_df    = pd.read_csv('./Figures/data/hcpb_Th_n-gamma_900K.csv') 
 
         self.save, self.show = save, show
         # self.name = 'All_Blankets'
@@ -58,10 +58,10 @@ class Plot:
         print(f"\nPlotting tritium breeding ratio vs. fertile density...")
 
         # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
-        x6, y6 =     self.pb_u_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * (    self.pb_u_rr_df['Li6(n,t)'] +     self.pb_u_rr_df['Li7(n,Xt)'] )
-        x5, y5 =    self.pb_th_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * (   self.pb_th_rr_df['Li6(n,t)'] +    self.pb_th_rr_df['Li7(n,Xt)'] )
-        x4, y4 =   self.pbli_u_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * (  self.pbli_u_rr_df['Li6(n,t)'] +   self.pbli_u_rr_df['Li7(n,Xt)'] )
-        x3, y3 =  self.pbli_th_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * ( self.pbli_th_rr_df['Li6(n,t)'] +  self.pbli_th_rr_df['Li7(n,Xt)'] )
+        x6, y6 =   self.hcpb_u_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * (  self.hcpb_u_rr_df['Li6(n,t)'] +   self.hcpb_u_rr_df['Li7(n,Xt)'] )
+        x5, y5 =  self.hcpb_th_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * ( self.hcpb_th_rr_df['Li6(n,t)'] +  self.hcpb_th_rr_df['Li7(n,Xt)'] )
+        x4, y4 =   self.dcll_u_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * (  self.dcll_u_rr_df['Li6(n,t)'] +   self.dcll_u_rr_df['Li7(n,Xt)'] )
+        x3, y3 =  self.dcll_th_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * ( self.dcll_th_rr_df['Li6(n,t)'] +  self.dcll_th_rr_df['Li7(n,Xt)'] )
         x2, y2 =  self.flibe_u_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * ( self.flibe_u_rr_df['Li6(n,t)'] +  self.flibe_u_rr_df['Li7(n,Xt)'] )
         x1, y1 = self.flibe_th_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * (self.flibe_th_rr_df['Li6(n,t)'] + self.flibe_th_rr_df['Li7(n,Xt)'] )
 
@@ -156,10 +156,10 @@ class Plot:
         u233_at_to_kg_per_yr  = tot_n_per_yr / AVO * AMU_U233  / 1e3
         
         # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
-        x6, y6 =     self.pb_u_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * pu239_at_to_kg_per_yr *     self.pb_u_rr_df['U238(n,g)'] 
-        x5, y5 =    self.pb_th_rr_df['fertile_kg/m3'], BLANKET_COVERAGE *  u233_at_to_kg_per_yr *    self.pb_th_rr_df['Th232(n,g)']
-        x4, y4 =   self.pbli_u_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * pu239_at_to_kg_per_yr *   self.pbli_u_rr_df['U238(n,g)'] 
-        x3, y3 =  self.pbli_th_rr_df['fertile_kg/m3'], BLANKET_COVERAGE *  u233_at_to_kg_per_yr *  self.pbli_th_rr_df['Th232(n,g)']
+        x6, y6 =   self.hcpb_u_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * pu239_at_to_kg_per_yr *   self.hcpb_u_rr_df['U238(n,g)'] 
+        x5, y5    self.hcpb_th_rr_df['fertile_kg/m3'], BLANKET_COVERAGE *  u233_at_to_kg_per_yr *  self.hcpb_th_rr_df['Th232(n,g)']
+        x4, y4 =   self.dcll_u_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * pu239_at_to_kg_per_yr *   self.dcll_u_rr_df['U238(n,g)'] 
+        x3, y3 =  self.dcll_th_rr_df['fertile_kg/m3'], BLANKET_COVERAGE *  u233_at_to_kg_per_yr *  self.dcll_th_rr_df['Th232(n,g)']
         x2, y2 =  self.flibe_u_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * pu239_at_to_kg_per_yr *  self.flibe_u_rr_df['U238(n,g)']
         x1, y1 = self.flibe_th_rr_df['fertile_kg/m3'], BLANKET_COVERAGE *  u233_at_to_kg_per_yr * self.flibe_th_rr_df['Th232(n,g)']
 
@@ -241,7 +241,7 @@ class Plot:
         fig, axes = plt.subplots(3, 2, figsize=(15,15)) # sharex='col', sharey='row', 
 
         titles = [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$", r"PB-UO$_2$", r"PB-ThO$_2$", r"LL-UO$_2$", r"LL-ThO$_2$",]
-        dfs    = [self.flibe_u_eb_df, self.flibe_th_eb_df, self.pb_u_eb_df, self.pb_th_eb_df, self.pbli_u_eb_df, self.pbli_th_eb_df,]
+        dfs    = [self.flibe_u_eb_df, self.flibe_th_eb_df, self.hcpb_u_eb_df, self.hcpb_th_eb_df, self.dcll_u_eb_df, self.dcll_th_eb_df,]
 
         for ax, df, title in zip(axes.flatten(), dfs, titles):
 

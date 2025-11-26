@@ -11,6 +11,7 @@ AMU_U = 238.02891 # for natural enrichment
 AMU_U234 = 234.0409456
 AMU_U235 = 235.0439299
 AMU_U238 = 238.05078826
+AMU_He4 = 4.0026 # [amu]
 AMU_O   = 15.999
 AMU_Th = 232.0381
 AMU_UF4 = AMU_U + 4 * AMU_F19
@@ -24,6 +25,7 @@ DENSITY_UO2 = 10.5 # g/cm³
 DENSITY_ThO2 = 10.0 # g/cm³
 DENSITY_SIC = 3.2 # g/cm³
 DENSITY_LI4SIO4 = 2.17 # g/cm3 at 900 K
+DENSITY_He  = 0.00428 # g/cm3 at 900 K, 8 MPa
 DENSITY_Be  = 1.80 # g/cm3 at 900 K
 AMU_PU239 = 239.0521634
 AMU_U233 = 233.039635207
@@ -185,10 +187,12 @@ def calculate_atomic_fractions(breeder, biso_vol_frac, li6_enrichment_at_percent
         vol_breeder = vol_total - BISO_VOLUME
         vol_li4sio4 = (0.1304 / (0.1304+0.3790)) * vol_breeder
         vol_be      = (0.3790 / (0.1304+0.3790)) * vol_breeder
+        vol_he      = (0.423/(1-0.423)) * vol_breeder # --ppark 2025-11-25
 
         amu_li4sio4 = 4*amu_li_avg + AMU_SI + 4*AMU_O
         mol_li4sio4 = vol_li4sio4 * DENSITY_LI4SIO4 / amu_li4sio4
         mol_be      = vol_be * DENSITY_Be / AMU_Be9
+        mol_he      = vol_he * DENSITY_He / AMU_He4
 
         # Lithium isotopes
         mols['3006'] = 4*mol_li4sio4 * li6_frac
@@ -207,8 +211,16 @@ def calculate_atomic_fractions(breeder, biso_vol_frac, li6_enrichment_at_percent
         # Beryllium (Be-9, 100% natural abundance)
         mols['4009'] = mol_be 
 
-        density_breeder = (vol_li4sio4*DENSITY_LI4SIO4 + vol_be*DENSITY_Be)/vol_breeder
-        rho_total = (mass_uo2 + mass_sic + vol_li4sio4*DENSITY_LI4SIO4 + vol_be*DENSITY_Be)/vol_total
+        # Helium (He-4, 100% natural abundance)
+        mols['2004'] = mol_he
+
+        density_breeder = (vol_li4sio4*DENSITY_LI4SIO4 + vol_be*DENSITY_Be + vol_he*DENSITY_He)/ (vol_breeder+vol_he)
+        rho_total = (mass_uo2 + mass_sic + vol_li4sio4*DENSITY_LI4SIO4 + vol_be*DENSITY_Be + vol_he*DENSITY_He)/ (vol_total+vol_he)
+
+        cube_vol = vol_total + vol_he 
+        cube_half = cube_vol**(1/3) * 1/2
+        print(f"*****Try cube volume of {cube_vol:.4e} [cm]")
+        print(f"*****Try cube half-length of {cube_half:.6f} [cm]")
     
     # Carbon isotopes from SiC
     mols['6012'] = mol_sic * C12_ABUNDANCE 
@@ -253,8 +265,9 @@ def print_pebble_het():
     """
 
     # Volume fractions of Li4SiO4 and Be based on EU DEMO HCPB
-    vf_li4sio4 = (0.1304 / (0.1304+0.3790)) 
-    vf_be      = (0.3790 / (0.1304+0.3790)) 
+    vf_li4sio4 = (0.1304 / (0.1304+0.3790+0.3730)) 
+    vf_be      = (0.3790 / (0.1304+0.3790+0.3730)) 
+    vf_he      = (0.3730 / (0.1304+0.3790+0.3730))
 
     # Moles of Li4SiO4 and Be
     li6_frac = 0.60
@@ -263,11 +276,13 @@ def print_pebble_het():
     amu_li4sio4 = 4*amu_li_avg + AMU_SI + 4*AMU_O
     mol_li4sio4 = vf_li4sio4 * DENSITY_LI4SIO4 / amu_li4sio4
     mol_be      = vf_be * DENSITY_Be / AMU_Be9
+    mol_he      = vf_he * DENSITY_He / AMU_He4
 
     # Molar fractions of Li4SiO4 and Be
-    mf_li4sio4 = mol_li4sio4 / (mol_li4sio4+mol_be)
-    mf_be      =      mol_be / (mol_li4sio4+mol_be)
-    mol_total  = 9*mol_li4sio4 + mol_be
+    mf_li4sio4 = mol_li4sio4 / (mol_li4sio4+mol_be+mol_he)
+    mf_be      =      mol_be / (mol_li4sio4+mol_be+mol_he)
+    mf_he      =      mol_he / (mol_li4sio4+mol_be+mol_he)
+    mol_total  = 9*mol_li4sio4 + mol_be + mol_he
 
     ''' Multiply molar ratios to molar fractions '''
     mols = {}
@@ -289,8 +304,13 @@ def print_pebble_het():
     # Beryllium (Be-9, 100% natural abundance)
     mols['4009'] = mol_be/mol_total
 
+    # Helium (He-4, 100% natural abundance)
+    mols['2004'] = mol_he/mol_total
+
     print(f"c       ----------------------------------------------------------------------------")
-    print(f"c       Li4SiO4 ({vf_li4sio4*100:.2f} vol% = {mf_li4sio4*100:.2f} mol%, 60 at% Li-6) - Be ({vf_be*100:.2f} vol% = {mf_be*100:.2f} mol%)")
+    print(f"c       Li4SiO4 ({vf_li4sio4*100:.2f} vol% = {mf_li4sio4*100:.2f} mol%, 60 at% Li-6)")
+    print(f"c       Be      ({vf_be*100:.2f} vol% = {mf_be*100:.2f} mol%)                       ")
+    print(f"c       He      ({vf_he*100:.2f} vol% = {mf_he*100:.2f} mol%)                       ")
     print(f"c       ----------------------------------------------------------------------------")
     print(f"c                                                                              ")
     print(f" m300    3006.02c  {mols['3006']:.6f}  $  {4*mol_li4sio4/mol_total:.4f} *  60.000 at% in Li")
@@ -302,6 +322,7 @@ def print_pebble_het():
     print(f"         8017.02c  {mols['8017']:.6f}  $  {4*mol_li4sio4/mol_total:.4f} *   0.038 at% in O")
     print(f"         8018.02c  {mols['8018']:.6f}  $  {4*mol_li4sio4/mol_total:.4f} *   0.205 at% in O")
     print(f"         4009.02c  {mols['4009']:.6f}  $  {mol_be/mol_total:.4f} * 100.000 at% in Be")
+    print(f"         2004.02c  {mols['2004']:.6f}  $  {mol_he/mol_total:.4f} * 100.000 at% in He")
 
  
 
@@ -314,6 +335,7 @@ def print_atomic_fractions(atomic_fractions):
     """
     # Define the order and format for output with isotopic abundances
     isotope_data = {
+         '2004': (' 2004.02c', 'He', 100.000),
          '9019': (' 9019.02c', 'F',  100.000),   # F-19 is 100% of natural F
          '3006': (' 3006.02c', 'Li', None),      # Will be calculated
          '3007': (' 3007.02c', 'Li', None),      # Will be calculated
@@ -349,7 +371,7 @@ def print_atomic_fractions(atomic_fractions):
     print("-" * 70)
     
     # Print in specified order
-    output_order = ['82204', '82206', '82207', '82208', 
+    output_order = ['2004','82204', '82206', '82207', '82208', 
                     '9019', '3006', '3007','4009',
                     '14028', '14029', '14030',
                     '6012', '6013', 
@@ -398,7 +420,7 @@ def calculate_weight_fraction(atom_fraction_li6):
 if __name__ == "__main__":
 
     # Calculate atomic fractions
-    biso_vol_frac  = float(0.50) # 0.01 # 0.50
+    biso_vol_frac  = float(0.01) # 0.01 # 0.50
     li6_enrichment = float(60) # 7.5 wt% = 8.640288 at% # 20 wt% = 22.576908 at%
     atomic_fractions = calculate_atomic_fractions('pebble', biso_vol_frac, li6_enrichment) # biso_vol_frac, li6_enrichment) #  
     print_atomic_fractions(atomic_fractions)
@@ -438,10 +460,3 @@ if __name__ == "__main__":
     # print(KERNEL_VOLUME)
     # print(BISO_VOLUME-KERNEL_VOLUME)
     # print(l**3-BISO_VOLUME)
-
-    # print(f"{(0.83* 1.400/100):.6f}")
-    # print(f"{(0.83*24.100/100):.6f}")
-    # print(f"{(0.83*22.100/100):.6f}")
-    # print(f"{(0.83*52.400/100):.6f}")
-    # print(f"{(0.17*90.000/100):.6f}")
-    # print(f"{(0.17*10.000/100):.6f}")
