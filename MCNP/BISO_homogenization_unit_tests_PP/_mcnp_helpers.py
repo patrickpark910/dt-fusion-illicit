@@ -187,7 +187,7 @@ def calculate_atomic_fractions(breeder, biso_vol_frac, li6_enrichment_at_percent
         vol_breeder = vol_total - BISO_VOLUME
         vol_li4sio4 = (0.1304 / (0.1304+0.3790)) * vol_breeder
         vol_be      = (0.3790 / (0.1304+0.3790)) * vol_breeder
-        vol_he      = (0.423/(1-0.423)) * vol_breeder # --ppark 2025-11-25
+        vol_he      = (0.423/(1-0.423)) * vol_breeder # 0.423 --ppark 2025-11-25
 
         amu_li4sio4 = 4*amu_li_avg + AMU_SI + 4*AMU_O
         mol_li4sio4 = vol_li4sio4 * DENSITY_LI4SIO4 / amu_li4sio4

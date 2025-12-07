@@ -12,10 +12,10 @@ class DCLL(Reactor):
 
         self.temp_k          = TEMP_K
         self.breeder_name    = 'DCLL'
-        self.breeder_density = DENSITY_LL # [g/cm³]
-        self.breeder_enrich  = ENRICH_LL  # [at%]
-        self.breeder_volume  = LL_BR_VOL  # [m³]
-        self.R0, self.a, self.kappa, self.delta = LL_R0, LL_A, LL_KAPPA, LL_DELTA
+        self.breeder_density = DENSITY_DCLL # [g/cm³]
+        self.breeder_enrich  = ENRICH_DCLL  # [at%]
+        self.breeder_volume  = DCLL_BR_VOL  # [m³]
+        self.R0, self.a, self.kappa, self.delta = DCLL_R0, DCLL_A, DCLL_KAPPA, DCLL_DELTA
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
         self.name = f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_element}{self.fertile_bulk_density_kgm3:06.2f}kgm3"         
@@ -191,19 +191,19 @@ class DCLL(Reactor):
         # Tokamak geometry parameters 
         # ------------------------------------------------------------------
 
-        d_fw   = LL_FW_CM
-        d_fwf  = d_fw   + LL_FWF_CM  # front wall front
-        d_fwc  = d_fwf  + LL_FWC_CM  # front wall cooling channel
-        d_fwb  = d_fwc  + LL_FWB_CM  # front wall back
-        d_br1  = d_fwb  + LL_BR1_CM  # breeding region 1
-        d_d1   = d_br1  + LL_D1_CM   # divider 1 
-        d_br2  = d_d1   + LL_BR2_CM  # breeding region 2
+        d_fw   = DCLL_FW_CM
+        d_fwf  = d_fw   + DCLL_FWF_CM  # front wall front
+        d_fwc  = d_fwf  + DCLL_FWC_CM  # front wall cooling channel
+        d_fwb  = d_fwc  + DCLL_FWB_CM  # front wall back
+        d_br1  = d_fwb  + DCLL_BR1_CM  # breeding region 1
+        d_d1   = d_br1  + DCLL_D1_CM   # divider 1 
+        d_br2  = d_d1   + DCLL_BR2_CM  # breeding region 2
         
-        d_d2_o  = d_br2    + LL_D2_O_CM    # only on outboard blanket
-        d_br3_o = d_d2_o   + LL_BR3_O_CM   # only on outboard blanket
-        d_im_o  = d_br3_o  + LL_IM_CM    # only on outboard blanket
+        d_d2_o  = d_br2    + DCLL_D2_O_CM    # only on outboard blanket
+        d_br3_o = d_d2_o   + DCLL_BR3_O_CM   # only on outboard blanket
+        d_im_o  = d_br3_o  + DCLL_IM_CM    # only on outboard blanket
         
-        d_im_i  = d_br2  + LL_IM_CM   # inboard blanket
+        d_im_i  = d_br2  + DCLL_IM_CM   # inboard blanket
 
         self.extent_r = (self.R0 + self.a + d_im_o)  * 1.2  # 120% radial extent
         self.extent_z = (self.kappa*self.a + d_im_o) * 1.2  # 120% vertical extent

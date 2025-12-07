@@ -12,8 +12,8 @@ class HCPB(Reactor):
 
         self.temp_k          = TEMP_K
         self.breeder_name    = 'HCPB'
-        self.breeder_enrich  = ENRICH_PB  # at% 
-        self.breeder_volume  = PB_BR_VOL  
+        self.breeder_enrich  = ENRICH_HCPB  # at% 
+        self.breeder_volume  = HCPB_BR_VOL  
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
         self.name = f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_element}{self.fertile_bulk_density_kgm3:06.2f}kgm3"         
@@ -105,8 +105,8 @@ class HCPB(Reactor):
 
         li4sio4 = openmc.Material(name='Li4SiO4', temperature=self.temp_k) 
         li4sio4.set_density('g/cm3', 2.17)  # normalized for ceramic porosity and 900 K (pure, room temp g/cm3 = 2.42)
-        li4sio4.add_elements_from_formula('Li4SiO4', enrichment_target='Li6', enrichment_type='ao', enrichment=ENRICH_PB) 
-        # self.lithium_ceramic.add_elements('Li', 22.415, percent_type='wo', enrichment_target='Li6', enrichment_type='ao', enrichment=ENRICH_PB) 
+        li4sio4.add_elements_from_formula('Li4SiO4', enrichment_target='Li6', enrichment_type='ao', enrichment=ENRICH_HCPB) 
+        # self.lithium_ceramic.add_elements('Li', 22.415, percent_type='wo', enrichment_target='Li6', enrichment_type='ao', enrichment=ENRICH_HCPB) 
         # self.lithium_ceramic.add_element('Si', 24.077, percent_type='wo') 
         # self.lithium_ceramic.add_element('O', 53.39, percent_type='wo') 
         # self.lithium_ceramic.add_element('Al', 0.003, percent_type='wo') 
@@ -221,15 +221,15 @@ class HCPB(Reactor):
         # Tokamak geometry parameters 
         # ------------------------------------------------------------------
 
-        self.R0, self.a, self.kappa, self.delta = PB_R0, PB_A, PB_KAPPA, PB_DELTA
+        self.R0, self.a, self.kappa, self.delta = HCPB_R0, HCPB_A, HCPB_KAPPA, HCPB_DELTA
 
-        d_fw  = PB_FW_CM 
-        d_st1 = d_fw  + PB_ST1_CM
-        d_br1 = d_st1 + PB_BR1_I_CM
-        d_st2 = d_br1 + PB_ST2_CM
+        d_fw  = HCPB_FW_CM 
+        d_st1 = d_fw  + HCPB_ST1_CM
+        d_br1 = d_st1 + HCPB_BR1_I_CM
+        d_st2 = d_br1 + HCPB_ST2_CM
         
-        d_br1_o = d_st1    + PB_BR1_O_CM   # only on outboard blanket
-        d_st2_o = d_br1_o  + PB_ST2_CM     # only on outboard blanket
+        d_br1_o = d_st1    + HCPB_BR1_O_CM   # only on outboard blanket
+        d_st2_o = d_br1_o  + HCPB_ST2_CM     # only on outboard blanket
         
         self.extent_r = (self.R0 + self.a + d_st2_o)*1.2 # 110%
         self.extent_z = (self.kappa*self.a + d_st2_o)*1.2

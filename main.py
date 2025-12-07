@@ -30,7 +30,7 @@ def main():
 
 
     if run_type == 'plot':
-        for breeder in ['ARC','ARCBall','FLiBe','DCLL', 'HCPB']: # make this match class name
+        for breeder in ['ARC','ARC-B','FLiBe','DCLL', 'HCPB']: # make this match class name
             
             current_run = build_reactor(breeder, breeder_name=breeder, run_type='plot', run_openmc=True)
 
@@ -41,7 +41,7 @@ def main():
 
 
     elif run_type == 'volume':
-        for breeder in ['ARC','ARCBall','FLiBe','DCLL', 'HCPB']: # make this match class name
+        for breeder in ['ARC','ARC-B','FLiBe','DCLL', 'HCPB']: # make this match class name
 
             current_run = build_reactor(breeder, breeder_name=breeder, run_type='volume', run_openmc=True)
             
@@ -53,7 +53,7 @@ def main():
 
     elif run_type == 'tallies':
 
-        for breeder in ['DCLL','HCPB','FLiBe', ]: # 'ARC','ARCBall','HCPB', make this match class name
+        for breeder in ['DCLL','HCPB','FLiBe', ]: # 'ARC','ARC-B','HCPB', make this match class name
             for fertile_element in ['U','Th']: # ,'Th']:
                 for fbd_kgm3 in FERTILE_BULK_DENSITY_KGM3: # [FERTILE_BULK_DENSITY_KGM3[0]]: # 
                     

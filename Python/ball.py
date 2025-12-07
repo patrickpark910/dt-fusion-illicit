@@ -6,12 +6,12 @@ from Python.parameters import *
 from Python.utilities  import *
 
 
-class ARCBall(Reactor):
+class ARCB(Reactor):
 
     def initialize(self):
 
         self.temp_k          = TEMP_K
-        self.breeder_name    = 'ARCBall'
+        self.breeder_name    = 'ARC-B'
         self.breeder_density = DENSITY_FLIBE  # g/cm³
         self.breeder_enrich  = ENRICH_FLIBE   # wt%
         self.breeder_volume  = BALL_BR_VOL    # m³

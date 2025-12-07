@@ -85,6 +85,18 @@ def main():
     print(f"Actual vol frac Li4SiO4 : {vf_A_AB:.6f} ")
     print(f"Actual vol frac Be      : {vf_B_AB:.6f} ")
 
+    vol_he  = cube_vol - vol_A - vol_B - V_C0
+    vf_he   = vol_he / (vol_A + vol_B + vol_he)
+    vf_be   = vol_B / (vol_A + vol_B + vol_he)
+    vf_li   = vol_A / (vol_A + vol_B + vol_he)
+    vf_biso = V_C0 / (vol_A+vol_B+V_C0)
+    print(f"Volume fraction He/(Li+Be+He): {vf_he}")
+    print(f"Volume fraction Li/(Li+Be+He): {vf_li}")
+    print(f"Volume fraction Be/(Li+Be+He): {vf_be}")
+    print(f"Volume fraction BISO/(Li+Be):  {vf_biso}")
+
+
+
     ''' TURN ON WHEN YOU NEED TO ACTUALLY GENERATE NEW SET OF POINTS
     """ Populate empty spaces between Be (B) and BISO (C) with Li4SiO4 pebbles (A) """
     GRID_STEP = 0.0005  # [cm]
