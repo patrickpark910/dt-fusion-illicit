@@ -130,7 +130,6 @@ def calc_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertil
         return breeder_mass_frac, thf4_mass_frac
 
 
-
 def calc_biso_blanket_vol_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertile_element='U', fertile_enrich=0.71):
     """
     Calculate volume fractions of breeding material and BISO particles.
@@ -148,17 +147,13 @@ def calc_biso_blanket_vol_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fe
     fertile_enrich = fertile_enrich*0.01 # OpenMC uses this in % but we want fraction
 
     if fertile_element == 'U':
-
         # Total mass of elemental uranium to be added to system [g]
         U_mass_g = (fertile_bulk_density_kgm3*1e3 * breeder_volume_m3) / (1 - fertile_enrich)
-
         # Total mass of UO2 [g]
         U_molar_mass = (1 - fertile_enrich) * AMU_U238 + fertile_enrich * AMU_U235
         UO2_mass_g = U_mass_g * ((U_molar_mass+2*AMU_O)/U_molar_mass)
-
         # Total volume of BISO [cm³] 
         biso_vol_cm3 = UO2_mass_g / DENSITY_UO2 * BISO_RADIUS**3 / BISO_KERNEL_RADIUS**3
-
         # Volume fractions
         biso_vf    = biso_vol_cm3 / (breeder_volume_m3*1e6)
         breeder_vf = 1 - biso_vf
@@ -170,18 +165,37 @@ def calc_biso_blanket_vol_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fe
 
         # Total mass of elemental uranium to be added to system [g]
         Th_mass_g = (fertile_bulk_density_kgm3*1e3 * breeder_volume_m3) # / (1 - fertile_enrich)
-
         # Total mass of UO2 [g]
         ThO2_mass_g = Th_mass_g * ((AMU_Th+2*AMU_O)/AMU_Th)
-
         # Total volume of BISO [cm³] 
         biso_vol_cm3 = ThO2_mass_g / DENSITY_ThO2 * BISO_RADIUS**3 / BISO_KERNEL_RADIUS**3
-
         # Volume fractions
         biso_vf    = biso_vol_cm3 / (breeder_volume_m3*1e6)
         breeder_vf = 1 - biso_vf
 
         return breeder_vf, biso_vf
+
+def wedge_angle_from_volume(V, d, h):
+    """
+    Solve for wedge angle theta (radians) given:
+      V volume between distances d and d+h (cm^3)
+      d distance from apex point to inner face (cm)
+      h segment thickness (cm)
+    we have square cross-sections with sides a(d)=2*d*sin(theta/2).
+    """
+    bracket = d**2 + (d + h)**2 + d*(d + h)
+    tan2 = (3.0 * V) / (4.0 * h * bracket)
+
+    if tan2 <= 0:
+        raise ValueError(f"tan^2(theta/2) <= 0 ({tan2}). Check V,d,h.")
+    theta = 2.0 * np.arctan(np.sqrt(tan2))
+    return theta
+
+def side_lengths(d, h, theta):
+    """Return (a,b) square side lengths at distances d and d+h."""
+    a = 2.0 * d * np.tan(theta/2.0)
+    b = 2.0 * (d + h) * np.tan(theta/2.0)
+    return a, b
 
 
 def set_xs_path():
@@ -269,6 +283,7 @@ def miller_model(R0, a, kappa, delta, extrude=0, calc_vol=False, n=100):
 
     # return R_offset, Z_offset
     return list(zip(R_offset, Z_offset))
+
 
 
 def timer(func):
