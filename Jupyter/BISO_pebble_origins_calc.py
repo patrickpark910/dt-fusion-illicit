@@ -29,7 +29,7 @@ def main():
     # Target volume fractions 
     frac_A_in_AB  = 0.256
     frac_B_in_AB  = 0.744 
-    frac_C_in_ABC = 0.5   # 0.010  # BISO is 1 vol% of total
+    frac_C_in_ABC = 0.05   # 0.010  # BISO is 1 vol% of total
 
     # Scaling factor - for testing purposes 
     CUBE_SCALE = 1.00
@@ -97,7 +97,7 @@ def main():
 
 
 
-    ''' TURN ON WHEN YOU NEED TO ACTUALLY GENERATE NEW SET OF POINTS
+    # ''' TURN ON WHEN YOU NEED TO ACTUALLY GENERATE NEW SET OF POINTS
     """ Populate empty spaces between Be (B) and BISO (C) with Li4SiO4 pebbles (A) """
     GRID_STEP = 0.0005  # [cm]
 
@@ -145,7 +145,7 @@ def main():
     print("\nCentral C sphere center (cm):", C_coords)
     print("Number of A spheres placed:", len(A_coords))
     print("Number of B spheres placed:", len(B_coords))
-    '''
+    # '''
 
 
 

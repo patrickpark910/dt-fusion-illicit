@@ -311,10 +311,13 @@ class Reactor(ABC):
             print(f"\n{e}\n")
             sys.exit(f"can't read the sp")
 
-
-        """ Convert tallies into usable forms """
-        # Read tallies
+        
         print(f"Reading tallies...")
+
+        """
+        Convert tallies into usable forms. These dataframes have headers:
+        cell  energy low [eV]  energy high [eV] nuclide score     mean  std. dev.  energy mid [eV]
+        """
 
         flux      = sp.get_tally(name='flux').get_pandas_dataframe()
         flux_spec = sp.get_tally(name='flux spectrum').get_pandas_dataframe()
@@ -334,7 +337,16 @@ class Reactor(ABC):
             (index), cell, energy low [eV], energy high [eV], nuclide, score, mean, std. dev., energy mid [eV]
         """
 
-        """ Reaction rates for every fertile loading and for every energy bin """
+        """
+        Reaction rates for every fertile loading and for every energy bin 
+
+
+        """
+        # print(flux_spec)
+        # Flux spectrum dataframe
+        flux_Ebin_df     = flux_spec[flux_spec['cell'].between(30, 39, inclusive='both')]  # extract the breeding region cells (30-39)
+        # flux_Ebin_df     = flux_Ebin_df.groupby('energy mid [eV]', as_index=False)['mean'].sum() # add 'mean' for matching 'energy mid [eV]' for each unique cell (31, 32...)
+
         U238_ng_Ebin_df  = fertile_spec[(fertile_spec['nuclide'] == self.fertile_isotope) & (fertile_spec['score'] == '(n,gamma)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
         U238_fis_Ebin_df = fertile_spec[(fertile_spec['nuclide'] == self.fertile_isotope) & (fertile_spec['score'] == 'fission')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
         Li6_nt_Ebin_df   = Li_spec[(Li_spec['nuclide'] == 'Li6') & (Li_spec['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
@@ -397,6 +409,7 @@ class Reactor(ABC):
         df.to_csv(f'./{self.path}/tallies_summary.csv', index=False)
         
         U238_ng_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_n-gamma_Ebins.csv', index=False)
+        flux_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_flux_Ebins.csv', index=False)
 
 
 

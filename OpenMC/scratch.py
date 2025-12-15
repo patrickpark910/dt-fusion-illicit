@@ -10,11 +10,11 @@ def rename_tally_folders(directory="."):
     by changing the LL prefix to DCLL.
     """
     for folder in os.listdir(directory):
-        if not folder.startswith("tallies_LL") or not os.path.isdir(os.path.join(directory, folder)):
+        if not folder.startswith("tallies_ARCBall") or not os.path.isdir(os.path.join(directory, folder)):
             continue
         
         # Replace tallies_LL with tallies_DCLL
-        new_name = folder.replace("tallies_LL", "tallies_DCLL", 1)
+        new_name = folder.replace("tallies_ARCBall", "tallies_ARCB", 1)
         old_path = os.path.join(directory, folder)
         new_path = os.path.join(directory, new_name)
         

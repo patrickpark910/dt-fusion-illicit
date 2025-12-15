@@ -104,7 +104,7 @@ class HCPB(Reactor):
         # ------------------------------------------------------------------
 
         li4sio4 = openmc.Material(name='Li4SiO4', temperature=self.temp_k) 
-        li4sio4.set_density('g/cm3', 2.17)  # normalized for ceramic porosity and 900 K (pure, room temp g/cm3 = 2.42)
+        li4sio4.set_density('g/cm3', DENSITY_LI4SIO4)  # normalized for ceramic porosity and 900 K (pure, room temp g/cm3 = 2.42)
         li4sio4.add_elements_from_formula('Li4SiO4', enrichment_target='Li6', enrichment_type='ao', enrichment=ENRICH_HCPB) 
         # self.lithium_ceramic.add_elements('Li', 22.415, percent_type='wo', enrichment_target='Li6', enrichment_type='ao', enrichment=ENRICH_HCPB) 
         # self.lithium_ceramic.add_element('Si', 24.077, percent_type='wo') 
@@ -128,7 +128,8 @@ class HCPB(Reactor):
         
         # Beryllium 
         be = openmc.Material(name='Beryllium') 
-        be.set_density('g/cm3', 1.80)  # normalized from 1.85 for 900 K
+        be.set_density('g/cm3', DENSITY_BE)  # normalized from 1.85 for 900 K
+        be.add_element('Be', 1, percent_type='wo') 
         # self.beryllium.add_element('Be', 98.749, percent_type='wo') 
         # self.beryllium.add_element('O', 0.9, percent_type='wo') 
         # self.beryllium.add_element('Al', 0.09, percent_type='wo') 

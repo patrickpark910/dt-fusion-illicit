@@ -74,14 +74,14 @@ class DCLL(Reactor):
         self.f82h = openmc.Material(name='f82h', temperature=self.temp_k)
         self.f82h.depletable = False
         self.f82h.add_element('Fe', 89.3686, percent_type='wo')
-        self.f82h.add_element('C' , 0.10, percent_type='wo')
-        self.f82h.add_element('Si', 0.10, percent_type='wo')
-        self.f82h.add_element('Mn', 0.13, percent_type='wo')
-        self.f82h.add_element('Cr', 8.16, percent_type='wo')
-        self.f82h.add_element('W' , 1.94, percent_type='wo')
-        self.f82h.add_element('V' , 0.20, percent_type='wo')
-        self.f82h.add_element('N' , 0.0014, percent_type='wo')
-        self.f82h.set_density("g/cm3", 7.6)  # from MCNP cell 112
+        self.f82h.add_element('C' ,  0.10,   percent_type='wo')
+        self.f82h.add_element('Si',  0.10,   percent_type='wo')
+        self.f82h.add_element('Mn',  0.13,   percent_type='wo')
+        self.f82h.add_element('Cr',  8.16,   percent_type='wo')
+        self.f82h.add_element('W' ,  1.94,   percent_type='wo')
+        self.f82h.add_element('V' ,  0.20,   percent_type='wo')
+        self.f82h.add_element('N' ,  0.0014, percent_type='wo')
+        self.f82h.set_density("g/cm3", 7.6)  # 7.887 @ 293 K
 
 
         # ------------------------------------------------------------------
@@ -158,11 +158,12 @@ class DCLL(Reactor):
         # - changed fertile kg/m³ to be per Pb-Li vol, not whole breeder region vol
         # 
         # We want "fertile bulk density" to be kg of U-238 per m³ of *breeding* material
-        # so we mix Pb-Li + BISO, and then mix Pb-Li-BISO with F82H, SiC, and He-4
+        # (T producer + neutron multiplier) so we mix Pb-Li + BISO, and then mix 
+        # PbLi-BISO with F82H, SiC, and He-4 
         # ------------------------------------------------------------------
 
-        # Volume fractions from Glaser & Goldston (2012) - Table 1, Breeding Ch.2
-        vf_fs = 0.019; vf_ll = 0.805; vf_sic = 0.079; vf_he = 0.097 # til ; can separate statements in python --ppark
+        # Volume fractions from Glaser & Goldston (2012) - Table 1, Breeding Ch.1
+        vf_fs = 0.019; vf_ll = 0.808; vf_sic = 0.076; vf_he = 0.097 # til ; can separate statements in python --ppark
         
         # Mix Pb-Li with BISO
         vol_ll = self.breeder_volume*vf_ll
@@ -171,9 +172,7 @@ class DCLL(Reactor):
         
         breeder = openmc.Material.mix_materials([pbli, biso], [vf_pbli, vf_biso], 'vo')
         # DO NOT CONFUSE vf_pbli WITH vf_ll !!! -- ppark 2025-11-11
-        
-        # So now we mix in Li4SiO4-Be-BISO with the Eurofer structure and He coolant materials
-        # Li4SiO4-Be-BISO should be the volume fractions of Li4SiO4 (0.1304) + Be (0.3790) = 0.5094
+
         self.blanket = openmc.Material.mix_materials([self.f82h, breeder, sic, he], [vf_fs, vf_ll, vf_sic, vf_he], 'vo') 
         self.blanket.name, self.blanket.temperature = self.name, self.temp_k    
 
@@ -213,7 +212,7 @@ class DCLL(Reactor):
         # Surfaces 
         # ------------------------------------------------------------------
 
-        points_vc   =  miller_model(self.R0, self.a, self.kappa, self.delta)
+        points_vc   = miller_model(self.R0, self.a, self.kappa, self.delta)
         points_fw   = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_fw)
         points_fwf  = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_fwf)
         points_fwc  = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_fwc)

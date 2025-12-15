@@ -2,12 +2,12 @@
 """ Universal parameters for ALL models """
 
 # Run settings
-FERTILE_BULK_DENSITY_KGM3 = [0, 0.03, 0.3, 0.6, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 1000]
-BREEDERS = ['ARC','ARC-B','FLiBe','DCLL','HCPB']
+FERTILE_BULK_DENSITY_KGM3 = [0, 0.1, 0.5, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 1000]
+BREEDERS = ['ARC','ARCB','FLiBe','DCLL','HCPB']
 BLANKET_COVERAGE = 0.8 # Assume blanket covers 80% of plasma surface, rest for divertor
 TEMP_K = 900 # [K] ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
 
-N_PARTICLES, N_CYCLES = int(1e6), 10
+N_PARTICLES, N_CYCLES = int(1e5), 10
 
 """ Material parameters of breeders """
 
@@ -20,8 +20,8 @@ DENSITY_DCLL    =  9.40  # [g/cm³]
 ENRICH_DCLL     = 90.00  # at% enrich of Li-6
 
 # Pebble bed (HCPB, Li4SiO4-Be)
-DENSITY_LI4SIO4 =  2.17  # [g/cm³]
-DENSITY_BE      =  1.80  # [g/cm³]
+DENSITY_LI4SIO4 =  2.17  # [g/cm³] # normalized for ceramic porosity and 900 K (pure, room temp g/cm3 = 2.42)
+DENSITY_BE      =  1.80  # [g/cm³] # normalized from 1.85 for 900 K
 ENRICH_HCPB     = 60.00  # at% enrich of Li-6 
 
 

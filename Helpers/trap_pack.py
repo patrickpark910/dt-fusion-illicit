@@ -2,26 +2,98 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
+"""
+SPHERE-PACKING IN TRAPEZOIDAL PRISM 
+My script to generate (x,y,z) coordinates for 1-mm wide BISO spheres
+packed in a trapezoidal prism, which represents a borehole wedge through
+the tokamak blankets.
+
+
+"""
+
+def main():
+
+    THETA = 0.1 # degrees
+    theta_rad = THETA * np.pi / 180
+
+    # HCPB blanket specifications
+
+    d1 = 365 # [cm] from origin to inboard blanket edge
+    h1 =  45 # [cm] plasma-facing side of inboard blanket
+    d2 = 830
+    h2 =  82 
+
+    # Bases 'a' and 'b' of trapezoidal prism
+    a1 = 2 * d1 * np.sin(theta_rad/2)
+    b1 = 2 * (d1 + h1) * np.sin(theta_rad/2)
+
+    a2 = 2 * d2 * np.sin(theta_rad/2)
+    b2 = 2 * (d2 + h2) * np.sin(theta_rad/2)
+
+    # Volume of wedge of inboard blanket
+    V_inboard  = ((a1+b1)/2)**2 * h1 
+    V_outboard = ((a2+b2)/2)**2 * h2
+
+    print(40*"=") 
+    print(f"Inboard wedge specs")
+    print(f"  Exterior length (a1)          : {a1:.6f} [cm]")
+    print(f"  Plasma-facing side length (b1): {b1:.6f} [cm]")
+    print(f"  Volume                        : {V_inboard:.6f} [cm³]")
+    print(f"Outboard wedge specs")
+    print(f"  Plasma-facing side length (a2): {a2:.6f} [cm]")
+    print(f"  Exterior length (b2)          : {b2:.6f} [cm]")
+    print(f"  Volume                        : {V_outboard:.6f} [cm³]")
+
+    for fertile_kgm3 in [0, 0.03, 0.3, 0.6, 1.5, 3, 7.5, 10, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150,]: #  250, 500, 750, 1000
+
+        print(40*"=") 
+        biso_per_cc = fertile_to_biso_density(fertile_kgm3)  
+        # print(f"Computing: {fertile_kgm3} [kg/m³] = {biso_per_cc:.6f} [p/cm³]")
+
+        # Number of BISO particles in blanket wedges
+        N_inboard  = round(V_inboard  * biso_per_cc)
+        N_outboard = round(V_outboard * biso_per_cc)
+
+        print(f"  Inboard particles : {N_inboard}")
+        print(f"  Outboard particles: {N_outboard}")
+
+        # --- Run Packing ---
+        spheres_inboard  = pack(a1, b1, h1, d1, N_inboard,  r=0.05)
+        spheres_outboard = pack(a2, b2, h2, d2, N_outboard, r=0.05)
+        
+        # --- Save Results ---
+        np.savetxt(f'./csv_coords/spheres_inboard_{fertile_kgm3}.csv', spheres_inboard, delimiter=',', header='x,y,z', comments='')
+        np.savetxt(f'./csv_coords/spheres_outboard_{fertile_kgm3}.csv', spheres_outboard, delimiter=',', header='x,y,z', comments='')
+        # visualize_and_save(spheres, a, b, h)
+
+
 def fertile_to_biso_density(fertile_kgm3, isotope='U238'):
-    """Calculates and prints BISO density metrics."""
+    """
+    Calculates and prints BISO density metrics.
+    """
     vol_kernel = 4/3 * np.pi * 0.04**3
     vol_biso   = 4/3 * np.pi * 0.05**3
-    biso_per_cc = fertile_kgm3 * (238.02+32)/238.05 / vol_kernel / 10.5 / 100**3 * 1000
+
+    if isotope == 'U238':
+        biso_per_cc = fertile_kgm3 * (238.02+32)/238.05 / vol_kernel / 10.5 / 100**3 * 1000
+    
     biso_vol_percent = biso_per_cc * vol_biso * 100
     
-    print(f"{fertile_kgm3:>8} kg/m³ | {biso_per_cc:>10.4f} part/cc | {biso_vol_percent:>8.4f} Vol %")
+    print(f"Case: {fertile_kgm3:>4} kg/m³ | {biso_per_cc:>10.4f} p/cm³ | {biso_vol_percent:>8.4f} vol%")
+
+    return biso_per_cc
 
 
-def pack_trapezoidal_prism(a, b, h, n_target, r=0.05, max_attempts=10000):
+def pack(a, b, h, d, n_target, r=0.05, max_attempts=10000):
     """Packs spheres into a trapezoidal prism using Random Sequential Adsorption."""
     spheres = []
     
     # Pre-calculate wall slope and safety margin
     slope = (a - b) / (2.0 * h)
     margin = r / np.sqrt(1 + slope**2) # Adjust for wall slant
-    min_dist_sq = (diam * 1.05) ** 2   # Minimum distance squared (with buffer)
+    min_dist_sq = (2*r * 1.05) ** 2   # Minimum distance squared (with buffer)
     
-    print(f"\nAttempting to pack {n_target} spheres...")
+    print(f"Attempting to pack {n_target} spheres...")
     start_time = time.time()
 
     for i in range(n_target):
@@ -45,6 +117,8 @@ def pack_trapezoidal_prism(a, b, h, n_target, r=0.05, max_attempts=10000):
                 dists_sq = np.sum((np.array(spheres) - pt)**2, axis=1)
                 if np.any(dists_sq < min_dist_sq):
                     continue # Overlap detected
+
+            pt[2] = np.abs(pt[2] - h - d)
 
             spheres.append(pt)
             break # Successfully placed
@@ -79,19 +153,4 @@ def visualize_and_save(spheres, a, b, h, filename="packing_viz.png"):
     print(f"Visualization saved to {filename}")
 
 if __name__ == "__main__":
-    # --- Configuration ---
-    a, b, h = 0.6370, 0.7155, 45.0000
-    N_target = round(1647 * 75/80)
-    densities = [0, 0.03, 0.3, 0.6, 1.5, 3, 7.5, 10, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 1000]
-
-    # --- Run Density Calcs ---
-    print("--- Density Calculations ---")
-    for f in densities:
-        fertile_to_biso_density(f)
-
-    # --- Run Packing ---
-    spheres = pack_trapezoidal_prism(a, b, h, N_target, r=0.05)
-    
-    # --- Save Results ---
-    np.savetxt('sphere_positions.csv', spheres, delimiter=',', header='x,y,z', comments='')
-    visualize_and_save(spheres, a, b, h)
+    main()
