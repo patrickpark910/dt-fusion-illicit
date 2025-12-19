@@ -6,7 +6,7 @@ from Python.parameters import *
 from Python.utilities  import *
 
 
-class PB(Reactor):
+class NOTPB(Reactor):
 
     def initialize(self):
 

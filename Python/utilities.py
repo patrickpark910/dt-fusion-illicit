@@ -175,27 +175,27 @@ def calc_biso_blanket_vol_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fe
 
         return breeder_vf, biso_vf
 
-def wedge_angle_from_volume(V, d, h):
-    """
-    Solve for wedge angle theta (radians) given:
-      V volume between distances d and d+h (cm^3)
-      d distance from apex point to inner face (cm)
-      h segment thickness (cm)
-    we have square cross-sections with sides a(d)=2*d*sin(theta/2).
-    """
-    bracket = d**2 + (d + h)**2 + d*(d + h)
-    tan2 = (3.0 * V) / (4.0 * h * bracket)
+#def wedge_angle_from_volume(V, d, h):
+    #"""
+    #Solve for wedge angle theta (radians) given:
+     # V volume between distances d and d+h (cm^3)
+      #d distance from apex point to inner face (cm)
+      #h segment thickness (cm)
+    #we have square cross-sections with sides a(d)=2*d*sin(theta/2).
+    #"""
+    #bracket = d**2 + (d + h)**2 + d*(d + h)
+    #tan2 = (3.0 * V) / (4.0 * h * bracket)
 
-    if tan2 <= 0:
-        raise ValueError(f"tan^2(theta/2) <= 0 ({tan2}). Check V,d,h.")
-    theta = 2.0 * np.arctan(np.sqrt(tan2))
-    return theta
+    #if tan2 <= 0:
+    #    raise ValueError(f"tan^2(theta/2) <= 0 ({tan2}). Check V,d,h.")
+    #theta = 2.0 * np.arctan(np.sqrt(tan2))
+    #return theta
 
-def side_lengths(d, h, theta):
-    """Return (a,b) square side lengths at distances d and d+h."""
-    a = 2.0 * d * np.tan(theta/2.0)
-    b = 2.0 * (d + h) * np.tan(theta/2.0)
-    return a, b
+#def side_lengths(d, h, theta):
+    #"""Return (a,b) square side lengths at distances d and d+h."""
+    #a = 2.0 * d * np.tan(theta/2.0)
+    #b = 2.0 * (d + h) * np.tan(theta/2.0)
+    #return a, b
 
 
 def set_xs_path():
