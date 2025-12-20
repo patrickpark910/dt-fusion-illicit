@@ -167,9 +167,10 @@ class DCLL(Reactor):
         
         # Mix Pb-Li with BISO
         vol_ll = self.breeder_volume*vf_ll
-        
         vf_pbli, vf_biso = calc_biso_blanket_vol_fracs(self.fertile_bulk_density_kgm3, vol_ll, fertile_element=self.fertile_element)
-        
+
+        print(f"\n\n******volume fractions are: PbLi vf {vf_pbli}, biso vf {vf_biso}\n\n")
+
         breeder = openmc.Material.mix_materials([pbli, biso], [vf_pbli, vf_biso], 'vo')
         # DO NOT CONFUSE vf_pbli WITH vf_ll !!! -- ppark 2025-11-11
 

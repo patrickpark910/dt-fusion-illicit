@@ -192,16 +192,16 @@ class HCPB(Reactor):
         # Volume fractions from Lu (2017) Table 2 
         vf_li4sio4 = 0.1304 ; vf_be = 0.3790 ; vf_eurofer = 0.1176 ; vf_he = 1 - (vf_li4sio4 + vf_be + vf_eurofer) 
         
-
         # Mix Li4SiO4 and Be (should be 25.6, 74.4 vol% respectively)
-        li4sio4_be = openmc.Material.mix_materials([li4sio4, be], [vf_li4sio4/(vf_li4sio4+vf_be), vf_be/(vf_li4sio4+vf_be)], 'vo') 
+        # li4sio4_be = openmc.Material.mix_materials([li4sio4, be], [vf_li4sio4/(vf_li4sio4+vf_be), vf_be/(vf_li4sio4+vf_be)], 'vo') 
 
         # Mix Li4SiO4-Be with BISO
         vol_li4sio4_be = self.breeder_volume*(vf_li4sio4+vf_be)
-        
         vf_li4sio4_be, vf_biso = calc_biso_blanket_vol_fracs(self.fertile_bulk_density_kgm3, vol_li4sio4_be, fertile_element=self.fertile_element)
+
+        print(f"\n\n******volume fractions are: Li vf {vf_li4sio4/(vf_li4sio4+vf_be)*vf_li4sio4_be}, Be vf {vf_be/(vf_li4sio4+vf_be)*vf_li4sio4_be}, biso vf {vf_biso}\n\n")
         
-        breeder = openmc.Material.mix_materials([li4sio4_be, biso], [vf_li4sio4_be, vf_biso], 'vo')
+        breeder = openmc.Material.mix_materials([li4sio4, be, biso], [vf_li4sio4/(vf_li4sio4+vf_be)*vf_li4sio4_be, vf_be/(vf_li4sio4+vf_be)*vf_li4sio4_be, vf_biso], 'vo')
         
         # So now we mix in Li4SiO4-Be-BISO with the Eurofer structure and He coolant materials
         # Li4SiO4-Be-BISO should be the volume fractions of Li4SiO4 (0.1304) + Be (0.3790) = 0.5094
@@ -252,9 +252,9 @@ class HCPB(Reactor):
         self.surface_vc    = openmc.model.Polygon(points_vc,    basis='rz')
         self.surface_fw    = openmc.model.Polygon(points_fw,    basis='rz')
         self.surface_st1   = openmc.model.Polygon(points_st1,   basis='rz')
-        self.surface_br1   = openmc.model.Polygon(points_br1,   basis='rz')
-        self.surface_st2   = openmc.model.Polygon(points_st2,   basis='rz')
-        self.surface_br1_o = openmc.model.Polygon(points_br1_o, basis='rz') # outboard blanket
+        self.surface_br1   = openmc.model.Polygon(points_br1,   basis='rz')  
+        self.surface_st2   = openmc.model.Polygon(points_st2,   basis='rz')  
+        self.surface_br1_o = openmc.model.Polygon(points_br1_o, basis='rz')  # outboard blanket
         self.surface_st2_o = openmc.model.Polygon(points_st2_o, basis='rz')  # outboard structure
 
         dividing_cylinder = openmc.ZCylinder(r=self.R0)

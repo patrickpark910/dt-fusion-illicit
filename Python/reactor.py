@@ -57,6 +57,7 @@ class Reactor(ABC):
         self.tallies = openmc.Tallies() # initialize
 
         # Filters
+        cellfrom_filter = openmc.CellFromFilter([cell for cell in self.cells if cell.fill is not None])
         cell_filter = openmc.CellFilter([cell for cell in self.cells if cell.fill is not None])
         energy_filter = openmc.EnergyFilter(logspace_per_decade(1e-5, 20e6, 100)) # './helpers/utilities.py'
         
@@ -83,12 +84,29 @@ class Reactor(ABC):
 
 
         # ---------------------------------------------------------------
-        # Flux and reaction rate tallies 
+        # Flux and current tallies 
+        # - Our Miller-shape Polygon doesn't play well with the surface_filter
+        #   (bc it is the union of like 1500 conic sections) so we get currents
+        #   by defining cell_filter and cellfrom_filter per docs below
+        # 
+        # cf. Misc scores > current > description @ docs.openmc.org/en/stable/usersguide/tallies.html 
+        # 
         # ---------------------------------------------------------------
+
+        # Current tally
+        current_tally        = self.make_tally('current', ['current'], filters=[cell_filter, cellfrom_filter])
+        # current_energy_tally = self.make_tally('current spectrum', ['current'], filters=[energy_filter]) # this might make output too big
 
         # Flux tally 
         flux_tally        = self.make_tally('flux', ['flux'], filters=[cell_filter])
         flux_energy_tally = self.make_tally('flux spectrum', ['flux'], filters=[cell_filter, energy_filter])
+
+        self.tallies.extend([current_tally, flux_tally, flux_energy_tally]) # current_energy_tally
+
+
+        # ---------------------------------------------------------------
+        # Reaction rate tallies 
+        # ---------------------------------------------------------------
 
         # Fertile element reaction rates
         if self.fertile_element == 'U':
@@ -111,8 +129,8 @@ class Reactor(ABC):
         Be_tally        = self.make_tally('Be rxn rates', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter], nuclides=['Be9'])
         Be_energy_tally = self.make_tally('Be rxn rates spectrum', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Be9'])
 
-        self.tallies.extend([flux_tally, fertile_tally, Li_tally, F_tally, Be_tally])
-        self.tallies.extend([flux_energy_tally, fertile_energy_tally, Li_energy_tally, F_energy_tally, Be_energy_tally])
+        self.tallies.extend([fertile_tally, Li_tally, F_tally, Be_tally])
+        self.tallies.extend([fertile_energy_tally, Li_energy_tally, F_energy_tally, Be_energy_tally])
 
 
     def make_tally(self, name, scores, filters:list=None, nuclides:list=None):
@@ -410,7 +428,3 @@ class Reactor(ABC):
         
         U238_ng_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_n-gamma_Ebins.csv', index=False)
         flux_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_flux_Ebins.csv', index=False)
-
-
-
-            
