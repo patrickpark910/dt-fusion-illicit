@@ -16,3 +16,7 @@ Jupyter/BISO_combined/statepoint.10.h5
 Jupyter/BISO_combined/summary.h5
 Jupyter/BISO_combined/tallies.out
 **/model.xml
+
+# never track OpenMC XML
+**/model.xml
+OpenMC/
