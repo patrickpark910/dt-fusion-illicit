@@ -277,7 +277,7 @@ class PB(Reactor):
         # Cells | 10: vc, fw | 2X: structure | 3X: breeding
         # ------------------------------------------------------------------
 
-        cell_vc   = openmc.Cell(cell_id=40, region= -self.surface_vc)
+        cell_vc   = openmc.Cell(cell_id=10, region= -self.surface_vc)
         cell_vc.importance = {'neutron':1}
 
         cell_fw    = openmc.Cell(cell_id=11, region= +self.surface_vc  & -self.surface_fw,  fill=self.firstwall)

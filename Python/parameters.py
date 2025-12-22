@@ -10,11 +10,23 @@ Nominal values used by Emma and Patrick + reasons
 """
 
 
-
 """ Parameters for ALL models """
 
 
-FERTILE_BULK_DENSITY_KGM3 = [0, 0.03, 0.3, 0.6, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150]
+# BISO particle parameters
+BISO_KERNEL_RADIUS = 0.04 # cm  # r = 400 μm = 0.0400 cm // "800 μm kernel"
+BISO_RADIUS        = 0.05 # cm  # r = 500 μm = 0.0500 cm // "100 μm thickness"
+DENSITY_UO2        = 10.5 # g/cm^3
+DENSITY_ThO2       = 10.0 # g/cm^3
+BISO_VOLUME        = (4 / 3) * 3.14159265359 * (BISO_RADIUS)**3            # volume of single BISO particle
+KERNEL_VOLUME      = (4 / 3) * 3.14159265359 * (BISO_KERNEL_RADIUS)**3     # volume of UO2/ThO2 kernel in single BISO particle
+BISO_KERNEL_VOL_FRAC = KERNEL_VOLUME / BISO_VOLUME  # vol frac kernel in single BISO
+BISO_COAT_VOL_FRAC   = 1.0 - BISO_KERNEL_VOL_FRAC
+
+
+FERTILE_BULK_DENSITY_KGM3 = [0, 0.03, 0.3, 0.6, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150,    250, 500, 750, 1000]
+
+BLANKET_COVERAGE = 0.8
 
 DENSITY_FLIBE = 1.94 # g/cm3
 ENRICH_FLIBE  = 7.5  # wt%
@@ -23,7 +35,7 @@ DENSITY_UF4   = 6.7 # g/cm3
 ENRICH_U  = 0.71  # wt% 
 TEMP_K = 900 # 900 # 294 K # ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
 
-DENSITY_BISO = 6.93759 # g/cc for UO2 BISO
+# DENSITY_BISO = 6.93759 # g/cc for UO2 BISO
 
 BREEDERS = ['ARC','ARCBall','FLiBe','LL']
 
@@ -98,22 +110,20 @@ LL_BR_VOL =  427.3   # m^3 - analytic vol from plot_miller_models.py
 
 ENRICH_PB   = 60.0 
 
-PB_R0    = 907.2  # cm - major radius
-PB_A     = 292.7  # cm - minor radius
-PB_KAPPA = 1.59 #      - elongation
-PB_DELTA = 0.33  #     - triangularity
+PB_R0    = 620  # 907.2  # cm - major radius
+PB_A     = 207  # 292.7  # cm - minor radius
+PB_KAPPA = 1.72 # 1.59 #      - elongation
+PB_DELTA = 0.4  # 0.33  #     - triangularity
 #----Outboard Layers----
 PB_FW_CM     =   0.2  # cm -           first wall
 PB_ST1_CM    =   2.5  # cm -  structural region 1
 PB_BR1_O_CM  =  82.0  # cm -    breeding region 1
 PB_ST2_CM    =   3.0  # cm -  structural region 2
-
 #----Inboard Layers----
 PB_BR1_CM    =  45.0  # cm -    breeding region 1
 
+PB_BR_VOL = 520.6 # 520.6121163 # 973.8489# m^3 ?????
 
-PB_BR_VOL =  973.8489# m^3 ?????
-#This is not accurate - Emma
 
 
 

@@ -27,7 +27,7 @@ class Reactor(ABC):
 
         self.run_type    = run_type
         self.run_openmc  = run_openmc
-        self.n_particles = int(1e5)
+        self.n_particles = int(1e6)
         self.n_cycles    = 10
 
         # All class templates must define these variables:
@@ -161,7 +161,7 @@ class Reactor(ABC):
         self.model.run(cwd=self.path)
 
 
-    def volumes(self, samples=int(1e8)):
+    def volumes(self, samples=int(1e10)):
         """
         Calculate volumes of all cells using OpenMC stochastic volume calculation.
         """
