@@ -117,7 +117,8 @@ PB_BR1_O_CM =  82.0  # [cm]   breeding region outboard
 PB_BR1_I_CM =  45.0  # [cm]   breeding region inboard
 PB_ST2_CM   =   3.0  # [cm] structural region 2
 
-PB_BR_VOL   = 520.6 # [m³] from ./OpenMC/volume_PB_900K_Li60.0_U000.00kgm3/volume_1.csv
+#PB_BR_VOL   = 520.6 # [m³] from ./OpenMC/volume_PB_900K_Li60.0_U000.00kgm3/volume_1.csv
+PB_BR_VOL   = 520.6e-3 # [m³]
 
 # Our PB coupon
 PB_RO       = 830    # [cm] plasma facing outer wall

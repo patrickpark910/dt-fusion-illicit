@@ -105,7 +105,7 @@ class PB(Reactor):
 
         li4sio4 = openmc.Material(name='Li4SiO4', temperature=self.temp_k) 
         li4sio4.set_density('g/cm3', 2.17)  # normalized for ceramic porosity and 900 K (pure, room temp g/cm3 = 2.42)
-        li4sio4.add_elements_from_formula('Li4SiO4', enrichment_target='Li6', enrichment_type='ao', enrichment=ENRICH_PB) 
+        li4sio4.add_elements_from_formula('Li4SiO4', enrichment_target='Li6', enrichment_type='ao', enrichment=self.breeder_enrich) 
         # self.lithium_ceramic.add_elements('Li', 22.415, percent_type='wo', enrichment_target='Li6', enrichment_type='ao', enrichment=ENRICH_PB) 
         # self.lithium_ceramic.add_element('Si', 24.077, percent_type='wo') 
         # self.lithium_ceramic.add_element('O', 53.39, percent_type='wo') 
@@ -128,7 +128,9 @@ class PB(Reactor):
         
         # Beryllium 
         be = openmc.Material(name='Beryllium') 
-        be.set_density('g/cm3', 1.80)  # normalized from 1.85 for 900 K
+        be.set_density('g/cm3', 1.80) 
+        be.add_element('Be', 1.0, percent_type='ao')
+        # normalized from 1.85 for 900 K
         # self.beryllium.add_element('Be', 98.749, percent_type='wo') 
         # self.beryllium.add_element('O', 0.9, percent_type='wo') 
         # self.beryllium.add_element('Al', 0.09, percent_type='wo') 
@@ -191,8 +193,15 @@ class PB(Reactor):
         m_out_g = rho_fert_kg_m3 * (self.V_out / 1e3)
         
         # mass of fertile needed into particle count
-        self.N_in  = int(np.rint(m_in_g  / m_fertile_per_particle_g))
-        self.N_out = int(np.rint(m_out_g / m_fertile_per_particle_g))
+        if m_in_g <= 0.0 or m_fertile_per_particle_g <= 0.0:
+            self.N_in = 0
+        else:
+            self.N_in = int(np.rint(m_in_g / m_fertile_per_particle_g))
+
+        if m_out_g <= 0.0 or m_fertile_per_particle_g <= 0.0:
+            self.N_out = 0
+        else:
+            self.N_out = int(np.rint(m_out_g / m_fertile_per_particle_g))
         
         # packing fractions
         pf_in  = (self.N_in  * V_p_cm3) / self.V_in 
@@ -220,7 +229,9 @@ class PB(Reactor):
         
         # Volume fractions from Lu (2017) Table 2 
         vf_li4sio4 = 0.1304 ; vf_be = 0.3790 ; vf_eurofer = 0.1176 ; vf_he = 1 - (vf_li4sio4 + vf_be + vf_eurofer) 
-        
+        print("Li4SiO4 nuclides:", len(li4sio4.nuclides), li4sio4.nuclides[:3])
+        print("Be nuclides:", len(be.nuclides), be.nuclides[:3])
+        print("vf sum:", vf_li4sio4 + vf_be)
 
         # Mix Li4SiO4 and Be (should be 25.6, 74.4 vol% respectively)
         breeder = openmc.Material.mix_materials([li4sio4, be], [vf_li4sio4/(vf_li4sio4+vf_be), vf_be/(vf_li4sio4+vf_be)], 'vo') 
@@ -257,7 +268,6 @@ class PB(Reactor):
         d_out = d1 + 465.0 
         h2 = 82.0
 
-        self.RO, self.RI = PB_RO, PB_RI
 
         PB_st1_ex            = d1 - PB_ST2_CM
         PB_BR1_exterior      = d1
@@ -274,23 +284,61 @@ class PB(Reactor):
         # ------------------------------------------------------------------
         # Surfaces 
         # ------------------------------------------------------------------
-        self.inner_cuboid = openmc.model.RectangularParallelepiped(
-            xmin=PB_st1_ex,xmax=PB_fw1,ymin=-a1/2,ymax= a1/2,zmin=-a1/2,zmax= a1/2,
-            boundary_type='transmission')
-        self.outer_cuboid = openmc.model.RectangularParallelepiped(
-            xmin=PB_fw2,xmax=PB_st2_ex,ymin=-a2/2,ymax= a2/2,zmin=-a2/2,zmax= a2/2,
-            boundary_type='transmission')
+        x0i = openmc.XPlane(x0=PB_st1_ex, boundary_type='transmission')
+        x1i = openmc.XPlane(x0=PB_fw1,   boundary_type='transmission')
+        y0i = openmc.YPlane(y0=-a1/2,    boundary_type='transmission')
+        y1i = openmc.YPlane(y0=+a1/2,    boundary_type='transmission')
+        z0i = openmc.ZPlane(z0=-a1/2,    boundary_type='transmission')
+        z1i = openmc.ZPlane(z0=+a1/2,    boundary_type='transmission')
+
+        self.inner_cuboid = (+x0i & -x1i & +y0i & -y1i & +z0i & -z1i)
+
+        x0o = openmc.XPlane(x0=PB_fw2,     boundary_type='transmission')
+        x1o = openmc.XPlane(x0=PB_st2_ex,  boundary_type='transmission')
+        y0o = openmc.YPlane(y0=-a2/2,      boundary_type='transmission')
+        y1o = openmc.YPlane(y0=+a2/2,      boundary_type='transmission')
+        z0o = openmc.ZPlane(z0=-a2/2,      boundary_type='transmission')
+        z1o = openmc.ZPlane(z0=+a2/2,      boundary_type='transmission')
+
+        self.outer_cuboid = (+x0o & -x1o & +y0o & -y1o & +z0o & -z1o)
+        
         margin = 20.0
         x_min_world = PB_st1_ex - margin
         x_max_world = PB_st2_ex + margin
         y_half_world = a2/2 + margin
         z_half_world = a2/2 + margin
-        self.world = openmc.model.RectangularParallelepiped(
-            x_min_world, x_max_world,
-            -y_half_world, y_half_world,
-            -z_half_world, z_half_world,
-            boundary_type='vacuum'   
-        )
+        # --- World planes (vacuum)
+        x0w = openmc.XPlane(x0=x_min_world, boundary_type='vacuum')
+        x1w = openmc.XPlane(x0=x_max_world, boundary_type='vacuum')
+        y0w = openmc.YPlane(y0=-y_half_world, boundary_type='vacuum')
+        y1w = openmc.YPlane(y0=+y_half_world, boundary_type='vacuum')
+        z0w = openmc.ZPlane(z0=-z_half_world, boundary_type='vacuum')
+        z1w = openmc.ZPlane(z0=+z_half_world, boundary_type='vacuum')
+
+        self.world_region = (+x0w & -x1w & +y0w & -y1w & +z0w & -z1w)
+
+        # --- Inner breeder packing box planes
+        x0_in = openmc.XPlane(x0=PB_BR1_exterior)       # inner breeder exterior
+        x1_in = openmc.XPlane(x0=PB_BR1_plasmafacing)   # inner breeder plasma-facing
+        y0_in = openmc.YPlane(y0=-a1/2)
+        y1_in = openmc.YPlane(y0=+a1/2)
+        z0_in = openmc.ZPlane(z0=-a1/2)
+        z1_in = openmc.ZPlane(z0=+a1/2)
+
+        self.inner_blanket = (+x0_in & -x1_in & +y0_in & -y1_in & +z0_in & -z1_in)
+        
+        x0_out = openmc.XPlane(x0=PB_BR2_plasmafacing)
+        x1_out = openmc.XPlane(x0=PB_BR2_exterior)
+        y0_out = openmc.YPlane(y0=-a2/2)
+        y1_out = openmc.YPlane(y0=+a2/2)
+        z0_out = openmc.ZPlane(z0=-a2/2)
+        z1_out = openmc.ZPlane(z0=+a2/2)
+
+        self.outer_blanket = (+x0_out & -x1_out & +y0_out & -y1_out & +z0_out & -z1_out)
+
+        # --- Vacuum cell
+        cell_vc = openmc.Cell(cell_id=10, region=self.world_region & ~self.inner_cuboid & ~self.outer_cuboid)
+        cell_vc.importance = {'neutron': 1}        
         
         self.surface_st1_ex         = openmc.XPlane(x0=PB_st1_ex)
         self.surface_br1_exterior   = openmc.XPlane(x0=PB_BR1_exterior)
@@ -306,9 +354,6 @@ class PB(Reactor):
       
         # ----------Cells----------------
 
-        cell_vc = openmc.Cell(cell_id=10, region=self.world & ~self.inner_cuboid & ~self.outer_cuboid)
-        cell_vc.importance = {'neutron': 1}
-        
         cell_fw1   = openmc.Cell(cell_id=11, region=self.inner_cuboid & -self.surface_fw1 & +self.surface_st1_pf,  fill=self.firstwall)
         cell_st1_pf   = openmc.Cell(cell_id=21, region=self.inner_cuboid & -self.surface_st1_pf & +self.surface_br1_pf, fill=self.structure)
         cell_st1_ex   = openmc.Cell(cell_id=41, region=self.inner_cuboid & -self.surface_br1_exterior & +self.surface_st1_ex, fill=self.structure)
@@ -316,48 +361,52 @@ class PB(Reactor):
         cell_fw2    = openmc.Cell(cell_id=12, region=self.outer_cuboid & +self.surface_fw2 & -self.surface_st2_pf,  fill=self.firstwall)
         cell_st2_pf   = openmc.Cell(cell_id=22, region=self.outer_cuboid & +self.surface_st2_pf  & -self.surface_br2_pf, fill=self.structure)
         cell_st2_ex   = openmc.Cell(cell_id=42, region=self.outer_cuboid & +self.surface_br2_exterior & -self.surface_st2_ex, fill=self.structure)
-        
+     
 
         # ---------BISO Packing--------
-        s_k = openmc.Sphere(r=BISO_KERNEL_RADIUS)
-        s_o = openmc.Sphere(r=BISO_RADIUS)
+        if self.N_in <=0:
+            cell_insert_in  = openmc.Cell(cell_id=51,  fill=self.blanket, region=self.inner_blanket)
+            cell_insert_out = openmc.Cell(cell_id=52, fill=self.blanket, region=self.outer_blanket)
 
-        c_kernel  = openmc.Cell(fill=self.kernel, region=-s_k)
-        c_coating = openmc.Cell(fill=self.sic,    region=+s_k & -s_o)
+        else:
+            s_k = openmc.Sphere(r=BISO_KERNEL_RADIUS)
+            s_o = openmc.Sphere(r=BISO_RADIUS)
 
-        self.u_biso = openmc.Universe(name='BISO_universe', cells=[c_kernel, c_coating])
+            c_kernel  = openmc.Cell(fill=self.kernel, region=-s_k)
+            c_coating = openmc.Cell(fill=self.sic,    region=+s_k & -s_o)
+
+            self.u_biso = openmc.Universe(name='BISO_universe', cells=[c_kernel, c_coating])
       
-        inner_centers = openmc.model.pack_spheres(radius=BISO_RADIUS, region=self.inner_cuboid & -self.surface_br1_pf & +self.surface_br1_exterior, num_spheres=self.N_in, seed=1)
-        outer_centers = openmc.model.pack_spheres(radius=BISO_RADIUS, region=self.outer_cuboid & +self.surface_br2_pf & -self.surface_br2_exterior, num_spheres=self.N_out, seed=2)
-        # Background cells in the insert regions (homogenized blanket, but with sphere voids carved out)
-        cell_bg_in  = openmc.Cell(name="bg_in",  fill=self.blanket, region=self.inner_cuboid & - self.surface_br1_pf & +self.surface_br1_exterior)
-        cell_bg_out = openmc.Cell(name="bg_out", fill=self.blanket, region=self.outer_cuboid & +self.surface_br2_pf & -self.surface_br2_exterior)
-        biso_cells_in = []
-        for i, (x, y, z) in enumerate(inner_centers):
-            s = openmc.Sphere(x0=float(x), y0=float(y), z0=float(z), r=BISO_RADIUS)
-            c = openmc.Cell(name=f"biso_in_{i}", fill=self.u_biso, region=-s)
-            biso_cells_in.append(c)
-            cell_bg_in.region &= +s   # keep only outside each sphere in the background
+            inner_centers = openmc.model.pack_spheres(radius=BISO_RADIUS, region=self.inner_blanket, num_spheres=self.N_in, seed=1)
+            outer_centers = openmc.model.pack_spheres(radius=BISO_RADIUS, region=self.outer_blanket, num_spheres=self.N_out, seed=2)
+            # Background cells in the insert regions (homogenized blanket, but with sphere voids carved out)
+            cell_bg_in  = openmc.Cell(name="bg_in",  fill=self.blanket, region=self.inner_blanket)
+            cell_bg_out = openmc.Cell(name="bg_out", fill=self.blanket, region=self.outer_blanket)
+            biso_cells_in = []
+            for i, (x, y, z) in enumerate(inner_centers):
+                s = openmc.Sphere(x0=float(x), y0=float(y), z0=float(z), r=BISO_RADIUS)
+                c = openmc.Cell(name=f"biso_in_{i}", fill=self.u_biso, region=-s)
+                biso_cells_in.append(c)
+                cell_bg_in.region &= +s   # keep only outside each sphere in the background
 
-        biso_cells_out = []
-        for i, (x, y, z) in enumerate(outer_centers):
-            s = openmc.Sphere(x0=float(x), y0=float(y), z0=float(z), r=BISO_RADIUS)
-            c = openmc.Cell(name=f"biso_out_{i}", fill=self.u_biso, region=-s)
-            biso_cells_out.append(c)
-            cell_bg_out.region &= +s
+            biso_cells_out = []
+            for i, (x, y, z) in enumerate(outer_centers):
+                s = openmc.Sphere(x0=float(x), y0=float(y), z0=float(z), r=BISO_RADIUS)
+                c = openmc.Cell(name=f"biso_out_{i}", fill=self.u_biso, region=-s)
+                biso_cells_out.append(c)
+                cell_bg_out.region &= +s
 
-        # Universes that contain background + explicit BISO spheres
-        u_insert_in  = openmc.Universe(name="insert_in",  cells=[cell_bg_in]  + biso_cells_in)
-        u_insert_out = openmc.Universe(name="insert_out", cells=[cell_bg_out] + biso_cells_out)
+            # Universes that contain background + explicit BISO spheres
+            u_insert_in  = openmc.Universe(name="insert_in",  cells=[cell_bg_in]  + biso_cells_in)
+            u_insert_out = openmc.Universe(name="insert_out", cells=[cell_bg_out] + biso_cells_out)
 
-        # Cells that place those universes into the model
-        cell_insert_in  = openmc.Cell(name="insert_cell_in",  fill=u_insert_in,  region=self.inner_cuboid & +self.surface_br2_pf & -self.surface_br2_exterior)
-        cell_insert_out = openmc.Cell(name="insert_cell_out", fill=u_insert_out, region=self.outer_cuboid & +self.surface_br2_pf & -self.surface_br2_exterior)
+            # Cells that place those universes into the model
+            cell_insert_in  = openmc.Cell(cell_id=51,  fill=u_insert_in,  region=self.inner_blanket)
+            cell_insert_out = openmc.Cell(cell_id=52, fill=u_insert_out, region=self.outer_blanket)
 
 
         self.cells = [cell_vc,
                       cell_fw1, cell_st1_pf, cell_insert_in, cell_st1_ex, 
-                      cell_fw2, cell_st2_pf, cell_insert_in, cell_st2_ex,
-                      cell_insert_in, cell_insert_out]
+                      cell_fw2, cell_st2_pf, cell_insert_out, cell_st2_ex]
     
         self.geometry = openmc.Geometry(openmc.Universe(cells=self.cells))

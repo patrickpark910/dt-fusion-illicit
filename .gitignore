@@ -1,16 +1,33 @@
+# Virtual environments
 .venv/
 venv/
+
+# IDE / Jupyter
 .idea/
 .ipynb_checkpoints/
 __pycache__/
-test/
 *.pyc
-*.ppm
-*.w
-*.r
-**.DS_Store
-*rssa
-.gitattributes
-Jupyter/BISO_combined/statepoint.10.h5
-Jupyter/BISO_combined/summary.h5
-Jupyter/BISO_combined/tallies.out
+
+# macOS
+.DS_Store
+
+# OpenMC outputs
+*.h5
+statepoint.*
+summary.h5
+tallies.out
+*.vtk
+
+# SLURM / cluster outputs
+*.out
+*.err
+slurm-*
+
+# Scratch / misc
+*.log
+*.tmp
+*.rst
+*.chk
+
+# Tests
+test/

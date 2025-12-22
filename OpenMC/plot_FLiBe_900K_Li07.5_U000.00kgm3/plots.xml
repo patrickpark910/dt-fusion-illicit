@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<plots>
+  <plot basis="xy" color_by="material" filename="FLiBe_xy" id="5" type="slice">
+    <pixels>21820 21820</pixels>
+    <origin>0.0 0.0 0.0</origin>
+    <width>2182 2182</width>
+    <color id="11" rgb="30 27 41"/>
+    <color id="12" rgb="109 110 113"/>
+    <color id="15" rgb="129 204 185"/>
+  </plot>
+  <plot basis="xz" color_by="material" filename="FLiBe_xz" id="6" type="slice">
+    <pixels>21820 10880</pixels>
+    <origin>0.0 0.0 0.0</origin>
+    <width>2182 1088</width>
+    <color id="11" rgb="30 27 41"/>
+    <color id="12" rgb="109 110 113"/>
+    <color id="15" rgb="129 204 185"/>
+  </plot>
+</plots>

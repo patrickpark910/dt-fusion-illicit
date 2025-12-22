@@ -127,16 +127,26 @@ class Reactor(ABC):
 
     def settings(self):
         """ SETTINGS """
-       
-        source = openmc.IndependentSource()
-        source.space = openmc.stats.CylindricalIndependent(
-                                      r=openmc.stats.Discrete([self.R0], [1.0]),  # r = R0 major radius [cm]
-                                    phi=openmc.stats.Uniform(0.0, 2*np.pi)   ,  # phi = 0 to 2pi
-                                      z=openmc.stats.Discrete([0.0], [1.0])   ) # z   = 0
+        if self.breeder_name == 'PB':
+            y_src = 0.0
+            z_src = 0.0
+            x_src = 620
+
+            source = openmc.IndependentSource()
+            source.space = openmc.stats.Point((x_src, y_src, z_src))
+            source.particle = 'neutron'
+            source.energy   = openmc.stats.Discrete([14.0e6], [1.0])  # 14 MeV
+            source.angle    = openmc.stats.Isotropic()
+        else:
+            source = openmc.IndependentSource()
+            source.space = openmc.stats.CylindricalIndependent(
+                                          r=openmc.stats.Discrete([self.R0], [1.0]),  # r = R0 major radius [cm]
+                                        phi=openmc.stats.Uniform(0.0, 2*np.pi)   ,  # phi = 0 to 2pi
+                                          z=openmc.stats.Discrete([0.0], [1.0])   ) # z   = 0
                                                           
-        source.particle = 'neutron'
-        source.energy   = openmc.stats.Discrete([14.0e6], [1.0])  # 14 MeV
-        source.angle    = openmc.stats.Isotropic()
+            source.particle = 'neutron'
+            source.energy   = openmc.stats.Discrete([14.0e6], [1.0])  # 14 MeV
+            source.angle    = openmc.stats.Isotropic()
 
         # Create settings and assign source
         self.settings = openmc.Settings()
@@ -373,8 +383,34 @@ class Reactor(ABC):
 
 
         """Create list of cell IDs randomly assigned by OpenMC to match mtu loading to cell ID"""
-        cell_ids = [str(x) for x in flux['cell'].unique().tolist()] 
+        cell_ids = [str(x) for x in flux['cell'].unique().tolist()]
         # turn into str to add 'total' at end -- otherwise gets pandas error for type mismatch -- ppark 2025-10-07
+        print("unique cells in Li  :", len(Li['cell'].unique()),   " rows:", len(Li))
+        print("unique cells in fertile:", len(fertile['cell'].unique()), " rows:", len(fertile))
+
+        print("\n-- list lengths --")
+        print("cell_ids           :", len(cell_ids))
+        print("flux_list          :", len(flux_list))
+        print("Li6_nt_list        :", len(Li6_nt_list))
+        print("Li6_nt_err_list    :", len(Li6_nt_err_list))
+        print("Li7_nt_list        :", len(Li7_nt_list))
+        print("Li7_nt_err_list    :", len(Li7_nt_err_list))
+        print("tbr_list           :", len(tbr_list))
+        print("tbr_err_list       :", len(tbr_err_list))
+        print("U238_fis_list      :", len(U238_fis_list))
+        print("U238_fis_err_list  :", len(U238_fis_err_list))
+        print("U238_ng_list       :", len(U238_ng_list))
+        print("U238_ng_err_list   :", len(U238_ng_err_list))
+        print("fissile_per_yr_list:", len(fissile_per_yr_list))
+
+        # Show which cells each list corresponds to (quick sanity)
+        print("\n-- head of cell columns --")
+        print("flux cells head:", flux['cell'].head(10).tolist())
+        print("Li cells head:", Li['cell'].head(10).tolist())
+        print("fertile cells head:", fertile['cell'].head(10).tolist())
+        print("cell_ids:", cell_ids)
+        print("=== END DEBUG ===\n")
+
 
         df = pd.DataFrame({'cell': cell_ids,
                            'flux': flux_list,

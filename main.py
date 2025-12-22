@@ -11,6 +11,7 @@ from Python.ball       import *
 from Python.flibe      import *
 from Python.pbli       import *
 from Python.pebble     import *
+from Python.pebble_coupon import *
 from Python.parameters import *
 from Python.utilities  import *
 
@@ -53,7 +54,7 @@ def main():
 
     elif run_type == 'tallies':
 
-        for breeder in ['LL','PB','FLiBe', ]: # 'ARC','ARCBall','PB', make this match class name
+        for breeder in ['PB']: # 'ARC','ARCBall','PB', make this match class name
             for fertile_element in ['U','Th']: # ,'Th']:
                 for fbd_kgm3 in FERTILE_BULK_DENSITY_KGM3: # [FERTILE_BULK_DENSITY_KGM3[0]]: # 
                     
