@@ -27,15 +27,15 @@ class Reactor(ABC):
 
         self.run_type    = run_type
         self.run_openmc  = run_openmc
-        self.n_particles = int(1e6)
-        self.n_cycles    = 10
+        self.n_particles = N_PARTICLES # int(1e6)
+        self.n_cycles    = N_CYCLES    # 10
 
         # All class templates must define these variables:
         self.temp_k          = None # TEMP_K
         self.breeder_name    = None # 'ARC'
-        self.breeder_density = None # DENSITY_FLIBE # g/cm^3
+        self.breeder_density = None # DENSITY_FLIBE # g/cm³
         self.breeder_enrich  = None # ENRICH_FLIBE  # wt%
-        self.breeder_volume  = None # ARC_BR_VOL    # m^3
+        self.breeder_volume  = None # ARC_BR_VOL    # m³
         self.name = None # f"{run_type}_{breeder_name}_{self.fertile_element}{fertile_bulk_density_kgm3:3.2f}kgm3_Li{self.breeder_enrich:04.1f}_{self.temp_k}K"         
         self.path = None # f"./OpenMC/{self.name}"
 
@@ -57,6 +57,7 @@ class Reactor(ABC):
         self.tallies = openmc.Tallies() # initialize
 
         # Filters
+        cellfrom_filter = openmc.CellFromFilter([cell for cell in self.cells if cell.fill is not None])
         cell_filter = openmc.CellFilter([cell for cell in self.cells if cell.fill is not None])
         energy_filter = openmc.EnergyFilter(logspace_per_decade(1e-5, 20e6, 100)) # './helpers/utilities.py'
         
@@ -83,12 +84,29 @@ class Reactor(ABC):
 
 
         # ---------------------------------------------------------------
-        # Flux and reaction rate tallies 
+        # Flux and current tallies 
+        # - Our Miller-shape Polygon doesn't play well with the surface_filter
+        #   (bc it is the union of like 1500 conic sections) so we get currents
+        #   by defining cell_filter and cellfrom_filter per docs below
+        # 
+        # cf. Misc scores > current > description @ docs.openmc.org/en/stable/usersguide/tallies.html 
+        # 
         # ---------------------------------------------------------------
+
+        # Current tally
+        current_tally        = self.make_tally('current', ['current'], filters=[cell_filter, cellfrom_filter])
+        # current_energy_tally = self.make_tally('current spectrum', ['current'], filters=[energy_filter]) # this might make output too big
 
         # Flux tally 
         flux_tally        = self.make_tally('flux', ['flux'], filters=[cell_filter])
         flux_energy_tally = self.make_tally('flux spectrum', ['flux'], filters=[cell_filter, energy_filter])
+
+        self.tallies.extend([current_tally, flux_tally, flux_energy_tally]) # current_energy_tally
+
+
+        # ---------------------------------------------------------------
+        # Reaction rate tallies 
+        # ---------------------------------------------------------------
 
         # Fertile element reaction rates
         if self.fertile_element == 'U':
@@ -111,8 +129,8 @@ class Reactor(ABC):
         Be_tally        = self.make_tally('Be rxn rates', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter], nuclides=['Be9'])
         Be_energy_tally = self.make_tally('Be rxn rates spectrum', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Be9'])
 
-        self.tallies.extend([flux_tally, fertile_tally, Li_tally, F_tally, Be_tally])
-        self.tallies.extend([flux_energy_tally, fertile_energy_tally, Li_energy_tally, F_energy_tally, Be_energy_tally])
+        self.tallies.extend([fertile_tally, Li_tally, F_tally, Be_tally])
+        self.tallies.extend([fertile_energy_tally, Li_energy_tally, F_energy_tally, Be_energy_tally])
 
 
     def make_tally(self, name, scores, filters:list=None, nuclides:list=None):
@@ -245,7 +263,7 @@ class Reactor(ABC):
                       # Void regions will be white by default
                       }
 
-        elif self.breeder_name in ['LL']:
+        elif self.breeder_name in ['DCLL']:
             colors = {self.firstwall: (30, 27, 41),           # very dark gray
                       self.structure: (109, 110, 113),        # gray
                       self.coolant: (37, 150, 190), # cobalt blue 
@@ -255,7 +273,7 @@ class Reactor(ABC):
                       # Void regions will be white by default
                       }
 
-        elif self.breeder_name in ['PB']:
+        elif self.breeder_name in ['HCPB']:
             colors = {self.firstwall: (30, 27, 41),           # very dark gray
                       self.structure: (109, 110, 113),        # gray
                       self.blanket: (129, 204, 185),          # teal
@@ -311,10 +329,13 @@ class Reactor(ABC):
             print(f"\n{e}\n")
             sys.exit(f"can't read the sp")
 
-
-        """ Convert tallies into usable forms """
-        # Read tallies
+        
         print(f"Reading tallies...")
+
+        """
+        Convert tallies into usable forms. These dataframes have headers:
+        cell  energy low [eV]  energy high [eV] nuclide score     mean  std. dev.  energy mid [eV]
+        """
 
         flux      = sp.get_tally(name='flux').get_pandas_dataframe()
         flux_spec = sp.get_tally(name='flux spectrum').get_pandas_dataframe()
@@ -334,7 +355,16 @@ class Reactor(ABC):
             (index), cell, energy low [eV], energy high [eV], nuclide, score, mean, std. dev., energy mid [eV]
         """
 
-        """ Reaction rates for every fertile loading and for every energy bin """
+        """
+        Reaction rates for every fertile loading and for every energy bin 
+
+
+        """
+        # print(flux_spec)
+        # Flux spectrum dataframe
+        flux_Ebin_df     = flux_spec[flux_spec['cell'].between(30, 39, inclusive='both')]  # extract the breeding region cells (30-39)
+        # flux_Ebin_df     = flux_Ebin_df.groupby('energy mid [eV]', as_index=False)['mean'].sum() # add 'mean' for matching 'energy mid [eV]' for each unique cell (31, 32...)
+
         U238_ng_Ebin_df  = fertile_spec[(fertile_spec['nuclide'] == self.fertile_isotope) & (fertile_spec['score'] == '(n,gamma)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
         U238_fis_Ebin_df = fertile_spec[(fertile_spec['nuclide'] == self.fertile_isotope) & (fertile_spec['score'] == 'fission')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
         Li6_nt_Ebin_df   = Li_spec[(Li_spec['nuclide'] == 'Li6') & (Li_spec['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
@@ -397,7 +427,4 @@ class Reactor(ABC):
         df.to_csv(f'./{self.path}/tallies_summary.csv', index=False)
         
         U238_ng_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_n-gamma_Ebins.csv', index=False)
-
-
-
-            
+        flux_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_flux_Ebins.csv', index=False)

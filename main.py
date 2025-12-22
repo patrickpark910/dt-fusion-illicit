@@ -9,8 +9,8 @@ from Python.reactor    import *
 from Python.arc        import *
 from Python.ball       import *
 from Python.flibe      import *
-from Python.pbli       import *
-from Python.pebble     import *
+from Python.dcll       import *
+from Python.hcpb       import *
 from Python.parameters import *
 from Python.utilities  import *
 
@@ -30,7 +30,7 @@ def main():
 
 
     if run_type == 'plot':
-        for breeder in ['ARC','ARCBall','FLiBe','LL', 'PB']: # make this match class name
+        for breeder in ['FLiBe',]: # 'ARC','ARCB','DCLL', 'HCPB']: # make this match class name
             
             current_run = build_reactor(breeder, breeder_name=breeder, run_type='plot', run_openmc=True)
 
@@ -41,7 +41,7 @@ def main():
 
 
     elif run_type == 'volume':
-        for breeder in ['ARC','ARCBall','FLiBe','LL', 'PB']: # make this match class name
+        for breeder in ['ARC','ARCB','FLiBe','DCLL', 'HCPB']: # make this match class name
 
             current_run = build_reactor(breeder, breeder_name=breeder, run_type='volume', run_openmc=True)
             
@@ -53,7 +53,7 @@ def main():
 
     elif run_type == 'tallies':
 
-        for breeder in ['LL','PB','FLiBe', ]: # 'ARC','ARCBall', make this match class name
+        for breeder in ['DCLL',]: # 'ARC','ARCB','DCLL','FLiBe','HCPB' make this match class name
             for fertile_element in ['U','Th']: # ,'Th']:
                 for fbd_kgm3 in FERTILE_BULK_DENSITY_KGM3: # [FERTILE_BULK_DENSITY_KGM3[0]]: # 
                     
@@ -72,6 +72,7 @@ def main():
 
                     if os.path.exists(f"{current_run.path}/tallies_summary.csv"): 
                         print(f"{Colors.YELLOW}Warning.{Colors.END} File {current_run.path}/tallies_summary.csv already exists, so tally extraction will be skipped...")
+                        current_run.extract_tallies()
                     elif current_run.run_openmc:
                         current_run.extract_tallies()
 
@@ -106,8 +107,13 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
         fertile_isotope = 'Th232'
         fissile_isotope =  'U233'
 
-    df_ebins = pd.DataFrame(columns=['filename','br_vol_m3','fertile_kg/m3', 'fertile_mt', 'energy mid [eV]', 'mean'])
+    # df_flux_collated  = pd.DataFrame(columns=['filename','br_vol_m3','fertile_kg/m3', 'fertile_mt', 'energy mid [eV]', 'mean'])
+    # df_ng_collated    = pd.DataFrame(columns=['filename','br_vol_m3','fertile_kg/m3', 'fertile_mt', 'energy mid [eV]', 'mean'])
     tally_folders = [x for x in os.listdir("./OpenMC/") if (x.startswith(f"tallies_{breeder}_{temp_k}K")) and x.split("_")[-1].startswith(fertile_element)]
+
+    # Use lists instead of empty DataFrames
+    flux_list = []
+    ng_list = []
 
     for folder in tally_folders:
 
@@ -117,8 +123,9 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
         mt = fertile*vol_m3/1e3 # metric tons of fertile isotope
 
         tally_summary = f"./OpenMC/{folder}/tallies_summary.csv"
-        tally_Ebins   = f"./OpenMC/{folder}/{fertile_isotope}_n-gamma_Ebins.csv"
-        
+        tally_ng      = f"./OpenMC/{folder}/{fertile_isotope}_n-gamma_Ebins.csv"
+        tally_flux    = f"./OpenMC/{folder}/{fertile_isotope}_flux_Ebins.csv"
+
         try:
             df = pd.read_csv(tally_summary)
         except:
@@ -126,9 +133,15 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
             continue
 
         try:
-            df_bins = pd.read_csv(tally_Ebins)
+            df_ng = pd.read_csv(tally_ng)
         except:
             print(f"{Colors.YELLOW}Warning.{Colors.END} File '{fertile_isotope}_n-gamma_Ebins.csv' not found in {folder}, skipping...")
+            continue
+
+        try:
+            df_flux = pd.read_csv(tally_flux)
+        except:
+            print(f"{Colors.YELLOW}Warning.{Colors.END} File '{fertile_isotope}_flux_Ebins.csv' not found in {folder}, skipping...")
             continue
 
         li6  = df[ df['cell']=='total' ]['Li6(n,t)'].values[0]
@@ -137,18 +150,47 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
         tbr  = df[ df['cell']=='total' ]['tbr'].values[0]
         pu   = df[ df['cell']=='total' ][f'{fissile_isotope}_kg/yr'].values[0]
 
-        cols = ["energy low [eV]", "energy high [eV]", "energy mid [eV]", "mean"]       
-        Ebins = (df_bins[cols].groupby("energy mid [eV]", as_index=False)
-                              .agg(**{"energy low [eV]" : ("energy low [eV]", "first"),
-                                      "energy high [eV]": ("energy high [eV]", "first"),
-                                                  "mean": ("mean", "sum"),} ) )
+        cols = ["energy low [eV]", "energy high [eV]", "energy mid [eV]", "mean"]     
 
-        Ebins['filename']      = folder
-        Ebins['fertile_kg/m3'] = fertile
-        Ebins['fertile_mt']    = mt
-        Ebins['br_vol_m3']     = vol_m3
-        df_ebins = pd.concat([df_ebins, Ebins])
-        df_ebins.to_csv(f"./Figures/Data/{breeder}_{fertile_element}_n-gamma_{temp_k}K.csv",index=False)
+        # Group by energy midpoint and sum mean values across all cells while preserving energy bin boundaries  
+        # groupby("energy mid [eV]", as_index=False) - Groups all rows that have the same "energy mid [eV]" value together
+        # .agg(**{...}) - "output_column_name": ("input_column_name", "aggregation_function")
+        # "energy low [eV]": ("energy low [eV]", "first") - Takes the first "energy low [eV]" value in the group
+        # "energy high [eV]": ("energy high [eV]", "first") - Takes the first "energy high [eV]" value in the group
+        # "mean": ("mean", "sum") - Sums all "mean" values in the group
+
+        ng =  (df_ng[cols].groupby("energy mid [eV]", as_index=False)
+                          .agg(**{"energy low [eV]" : ("energy low [eV]", "first"),
+                                  "energy high [eV]": ("energy high [eV]", "first"),
+                                              "mean": ("mean", "sum"),} ) )
+
+        flux = (df_flux[cols].groupby("energy mid [eV]", as_index=False)
+                             .agg(**{"energy low [eV]" : ("energy low [eV]", "first"),
+                                    "energy high [eV]": ("energy high [eV]", "first"),
+                                                "mean": ("mean", "sum"),} ) )
+
+        ng['filename'],      flux['filename']      = folder, folder
+        ng['fertile_kg/m3'], flux['fertile_kg/m3'] = fertile, fertile
+        ng['fertile_mt'],    flux['fertile_mt']    = mt, mt
+        ng['br_vol_m3'],     flux['br_vol_m3']     = vol_m3, vol_m3
+
+        # avoid deprecation warning smh this change by pd feels unnecessary
+        ng_list.append(ng)
+        flux_list.append(flux)
+
+        # Concatenate once at the end
+        df_ng_collated = pd.concat(ng_list, ignore_index=True) if ng_list else pd.DataFrame()
+        df_flux_collated = pd.concat(flux_list, ignore_index=True) if flux_list else pd.DataFrame()
+
+        # Reorder columns
+        df_ng_collated = df_ng_collated[['filename', 'fertile_kg/m3', 'fertile_mt', 'br_vol_m3', 
+                                         'energy mid [eV]', 'mean', 'energy low [eV]', 'energy high [eV]']]
+
+        df_flux_collated = df_flux_collated[['filename', 'fertile_kg/m3', 'fertile_mt', 'br_vol_m3', 
+                                             'energy mid [eV]', 'mean', 'energy low [eV]', 'energy high [eV]']]
+
+        df_ng_collated.to_csv(f"./Figures/Data/{breeder}_{fertile_element}_n-gamma_{temp_k}K.csv",index=False)
+        df_flux_collated.to_csv(f"./Figures/Data/{breeder}_{fertile_element}_flux_{temp_k}K.csv",index=False)
 
         df_all.loc[len(df_all)] = {'filename': folder,
                               'fertile_kg/m3': fertile,
@@ -159,8 +201,9 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
                                         'tbr': tbr,
                    f'{fissile_isotope}_kg/yr': pu }
 
-    dst = f"./Figures/Data/{breeder}_{fertile_element}_rxns_{temp_k}K.csv"
-    df_all.to_csv(dst, index=False)
+        dst = f"./Figures/Data/{breeder}_{fertile_element}_rxns_{temp_k}K.csv"
+        df_all.to_csv(dst, index=False)
+
     print(f"{Colors.GREEN}Comment.{Colors.END} Collated tallies for {breeder} at {temp_k} K to: {dst}")
                           
 
