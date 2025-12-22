@@ -4,7 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, ScalarFormatter
 from scipy.interpolate import Akima1DInterpolator
-from scipy.interpolate import PchipInterpolator
+from scipy.interpolate import UnivariateSpline
+from scipy.optimize import curve_fit
 
 
 """ import helper functions """
@@ -26,6 +27,27 @@ def readtxtFile(path):
     return np.array(energy), np.log(np.array(microxs))
 
 
+def fitquartic(x,y):
+    '''
+    Fits [a, b, c, d] for ax^4 + bx^3 + cx^2 + dx = y (force zero production at zero enrichment)
+    Return approximation expression, derivative of approximation
+    
+    x: array, enrichment amounts
+    y: array, Pu-239 production per year 
+    '''
+    def quartic(x,a,b,c,d):
+        return a*x**4 + b*x**3 + c*x**2 + d*x
+    
+    params, covariance = curve_fit(quartic, x, y)
+    a_fit,b_fit,c_fit,d_fit = params
+    print(covariance)
+
+    f = lambda x: a_fit*x**4 + b_fit*x**3 + c_fit*x**2 + d_fit*x
+    fprime = lambda x: 4*a_fit*x**3 + 3*b_fit*x**2 + 2*c_fit*x + d_fit
+
+    return f, fprime
+
+
 def plot_all():
     """ Read CSV data into pandas DataFrames """
 
@@ -34,8 +56,9 @@ def plot_all():
     """ Pick which one to plot by uncommenting """
     # combined_plot.plot_tbr()
     # combined_plot.plot_pu_per_yr()
-    # combined_plot.plot_cum_norm_histogram()
-    combined_plot.plot_dfisdfer()
+    combined_plot.plot_cum_norm_histogram()
+    # combined_plot.plot_dfisdfer()
+    # combined_plot.plot_fisovern()
 
     print("All plots completed and saved.")
 
@@ -47,17 +70,26 @@ class Plot:
         # Dataframes of reaction rates (rr)
         self.flibe_u_rr_df  = pd.read_csv('./Figures/Data/FLiBe_U_rxns_900K.csv')
         self.flibe_th_rr_df = pd.read_csv('./Figures/Data/FLiBe_Th_rxns_900K.csv')
-        self.pbli_u_rr_df   = pd.read_csv('./Figures/Data/LL_U_rxns_900K.csv')
-        self.pbli_th_rr_df  = pd.read_csv('./Figures/Data/LL_Th_rxns_900K.csv')
-        self.pb_u_rr_df     = pd.read_csv('./Figures/Data/PB_U_rxns_900K.csv')
-        self.pb_th_rr_df    = pd.read_csv('./Figures/Data/PB_Th_rxns_900K.csv')
+        self.dcll_u_rr_df   = pd.read_csv('./Figures/Data/DCLL_U_rxns_900K.csv')
+        self.dcll_th_rr_df  = pd.read_csv('./Figures/Data/DCLL_Th_rxns_900K.csv')
+        self.hcpb_u_rr_df     = pd.read_csv('./Figures/Data/HCPB_U_rxns_900K.csv')
+        self.hcpb_th_rr_df    = pd.read_csv('./Figures/Data/HCPB_Th_rxns_900K.csv')
+
+        ### sorting
+        self.flibe_u_rr_df   = self.flibe_u_rr_df.sort_values(by='fertile_kg/m3', ignore_index=True)
+        self.flibe_th_rr_df  = self.flibe_th_rr_df.sort_values(by='fertile_kg/m3', ignore_index=True)
+        self.dcll_u_rr_df    = self.dcll_u_rr_df.sort_values(by='fertile_kg/m3', ignore_index=True)
+        self.dcll_th_rr_df   = self.dcll_th_rr_df.sort_values(by='fertile_kg/m3', ignore_index=True)
+        self.hcpb_u_rr_df    = self.hcpb_u_rr_df.sort_values(by='fertile_kg/m3', ignore_index=True)
+        self.hcpb_th_rr_df   = self.hcpb_th_rr_df.sort_values(by='fertile_kg/m3', ignore_index=True)
+        ###
 
         self.flibe_u_eb_df  = pd.read_csv('./Figures/Data/FLiBe_U_n-gamma_900K.csv')
         self.flibe_th_eb_df = pd.read_csv('./Figures/Data/FLiBe_Th_n-gamma_900K.csv')
-        self.pbli_u_eb_df   = pd.read_csv('./Figures/Data/LL_U_n-gamma_900K.csv')
-        self.pbli_th_eb_df  = pd.read_csv('./Figures/Data/LL_Th_n-gamma_900K.csv')
-        self.pb_u_eb_df     = pd.read_csv('./Figures/data/PB_U_n-gamma_900K.csv') 
-        self.pb_th_eb_df    = pd.read_csv('./Figures/data/PB_Th_n-gamma_900K.csv') 
+        self.dcll_u_eb_df   = pd.read_csv('./Figures/Data/DCLL_U_n-gamma_900K.csv')
+        self.dcll_th_eb_df  = pd.read_csv('./Figures/Data/DCLL_Th_n-gamma_900K.csv')
+        self.hcpb_u_eb_df     = pd.read_csv('./Figures/data/HCPB_U_n-gamma_900K.csv') 
+        self.hcpb_th_eb_df    = pd.read_csv('./Figures/data/HCPB_Th_n-gamma_900K.csv') 
 
         self.save, self.show = save, show
         # self.name = 'All_Blankets'
@@ -72,13 +104,13 @@ class Plot:
         print(f"\nPlotting tritium breeding ratio vs. fertile density...")
 
         # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
-        x6, y6 =     self.pb_u_rr_df['fertile_kg/m3'],     self.pb_u_rr_df['Li6(n,t)'] +     self.pb_u_rr_df['Li7(n,Xt)']
-        x5, y5 =    self.pb_th_rr_df['fertile_kg/m3'],    self.pb_th_rr_df['Li6(n,t)'] +    self.pb_th_rr_df['Li7(n,Xt)']     
-        x4, y4 =   self.pbli_u_rr_df['fertile_kg/m3'],   self.pbli_u_rr_df['Li6(n,t)'] +   self.pbli_u_rr_df['Li7(n,Xt)']
-        x3, y3 =  self.pbli_th_rr_df['fertile_kg/m3'],  self.pbli_th_rr_df['Li6(n,t)'] +  self.pbli_th_rr_df['Li7(n,Xt)']
+        x6, y6 =     self.hcpb_u_rr_df['fertile_kg/m3'],     self.hcpb_u_rr_df['Li6(n,t)'] +     self.hcpb_u_rr_df['Li7(n,Xt)']
+        x5, y5 =    self.hcpb_th_rr_df['fertile_kg/m3'],    self.hcpb_th_rr_df['Li6(n,t)'] +    self.hcpb_th_rr_df['Li7(n,Xt)']     
+        x4, y4 =   self.dcll_u_rr_df['fertile_kg/m3'],   self.dcll_u_rr_df['Li6(n,t)'] +   self.dcll_u_rr_df['Li7(n,Xt)']
+        x3, y3 =  self.dcll_th_rr_df['fertile_kg/m3'],  self.dcll_th_rr_df['Li6(n,t)'] +  self.dcll_th_rr_df['Li7(n,Xt)']
         x2, y2 =  self.flibe_u_rr_df['fertile_kg/m3'],  self.flibe_u_rr_df['Li6(n,t)'] +  self.flibe_u_rr_df['Li7(n,Xt)']
         x1, y1 = self.flibe_th_rr_df['fertile_kg/m3'], self.flibe_th_rr_df['Li6(n,t)'] + self.flibe_th_rr_df['Li7(n,Xt)']
-
+        
         # AkimaInterpolation ripped from my ELWR paper --ppark 2025-08-06
         x_fine = np.linspace(x1.min(), x1.max(), 300) # Evaluate on a fine grid
         y_akima1 = Akima1DInterpolator(x1, y1)(x_fine)
@@ -96,25 +128,25 @@ class Plot:
 
         plt.figure(figsize=(7.5,5))
 
-        plt.scatter(x6, y6, marker='s', s=40, color='#b41f24') #  PB-UO2
-        plt.scatter(x5, y5, marker='1', s=70, color='#b41f24') #  PB-ThO2
-        plt.scatter(x4, y4, marker='^', s=40, color='#0047ba') #  LL-UO2
-        plt.scatter(x3, y3, marker='x', s=50, color='#0047ba') #  LL-ThO2
+        plt.scatter(x6, y6, marker='s', s=40, color='#b41f24') #  HCPB-UO2
+        plt.scatter(x5, y5, marker='1', s=70, color='#b41f24') #  HCPB-ThO2
+        plt.scatter(x4, y4, marker='^', s=40, color='#0047ba') #  DCLL-UO2
+        plt.scatter(x3, y3, marker='x', s=50, color='#0047ba') #  DCLL-ThO2
         plt.scatter(x2, y2, marker='o', s=30, color='#66b420')   #  FLiBe-UF4
         plt.scatter(x1, y1, marker='+', s=60, color='#66b420')   #  FLiBe-ThF4 
 
-        plt.plot(x_fine, y_akima6, '-',   linewidth=1, color='#b41f24',)   #  PB-UO2
-        plt.plot(x_fine, y_akima5, '--',  linewidth=1, color='#b41f24',)   #  PB-ThO2
-        plt.plot(x_fine, y_akima4, '-',   linewidth=1, color='#0047ba',)   #  LL-UO2
-        plt.plot(x_fine, y_akima3, '--',  linewidth=1, color='#0047ba',)   #  LL-ThO2
+        plt.plot(x_fine, y_akima6, '-',   linewidth=1, color='#b41f24',)   #  HCPB-UO2
+        plt.plot(x_fine, y_akima5, '--',  linewidth=1, color='#b41f24',)   #  HCPB-ThO2
+        plt.plot(x_fine, y_akima4, '-',   linewidth=1, color='#0047ba',)   #  DCLL-UO2
+        plt.plot(x_fine, y_akima3, '--',  linewidth=1, color='#0047ba',)   #  DCLL-ThO2
         plt.plot(x_fine, y_akima2, '-',   linewidth=1, color='#66b420', )    #  FLiBe-UF4
         plt.plot(x_fine, y_akima1, '--',  linewidth=1, color='#66b420', )    #  FLiBe-ThF4 
 
         # Dummy plots for legend -- bit of a hack lmao -- ppark
-        plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'LL-UO$_2$')     #  blue: #0047ba
-        plt.plot([9e8,9e9], [9e8,9e9], 'x--', markersize=7, linewidth=1, color='#0047ba', label=r'LL-ThO$_2$')    #  
-        plt.plot([9e8,9e9], [9e8,9e9], 's-',  markersize=5, linewidth=1, color='#b41f24', label=r'PB-UO$_2$')     #  red: #b41f24
-        plt.plot([9e8,9e9], [9e8,9e9], '1--', markersize=9, linewidth=1, color='#b41f24', label=r'PB-ThO$_2$')    # 
+        plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'DCLL-UO$_2$')     #  blue: #0047ba
+        plt.plot([9e8,9e9], [9e8,9e9], 'x--', markersize=7, linewidth=1, color='#0047ba', label=r'DCLL-ThO$_2$')    #  
+        plt.plot([9e8,9e9], [9e8,9e9], 's-',  markersize=5, linewidth=1, color='#b41f24', label=r'HCPB-UO$_2$')     #  red: #b41f24
+        plt.plot([9e8,9e9], [9e8,9e9], '1--', markersize=9, linewidth=1, color='#b41f24', label=r'HCPB-ThO$_2$')    # 
         plt.plot([9e8,9e9], [9e8,9e9], 'o-',  markersize=5, linewidth=1, color='#66b420',   label=r'FLiBe-UF$_4$')  #  green: #66b420
         plt.plot([9e8,9e9], [9e8,9e9], '+--', markersize=8, linewidth=1, color='#66b420',   label=r'FLiBe-ThF$_4$') #  
         
@@ -169,10 +201,10 @@ class Plot:
         u233_at_to_kg_per_yr  = tot_n_per_yr / AVO * AMU_U233  / 1e3
         
         # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
-        x6, y6 =     self.pb_u_rr_df['fertile_kg/m3'], pu239_at_to_kg_per_yr *     self.pb_u_rr_df['U238(n,g)'] 
-        x5, y5 =    self.pb_th_rr_df['fertile_kg/m3'],  u233_at_to_kg_per_yr *    self.pb_th_rr_df['Th232(n,g)']
-        x4, y4 =   self.pbli_u_rr_df['fertile_kg/m3'], pu239_at_to_kg_per_yr *   self.pbli_u_rr_df['U238(n,g)'] 
-        x3, y3 =  self.pbli_th_rr_df['fertile_kg/m3'],  u233_at_to_kg_per_yr *  self.pbli_th_rr_df['Th232(n,g)']
+        x6, y6 =     self.hcpb_u_rr_df['fertile_kg/m3'], pu239_at_to_kg_per_yr *     self.hcpb_u_rr_df['U238(n,g)'] 
+        x5, y5 =    self.hcpb_th_rr_df['fertile_kg/m3'],  u233_at_to_kg_per_yr *    self.hcpb_th_rr_df['Th232(n,g)']
+        x4, y4 =   self.dcll_u_rr_df['fertile_kg/m3'], pu239_at_to_kg_per_yr *   self.dcll_u_rr_df['U238(n,g)'] 
+        x3, y3 =  self.dcll_th_rr_df['fertile_kg/m3'],  u233_at_to_kg_per_yr *  self.dcll_th_rr_df['Th232(n,g)']
         x2, y2 =  self.flibe_u_rr_df['fertile_kg/m3'], pu239_at_to_kg_per_yr *  self.flibe_u_rr_df['U238(n,g)']
         x1, y1 = self.flibe_th_rr_df['fertile_kg/m3'],  u233_at_to_kg_per_yr * self.flibe_th_rr_df['Th232(n,g)']
 
@@ -187,34 +219,33 @@ class Plot:
 
         plt.figure(figsize=(7.5,5))
 
-        plt.scatter(x6, y6, marker='s', s=40, color='#b41f24') # PB-UO2
-        plt.scatter(x5, y5, marker='1', s=70, color='#b41f24') # PB-ThO2
-        plt.scatter(x4, y4, marker='^', s=40, color='#0047ba') # LL-UO2
-        plt.scatter(x3, y3, marker='x', s=50, color='#0047ba') # LL-ThO2
+        plt.scatter(x6, y6, marker='s', s=40, color='#b41f24') # HCPB-UO2
+        plt.scatter(x5, y5, marker='1', s=70, color='#b41f24') # HCPB-ThO2
+        plt.scatter(x4, y4, marker='^', s=40, color='#0047ba') # DCLL-UO2
+        plt.scatter(x3, y3, marker='x', s=50, color='#0047ba') # DCLL-ThO2
         plt.scatter(x2, y2, marker='o', s=30, color='#66b420')   # FLiBe-UF4
         plt.scatter(x1, y1, marker='+', s=60, color='#66b420')   # FLiBe-ThF4
 
-        plt.plot(x_fine, y_akima6, '-',   linewidth=1, color='#b41f24',)   #  PB-UO2
-        plt.plot(x_fine, y_akima5, '--',  linewidth=1, color='#b41f24',)   #  PB-ThO2
-        plt.plot(x_fine, y_akima4, '-',   linewidth=1, color='#0047ba',)   #  LL-UO2
-        plt.plot(x_fine, y_akima3, '--',  linewidth=1, color='#0047ba',)   #  LL-ThO2
+        plt.plot(x_fine, y_akima6, '-',   linewidth=1, color='#b41f24',)   #  HCPB-UO2
+        plt.plot(x_fine, y_akima5, '--',  linewidth=1, color='#b41f24',)   #  HCPB-ThO2
+        plt.plot(x_fine, y_akima4, '-',   linewidth=1, color='#0047ba',)   #  DCLL-UO2
+        plt.plot(x_fine, y_akima3, '--',  linewidth=1, color='#0047ba',)   #  DCLL-ThO2
         plt.plot(x_fine, y_akima2, '-',   linewidth=1, color='#66b420', )    #  FLiBe-UF4
         plt.plot(x_fine, y_akima1, '--',  linewidth=1, color='#66b420', )    #  FLiBe-ThF4 
 
         # Dummy plots for legend -- bit of a hack lmao -- ppark
         plt.plot([9e8,9e9], [9e8,9e9], '+--', markersize=8, linewidth=1, color='#66b420',   label=r'FLiBe-ThF$_4$') #  green: #66b420
         plt.plot([9e8,9e9], [9e8,9e9], 'o-',  markersize=5, linewidth=1, color='#66b420',   label=r'FLiBe-UF$_4$')  # 
-        plt.plot([9e8,9e9], [9e8,9e9], '1--', markersize=9, linewidth=1, color='#b41f24', label=r'PB-ThO$_2$')    # 
-        plt.plot([9e8,9e9], [9e8,9e9], 's-',  markersize=5, linewidth=1, color='#b41f24', label=r'PB-UO$_2$')     # 
-        plt.plot([9e8,9e9], [9e8,9e9], 'x--', markersize=7, linewidth=1, color='#0047ba', label=r'LL-ThO$_2$')    #  red: #b41f24
-        plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'LL-UO$_2$')     #  blue: #0047ba
-
+        plt.plot([9e8,9e9], [9e8,9e9], '1--', markersize=9, linewidth=1, color='#b41f24', label=r'HCPB-ThO$_2$')    # 
+        plt.plot([9e8,9e9], [9e8,9e9], 's-',  markersize=5, linewidth=1, color='#b41f24', label=r'HCPB-UO$_2$')     # 
+        plt.plot([9e8,9e9], [9e8,9e9], 'x--', markersize=7, linewidth=1, color='#0047ba', label=r'DCLL-ThO$_2$')    #  red: #b41f24
+        plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'DCLL-UO$_2$')     #  blue: #0047ba
 
         # plt.title(f'Tritium breeding ratio (All)') # Exclude title for production figs --ppark 2025-08-06
         plt.xlabel(r'Fertile isotope density in blanket [kg$/$m$^3$]')
         plt.ylabel('Initial fissile production rate [kg$/$yr]')
 
-        plt.xlim(-5,165)
+        plt.xlim(-5, 165) # 165
         plt.ylim(-15,2*(250+7.5))  # plt.ylim(-7.5,225+7.5) 
 
         # Tick grid
@@ -261,8 +292,8 @@ class Plot:
         u238_mxs_shifted = (u238_mxs - np.min(u238_mxs)) * 0.8 / (np.max(u238_mxs) - np.min(u238_mxs)) + 0.1
         th232_mxs_shifted = (th232_mxs - np.min(th232_mxs)) * 0.8 / (np.max(th232_mxs) - np.min(th232_mxs)) + 0.1
 
-        titles = [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$", r"PB-UO$_2$", r"PB-ThO$_2$", r"LL-UO$_2$", r"LL-ThO$_2$",]
-        dfs    = [self.flibe_u_eb_df, self.flibe_th_eb_df, self.pb_u_eb_df, self.pb_th_eb_df, self.pbli_u_eb_df, self.pbli_th_eb_df,]
+        titles = [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$", r"HCPB-UO$_2$", r"HCPB-ThO$_2$", r"DCLL-UO$_2$", r"DCLL-ThO$_2$",]
+        dfs    = [self.flibe_u_eb_df, self.flibe_th_eb_df, self.hcpb_u_eb_df, self.hcpb_th_eb_df, self.dcll_u_eb_df, self.dcll_th_eb_df,]
 
         for i in range(3):
             for j in range(2):
@@ -333,8 +364,8 @@ class Plot:
             leg.get_frame().set_linewidth(0.5) 
 
         if self.save:
-            plt.savefig(f'./Figures/pdf/fig_cum_norm_histogram.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/png/fig_cum_norm_histogram.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/pdf/fig_cum_norm_histogram_new.pdf', bbox_inches='tight', format='pdf')
+            plt.savefig(f'./Figures/png/fig_cum_norm_histogram_new.png', bbox_inches='tight', format='png')
             print(f"Exported cumulative normalized histogram plots.")
         else:
             print(f"Did not export cumulative normalized histogram plot.")
@@ -354,58 +385,58 @@ class Plot:
 
         # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
         # pebble bed
-        x6, y6 =     self.pb_u_rr_df['fertile_kg/m3'], pu239_at_to_kg_per_yr * self.pb_u_rr_df['U238(n,g)']
-        x5, y5 =    self.pb_th_rr_df['fertile_kg/m3'], u233_at_to_kg_per_yr * self.pb_th_rr_df['Th232(n,g)']
+        x6, y6 =     self.hcpb_u_rr_df['fertile_kg/m3'], pu239_at_to_kg_per_yr * self.hcpb_u_rr_df['U238(n,g)']
+        x5, y5 =    self.hcpb_th_rr_df['fertile_kg/m3'], u233_at_to_kg_per_yr * self.hcpb_th_rr_df['Th232(n,g)']
 
         # lead lithium     
-        x4, y4 =   self.pbli_u_rr_df['fertile_kg/m3'],  pu239_at_to_kg_per_yr *  self.pbli_u_rr_df['U238(n,g)']
-        x3, y3 =  self.pbli_th_rr_df['fertile_kg/m3'],  u233_at_to_kg_per_yr * self.pbli_th_rr_df['Th232(n,g)']
+        x4, y4 =   self.dcll_u_rr_df['fertile_kg/m3'],  pu239_at_to_kg_per_yr *  self.dcll_u_rr_df['U238(n,g)']
+        x3, y3 =  self.dcll_th_rr_df['fertile_kg/m3'],  u233_at_to_kg_per_yr * self.dcll_th_rr_df['Th232(n,g)']
 
         # flibe
         x2, y2 =  self.flibe_u_rr_df['fertile_kg/m3'],  pu239_at_to_kg_per_yr *  self.flibe_u_rr_df['U238(n,g)']
         x1, y1 = self.flibe_th_rr_df['fertile_kg/m3'],  u233_at_to_kg_per_yr * self.flibe_th_rr_df['Th232(n,g)']
 
-        # evaluated derviative at original points 
-        y1eval = Akima1DInterpolator(x1, y1).derivative(nu=1)(x1)
-        y2eval = Akima1DInterpolator(x2, y2).derivative(nu=1)(x2)
-        y3eval = Akima1DInterpolator(x3, y3).derivative(nu=1)(x3)
-        y4eval = Akima1DInterpolator(x4, y4).derivative(nu=1)(x4)
-        y5eval = Akima1DInterpolator(x5, y5).derivative(nu=1)(x5)
-        y6eval = Akima1DInterpolator(x6, y6).derivative(nu=1)(x6)
+        # find derivatives 
+        quartic_deriv1 = fitquartic(x1[:17], y1[:17])[1] # fit quartic up until 250 kg enrichment
+        quartic_deriv2 = fitquartic(x2[:17], y2[:17])[1]
+        quartic_deriv3 = fitquartic(x3[:17], y3[:17])[1]
+        quartic_deriv4 = fitquartic(x4[:17], y4[:17])[1]
+        quartic_deriv5 = fitquartic(x5[:17], y5[:17])[1]
+        quartic_deriv6 = fitquartic(x6[:17], y6[:17])[1]
 
-        # interpolation and differentiation
-        x_fine = np.linspace(x1.min(), x1.max(), 300) # Evaluate on a fine grid
-        y_akima1 = Akima1DInterpolator(x1, y1eval)(x_fine)
-        y_akima2 = Akima1DInterpolator(x2, y2eval)(x_fine)
-        y_akima3 = Akima1DInterpolator(x3, y3eval)(x_fine)
-        y_akima4 = Akima1DInterpolator(x4, y4eval)(x_fine)
-        y_akima5 = Akima1DInterpolator(x5, y5eval)(x_fine)
-        y_akima6 = Akima1DInterpolator(x6, y6eval)(x_fine)
+        # evaluate
+        x_fine = np.linspace(x1.min(), x1.max(), 300)
+        y1eval, y1fine = quartic_deriv1(x1), quartic_deriv1(x_fine)
+        y2eval, y2fine = quartic_deriv2(x2), quartic_deriv2(x_fine)
+        y3eval, y3fine = quartic_deriv3(x3), quartic_deriv3(x_fine)
+        y4eval, y4fine = quartic_deriv4(x4), quartic_deriv4(x_fine)
+        y5eval, y5fine = quartic_deriv5(x5), quartic_deriv5(x_fine)
+        y6eval, y6fine = quartic_deriv6(x6), quartic_deriv6(x_fine)
 
         # plot
         plt.figure(figsize=(7.5,5))
 
-        plt.scatter(x6, y6eval, marker='s', s=40, color='#b41f24') # PB-UO2
-        plt.scatter(x5, y5eval, marker='1', s=70, color='#b41f24') # PB-ThO2
-        plt.scatter(x4, y4eval, marker='^', s=40, color='#0047ba') # LL-UO2
-        plt.scatter(x3, y3eval, marker='x', s=50, color='#0047ba') # LL-ThO2
+        plt.scatter(x6, y6eval, marker='s', s=40, color='#b41f24') # HCPB-UO2
+        plt.scatter(x5, y5eval, marker='1', s=70, color='#b41f24') # HCPB-ThO2
+        plt.scatter(x4, y4eval, marker='^', s=40, color='#0047ba') # DCLL-UO2
+        plt.scatter(x3, y3eval, marker='x', s=50, color='#0047ba') # DCLL-ThO2
         plt.scatter(x2, y2eval, marker='o', s=30, color='#66b420')   # FLiBe-UF4
         plt.scatter(x1, y1eval, marker='+', s=60, color='#66b420')   # FLiBe-ThF4
 
-        plt.plot(x_fine, y_akima6, '-',   linewidth=1, color='#b41f24',)   #  PB-UO2
-        plt.plot(x_fine, y_akima5, '--',  linewidth=1, color='#b41f24',)   #  PB-ThO2
-        plt.plot(x_fine, y_akima4, '-',   linewidth=1, color='#0047ba',)   #  LL-UO2
-        plt.plot(x_fine, y_akima3, '--',  linewidth=1, color='#0047ba',)   #  LL-ThO2
-        plt.plot(x_fine, y_akima2, '-',   linewidth=1, color='#66b420', )    #  FLiBe-UF4
-        plt.plot(x_fine, y_akima1, '--',  linewidth=1, color='#66b420', )    #  FLiBe-ThF4 
+        plt.plot(x_fine, y6fine, '-',   linewidth=1, color='#b41f24',)   #  HCPB-UO2
+        plt.plot(x_fine, y5fine, '--',  linewidth=1, color='#b41f24',)   #  HCPB-ThO2
+        plt.plot(x_fine, y4fine, '-',   linewidth=1, color='#0047ba',)   #  DCLL-UO2
+        plt.plot(x_fine, y3fine, '--',  linewidth=1, color='#0047ba',)   #  DCLL-ThO2
+        plt.plot(x_fine, y2fine, '-',   linewidth=1, color='#66b420', )    #  FLiBe-UF4
+        plt.plot(x_fine, y1fine, '--',  linewidth=1, color='#66b420', )    #  FLiBe-ThF4 
 
         # Dummy plots for legend -- ppark
         plt.plot([9e8,9e9], [9e8,9e9], '+--', markersize=8, linewidth=1, color='#66b420',   label=r'FLiBe-ThF$_4$') #  green: #66b420
         plt.plot([9e8,9e9], [9e8,9e9], 'o-',  markersize=5, linewidth=1, color='#66b420',   label=r'FLiBe-UF$_4$')  # 
-        plt.plot([9e8,9e9], [9e8,9e9], '1--', markersize=9, linewidth=1, color='#b41f24', label=r'PB-ThO$_2$')    # 
-        plt.plot([9e8,9e9], [9e8,9e9], 's-',  markersize=5, linewidth=1, color='#b41f24', label=r'PB-UO$_2$')     # 
-        plt.plot([9e8,9e9], [9e8,9e9], 'x--', markersize=7, linewidth=1, color='#0047ba', label=r'LL-ThO$_2$')    #  red: #b41f24
-        plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'LL-UO$_2$')     #  blue: #0047ba
+        plt.plot([9e8,9e9], [9e8,9e9], '1--', markersize=9, linewidth=1, color='#b41f24', label=r'HCPB-ThO$_2$')    # 
+        plt.plot([9e8,9e9], [9e8,9e9], 's-',  markersize=5, linewidth=1, color='#b41f24', label=r'HCPB-UO$_2$')     # 
+        plt.plot([9e8,9e9], [9e8,9e9], 'x--', markersize=7, linewidth=1, color='#0047ba', label=r'DCLL-ThO$_2$')    #  red: #b41f24
+        plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'DCLL-UO$_2$')     #  blue: #0047ba
 
         # plt.title(f'Tritium breeding ratio (All)') # Exclude title for production figs --ppark 2025-08-06
         plt.xlabel(r'Fertile isotope density $n$ in blanket [kg$/$m$^3$]')
@@ -439,6 +470,101 @@ class Plot:
 
         if self.show: plt.show()
         plt.close('all')
+
+
+    def plot_fisovern(self):
+        print(f"\nPlotting fissile material divided by fertile density vs. fertile density...")
+
+        tot_n_per_yr = NPS_FUS * 3.156e+7
+
+        # Gotta then convert fissile atoms/yr to kg/yr
+        pu239_at_to_kg_per_yr = tot_n_per_yr / AVO * AMU_PU239 / 1e3
+        u233_at_to_kg_per_yr  = tot_n_per_yr / AVO * AMU_U233  / 1e3
+
+        # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
+        # cut out the first point since dividing by zero.
+        # pebble bed
+        x6, y6 =     self.pb_u_rr_df['fertile_kg/m3'][1:], pu239_at_to_kg_per_yr * self.pb_u_rr_df['U238(n,g)'][1:]
+        x5, y5 =    self.pb_th_rr_df['fertile_kg/m3'][1:], u233_at_to_kg_per_yr * self.pb_th_rr_df['Th232(n,g)'][1:]
+
+        # lead lithium     
+        x4, y4 =   self.pbli_u_rr_df['fertile_kg/m3'][1:],  pu239_at_to_kg_per_yr *  self.pbli_u_rr_df['U238(n,g)'][1:]
+        x3, y3 =  self.pbli_th_rr_df['fertile_kg/m3'][1:],  u233_at_to_kg_per_yr * self.pbli_th_rr_df['Th232(n,g)'][1:]
+
+        # flibe
+        x2, y2 =  self.flibe_u_rr_df['fertile_kg/m3'][1:],  pu239_at_to_kg_per_yr *  self.flibe_u_rr_df['U238(n,g)'][1:]
+        x1, y1 = self.flibe_th_rr_df['fertile_kg/m3'][1:],  u233_at_to_kg_per_yr * self.flibe_th_rr_df['Th232(n,g)'][1:]
+
+        print(y6/x6)
+        print(y5/x5)
+        # evaluated derviative at original points
+        # interpolation and differentiation
+        x_fine = np.linspace(x1.min(), x1.max(), 300) # Evaluate on a fine grid
+        y_akima1 = Akima1DInterpolator(x1, y1/x1)(x_fine)
+        y_akima2 = Akima1DInterpolator(x2, y2/x2)(x_fine)
+        y_akima3 = Akima1DInterpolator(x3, y3/x3)(x_fine)
+        y_akima4 = Akima1DInterpolator(x4, y4/x4)(x_fine)
+        y_akima5 = Akima1DInterpolator(x5, y5/x5)(x_fine)
+        y_akima6 = Akima1DInterpolator(x6, y6/x6)(x_fine)
+
+        # plot
+        plt.figure(figsize=(7.5,5))
+
+        plt.scatter(x6, y6/x6, marker='s', s=40, color='#b41f24') # PB-UO2
+        plt.scatter(x5, y5/x5, marker='1', s=70, color='#b41f24') # PB-ThO2
+        plt.scatter(x4, y4/x4, marker='^', s=40, color='#0047ba') # LL-UO2
+        plt.scatter(x3, y3/x3, marker='x', s=50, color='#0047ba') # LL-ThO2
+        plt.scatter(x2, y2/x2, marker='o', s=30, color='#66b420')   # FLiBe-UF4
+        plt.scatter(x1, y1/x1, marker='+', s=60, color='#66b420')   # FLiBe-ThF4
+
+        plt.plot(x_fine, y_akima6, '-',   linewidth=1, color='#b41f24',)   #  PB-UO2
+        plt.plot(x_fine, y_akima5, '--',  linewidth=1, color='#b41f24',)   #  PB-ThO2
+        plt.plot(x_fine, y_akima4, '-',   linewidth=1, color='#0047ba',)   #  LL-UO2
+        plt.plot(x_fine, y_akima3, '--',  linewidth=1, color='#0047ba',)   #  LL-ThO2
+        plt.plot(x_fine, y_akima2, '-',   linewidth=1, color='#66b420', )    #  FLiBe-UF4
+        plt.plot(x_fine, y_akima1, '--',  linewidth=1, color='#66b420', )    #  FLiBe-ThF4 
+
+        # Dummy plots for legend -- ppark
+        plt.plot([9e8,9e9], [9e8,9e9], '+--', markersize=8, linewidth=1, color='#66b420',   label=r'FLiBe-ThF$_4$') #  green: #66b420
+        plt.plot([9e8,9e9], [9e8,9e9], 'o-',  markersize=5, linewidth=1, color='#66b420',   label=r'FLiBe-UF$_4$')  # 
+        plt.plot([9e8,9e9], [9e8,9e9], '1--', markersize=9, linewidth=1, color='#b41f24', label=r'PB-ThO$_2$')    # 
+        plt.plot([9e8,9e9], [9e8,9e9], 's-',  markersize=5, linewidth=1, color='#b41f24', label=r'PB-UO$_2$')     # 
+        plt.plot([9e8,9e9], [9e8,9e9], 'x--', markersize=7, linewidth=1, color='#0047ba', label=r'LL-ThO$_2$')    #  red: #b41f24
+        plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'LL-UO$_2$')     #  blue: #0047ba
+
+        # plt.title(f'Tritium breeding ratio (All)') # Exclude title for production figs --ppark 2025-08-06
+        plt.xlabel(r'Fertile isotope density $n$ in blanket [kg$/$m$^3$]')
+        plt.ylabel(r'$R_{\text{fis}}/n$ [kg$/$yr]')
+
+        plt.xlim(-5,160)
+        plt.ylim(-0.25,6)  # plt.ylim(-7.5,225+7.5) REMEMBER TO CHANGE 
+
+        # Tick grid
+        ax = plt.gca()
+        ax.xaxis.set_ticks_position('both')
+        ax.xaxis.set_minor_locator(MultipleLocator(10))
+        ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
+ 
+        ax.yaxis.set_ticks_position('both')
+        ax.yaxis.set_major_locator(MultipleLocator(1))   # ax.yaxis.set_major_locator(MultipleLocator(25))
+        ax.yaxis.set_minor_locator(MultipleLocator(0.25)) # ax.yaxis.set_minor_locator(MultipleLocator(12.5))
+        ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
+
+        plt.tight_layout()
+
+        leg = plt.legend(fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1)
+        leg.get_frame().set_linewidth(0.5) 
+    
+        if self.save:
+            plt.savefig(f'./Figures/pdf/fig_fisovern.pdf', bbox_inches='tight', format='pdf')
+            plt.savefig(f'./Figures/png/fig_fisovern.png', bbox_inches='tight', format='png')
+            print("Exported fissile material production divided by fertile material for all blankets.")
+        else:
+            print("Did not export fissile/fertile plot due to user setting.")
+
+        if self.show: plt.show()
+        plt.close('all')
+
 
 
     
