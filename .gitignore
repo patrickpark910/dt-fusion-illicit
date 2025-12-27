@@ -20,3 +20,7 @@ Jupyter/BISO_combined/tallies.out
 # never track OpenMC XML
 **/model.xml
 OpenMC/
+OpenMC/**/*.h5
+OpenMC/**/tallies_*/
+OpenMC/**/statepoint.*
+OpenMC/**/summary.h5

@@ -6,14 +6,14 @@ from Python.parameters import *
 from Python.utilities  import *
 
 
-class PB(Reactor):
+class PBHomo(Reactor):
 
     def initialize(self):
 
         self.temp_k          = TEMP_K
-        self.breeder_name    = 'PB'
+        self.breeder_name    = 'PBHomo'  # Changed from 'PB' to distinguish from PBHet
         self.breeder_enrich  = ENRICH_PB  # at% 
-        self.breeder_volume  = PB_BR_VOL  
+        self.breeder_volume  = PBCoupon_BR_VOL  
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
         self.name = f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_element}{self.fertile_bulk_density_kgm3:06.2f}kgm3"         
@@ -105,7 +105,7 @@ class PB(Reactor):
 
         li4sio4 = openmc.Material(name='Li4SiO4', temperature=self.temp_k) 
         li4sio4.set_density('g/cm3', 2.17)  # normalized for ceramic porosity and 900 K (pure, room temp g/cm3 = 2.42)
-        li4sio4.add_elements_from_formula('Li4SiO4', enrichment_target='Li6', enrichment_type='ao', enrichment=ENRICH_PB) 
+        li4sio4.add_elements_from_formula('Li4SiO4', enrichment_target='Li6', enrichment_type='ao', enrichment=self.breeder_enrich) 
         # self.lithium_ceramic.add_elements('Li', 22.415, percent_type='wo', enrichment_target='Li6', enrichment_type='ao', enrichment=ENRICH_PB) 
         # self.lithium_ceramic.add_element('Si', 24.077, percent_type='wo') 
         # self.lithium_ceramic.add_element('O', 53.39, percent_type='wo') 
@@ -128,7 +128,9 @@ class PB(Reactor):
         
         # Beryllium 
         be = openmc.Material(name='Beryllium') 
-        be.set_density('g/cm3', 1.80)  # normalized from 1.85 for 900 K
+        be.set_density('g/cm3', 1.80) 
+        be.add_element('Be', 1.0, percent_type='ao')
+        # normalized from 1.85 for 900 K
         # self.beryllium.add_element('Be', 98.749, percent_type='wo') 
         # self.beryllium.add_element('O', 0.9, percent_type='wo') 
         # self.beryllium.add_element('Al', 0.09, percent_type='wo') 
@@ -153,23 +155,22 @@ class PB(Reactor):
         he.set_density('g/cm3', 0.004279) # Helium density at 900 K ~80 bar 
         he.add_element('He', 1) 
         
-
-        # ------------------------------------------------------------------
+# ------------------------------------------------------------------
         # Fertile material - BISO Particle
         # ------------------------------------------------------------------
 
         if self.fertile_element == 'U':
-            kernel = openmc.Material(name='UO2')
+            kernel = openmc.Material(name='UO2', temperature=self.temp_k)
             kernel.add_elements_from_formula('UO2', enrichment=ENRICH_U)
             kernel.set_density('g/cm3', DENSITY_UO2)  
 
         elif self.fertile_element == 'Th': 
-            kernel = openmc.Material(name='ThO2') 
+            kernel = openmc.Material(name='ThO2', temperature=self.temp_k) 
             kernel.add_elements_from_formula('ThO2') 
             kernel.set_density('g/cm3', DENSITY_ThO2) 
 
         # SiC coating
-        sic = openmc.Material(name='SiC')
+        sic = openmc.Material(name='SiC', temperature=self.temp_k)
         sic.add_elements_from_formula('SiC')
         sic.set_density('g/cm3', 3.2)
 
@@ -217,73 +218,127 @@ class PB(Reactor):
 
     def geometry(self):
 
-        # ------------------------------------------------------------------
-        # Tokamak geometry parameters 
-        # ------------------------------------------------------------------
+        #  geometry parameters -----------------------
+        d1 = 365.0   # cm
+        h1 = 45.0    # cm
 
-        self.R0, self.a, self.kappa, self.delta = PB_R0, PB_A, PB_KAPPA, PB_DELTA
+        #total surface areas of inner and outer MILLER blanket volumes
+        # inner blanket (both sides) = 6.850857e6 cm2
+        # outer blanket = 9.135564e6 cm2
+        # V(cuboid) = h * a^2 
+        # based on volumes a1 = 54.86cm; a2 = 68.54cm
+        # based on surface area ratios a1 = 58.05cm; 67.04cm
+        #    based on SA Vinner=29.16%; Vouter=70.80% of 520.16cm2
+        a1 = 58.05 #cm inboard blanket cuboid side length
+        a2 = 67.04 #cm outboard blanket cuboid side length
 
-        d_fw  = PB_FW_CM 
-        d_st1 = d_fw  + PB_ST1_CM
-        d_br1 = d_st1 + PB_BR1_I_CM
-        d_st2 = d_br1 + PB_ST2_CM
-        
-        d_br1_o = d_st1    + PB_BR1_O_CM   # only on outboard blanket
-        d_st2_o = d_br1_o  + PB_ST2_CM     # only on outboard blanket
-        
-        self.extent_r = (self.R0 + self.a + d_st2_o)*1.2 # 110%
-        self.extent_z = (self.kappa*self.a + d_st2_o)*1.2
+        d_out = d1 + 465.0 
+        h2 = 82.0
 
 
+        PB_st1_ex            = d1 - PB_ST2_CM
+        PB_BR1_exterior      = d1
+        PB_BR1_plasmafacing  = d1 + h1
+        PB_st1_pf            = PB_BR1_plasmafacing + PB_ST1_CM
+        PB_fw1               = PB_st1_pf + PB_FW_CM
+
+        PB_fw2               = PB_st1_pf - PB_FW_CM
+        PB_st2_pf            = PB_BR1_plasmafacing - PB_ST1_CM
+        PB_BR2_plasmafacing  = d_out
+        PB_BR2_exterior      = d_out + h2
+        PB_st2_ex            = PB_BR2_exterior + PB_ST2_CM
+    
         # ------------------------------------------------------------------
         # Surfaces 
         # ------------------------------------------------------------------
+        # X-direction: transmissive (neutrons can enter/exit front and back)
+        x0i = openmc.XPlane(x0=PB_st1_ex, boundary_type='transmission')
+        x1i = openmc.XPlane(x0=PB_fw1,   boundary_type='transmission')
+        # Y and Z directions: REFLECTIVE (simulates infinite extent, like coupon test)
+        y0i = openmc.YPlane(y0=-a1/2,    boundary_type='reflective')
+        y1i = openmc.YPlane(y0=+a1/2,    boundary_type='reflective')
+        z0i = openmc.ZPlane(z0=-a1/2,    boundary_type='reflective')
+        z1i = openmc.ZPlane(z0=+a1/2,    boundary_type='reflective')
 
-        points_vc    = miller_model(self.R0, self.a, self.kappa, self.delta)
-        points_fw    = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_fw)
-        points_st1   = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_st1)
-        points_br1   = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_br1)
-        points_st2   = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_st2)
-        points_br1_o = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_br1_o)  # outboard blanket
-        points_st2_o = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_st2_o)  # outboard structure
+        self.inner_cuboid = (+x0i & -x1i & +y0i & -y1i & +z0i & -z1i)
+
+        # X-direction: transmissive (neutrons can enter/exit front and back)
+        x0o = openmc.XPlane(x0=PB_fw2,     boundary_type='transmission')
+        x1o = openmc.XPlane(x0=PB_st2_ex,  boundary_type='transmission')
+        # Y and Z directions: REFLECTIVE (simulates infinite extent, like coupon test)
+        y0o = openmc.YPlane(y0=-a2/2,      boundary_type='reflective')
+        y1o = openmc.YPlane(y0=+a2/2,      boundary_type='reflective')
+        z0o = openmc.ZPlane(z0=-a2/2,      boundary_type='reflective')
+        z1o = openmc.ZPlane(z0=+a2/2,      boundary_type='reflective')
+
+        self.outer_cuboid = (+x0o & -x1o & +y0o & -y1o & +z0o & -z1o)
         
-        # Create OpenMC surfaces
-        self.surface_vc    = openmc.model.Polygon(points_vc,    basis='rz')
-        self.surface_fw    = openmc.model.Polygon(points_fw,    basis='rz')
-        self.surface_st1   = openmc.model.Polygon(points_st1,   basis='rz')
-        self.surface_br1   = openmc.model.Polygon(points_br1,   basis='rz')
-        self.surface_st2   = openmc.model.Polygon(points_st2,   basis='rz')
-        self.surface_br1_o = openmc.model.Polygon(points_br1_o, basis='rz') # outboard blanket
-        self.surface_st2_o = openmc.model.Polygon(points_st2_o, basis='rz')  # outboard structure
+        p2_BL = (PB_fw2, -a2/2 , -a2/2)
+        p2_BR = (PB_fw2, +a2/2 , -a2/2)
+        p2_TL = (PB_fw2, -a2/2 , +a2/2)
+        p2_TR = (PB_fw2, +a2/2 , +a2/2)
+        p1_BL = (PB_fw1, -a2/2 , -a2/2)
+        p1_BR = (PB_fw1, +a2/2 , -a2/2)
+        p1_TL = (PB_fw1, -a2/2 , +a2/2)
+        p1_TR = (PB_fw1, +a2/2 , +a2/2)
+        y0p_B = openmc.Plane.from_points(p2_BL, p2_BR, p1_BL, boundary_type='reflective')
+        y0p_L = openmc.Plane.from_points(p2_BL, p2_TL, p1_BL, boundary_type='reflective')
+        y0p_T = openmc.Plane.from_points(p2_TL, p2_TR, p1_TL, boundary_type='reflective')
+        y0p_R = openmc.Plane.from_points(p2_BR, p2_TR, p1_BR, boundary_type='reflective')
 
-        dividing_cylinder = openmc.ZCylinder(r=self.R0)
-        outer_cylinder    = openmc.ZCylinder(r=self.extent_r, boundary_type='vacuum')
-        top_plane         = openmc.ZPlane(z0=self.extent_z, boundary_type='vacuum')
-        bottom_plane      = openmc.ZPlane(z0=-self.extent_z, boundary_type='vacuum')
+        self.plasma_region = (+y0p_B & -y0p_R & +y0p_L & -y0p_T & +x1i & -x0o)
+
+        # --- Inner breeder packing box planes
+        x0_in = openmc.XPlane(x0=PB_BR1_exterior)       # inner breeder exterior
+        x1_in = openmc.XPlane(x0=PB_BR1_plasmafacing)   # inner breeder plasma-facing
+        y0_in = openmc.YPlane(y0=-a1/2)
+        y1_in = openmc.YPlane(y0=+a1/2)
+        z0_in = openmc.ZPlane(z0=-a1/2)
+        z1_in = openmc.ZPlane(z0=+a1/2)
+
+        self.inner_blanket = (+x0_in & -x1_in & +y0_in & -y1_in & +z0_in & -z1_in)
         
-        # ------------------------------------------------------------------
-        # Cells | 10: vc, fw | 2X: structure | 3X: breeding
-        # ------------------------------------------------------------------
+        x0_out = openmc.XPlane(x0=PB_BR2_plasmafacing)
+        x1_out = openmc.XPlane(x0=PB_BR2_exterior)
+        y0_out = openmc.YPlane(y0=-a2/2)
+        y1_out = openmc.YPlane(y0=+a2/2)
+        z0_out = openmc.ZPlane(z0=-a2/2)
+        z1_out = openmc.ZPlane(z0=+a2/2)
 
-        cell_vc   = openmc.Cell(cell_id=10, region= -self.surface_vc)
-        cell_vc.importance = {'neutron':1}
+        self.outer_blanket = (+x0_out & -x1_out & +y0_out & -y1_out & +z0_out & -z1_out)
 
-        cell_fw    = openmc.Cell(cell_id=11, region= +self.surface_vc  & -self.surface_fw,  fill=self.firstwall)
-        cell_st1   = openmc.Cell(cell_id=21, region= +self.surface_fw  & -self.surface_st1, fill=self.structure)
-        cell_br1   = openmc.Cell(cell_id=31, region= -dividing_cylinder & +self.surface_st1 & -self.surface_br1, fill=self.blanket)
-        cell_st2   = openmc.Cell(cell_id=22, region= -dividing_cylinder & +self.surface_br1 & -self.surface_st2, fill=self.structure)
-        cell_br1_o = openmc.Cell(cell_id=32, region= +dividing_cylinder & +self.surface_st1 & -self.surface_br1_o, fill=self.blanket)
-        cell_st2_o = openmc.Cell(cell_id=23, region= +dividing_cylinder & +self.surface_br1_o & -self.surface_st2_o,  fill=self.structure)
+        # --- Vacuum cell
+        cell_vc = openmc.Cell(cell_id=60, region=self.plasma_region)
+        cell_vc.importance = {'neutron': 1}        
         
-        # Void cells
-        cell_void_i = openmc.Cell(cell_id=98, region= +self.surface_st2 & -dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane)
-        cell_void_o = openmc.Cell(cell_id=97, region= +self.surface_st2_o & +dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane)
-        cell_void_i.importance = {'neutron': 0}
-        cell_void_o.importance = {'neutron': 0}
+        self.surface_st1_ex         = openmc.XPlane(x0=PB_st1_ex)
+        self.surface_br1_exterior   = openmc.XPlane(x0=PB_BR1_exterior)
+        self.surface_br1_pf         = openmc.XPlane(x0=PB_BR1_plasmafacing)
+        self.surface_st1_pf         = openmc.XPlane(x0=PB_st1_pf)
+        self.surface_fw1            = openmc.XPlane(x0=PB_fw1)
 
+        self.surface_fw2            = openmc.XPlane(x0=PB_fw2)
+        self.surface_st2_pf         = openmc.XPlane(x0=PB_st2_pf)
+        self.surface_br2_pf         = openmc.XPlane(x0=PB_BR2_plasmafacing)
+        self.surface_br2_exterior   = openmc.XPlane(x0=PB_BR2_exterior)
+        self.surface_st2_ex         = openmc.XPlane(x0=PB_st2_ex)
+      
+        # ----------Cells----------------
+
+        cell_fw1   = openmc.Cell(cell_id=11, region=self.inner_cuboid & -self.surface_fw1 & +self.surface_st1_pf,  fill=self.firstwall)
+        cell_st1_pf   = openmc.Cell(cell_id=21, region=self.inner_cuboid & -self.surface_st1_pf & +self.surface_br1_pf, fill=self.structure)
+        cell_br1   = openmc.Cell(cell_id=31, region=self.inner_cuboid & +self.surface_br1_pf & -self.surface_br1_exterior, fill=self.blanket)
+        cell_st1_ex   = openmc.Cell(cell_id=41, region=self.inner_cuboid & -self.surface_br1_exterior & +self.surface_st1_ex, fill=self.structure)
+
+        cell_fw2    = openmc.Cell(cell_id=12, region=self.outer_cuboid & +self.surface_fw2 & -self.surface_st2_pf,  fill=self.firstwall)
+        cell_st2_pf   = openmc.Cell(cell_id=22, region=self.outer_cuboid & +self.surface_st2_pf  & -self.surface_br2_pf, fill=self.structure)
+        cell_br2   = openmc.Cell(cell_id=32, region=self.outer_cuboid & +self.surface_br2_pf & -self.surface_br2_exterior, fill=self.blanket)
+        cell_st2_ex   = openmc.Cell(cell_id=42, region=self.outer_cuboid & +self.surface_br2_exterior & -self.surface_st2_ex, fill=self.structure)
+     
+
+    
         self.cells = [cell_vc,
-                      cell_fw, cell_st1, cell_br1, cell_st2, 
-                      cell_br1_o, cell_st2_o,
-                      cell_void_i, cell_void_o,]
+                      cell_fw1, cell_st1_pf, cell_br1, cell_st1_ex, 
+                      cell_fw2, cell_st2_pf, cell_br2, cell_st2_ex]
     
         self.geometry = openmc.Geometry(openmc.Universe(cells=self.cells))

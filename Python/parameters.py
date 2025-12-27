@@ -3,9 +3,10 @@
 
 # Run settings
 #FERTILE_BULK_DENSITY_KGM3 = [0, 0.03, 0.3, 0.6, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 1000]
+FERTILE_BULK_DENSITY_KGM3 = [0, 0.3, 3, 15, 60]
 #BREEDERS = ['ARC','ARCBall','FLiBe','LL','PB']
-FERTILE_BULK_DENSITY_KGM3 = [0, 0.03, 1.5, 15, 90, 150]
-BREEDERS = ['PB']
+#FERTILE_BULK_DENSITY_KGM3 = [0, 0.03, 1.5, 15, 45, 105]
+BREEDERS = ['PBHomo', 'PBhet']
 BLANKET_COVERAGE = 0.8 # Assume blanket covers 80% of plasma surface, rest for divertor
 TEMP_K = 900 # [K] ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
 
@@ -117,8 +118,8 @@ PB_BR1_O_CM =  82.0  # [cm]   breeding region outboard
 PB_BR1_I_CM =  45.0  # [cm]   breeding region inboard
 PB_ST2_CM   =   3.0  # [cm] structural region 2
 
-#PB_BR_VOL   = 520.6 # [m³] from ./OpenMC/volume_PB_900K_Li60.0_U000.00kgm3/volume_1.csv
-PB_BR_VOL   = 520.6e-3 # [m³]
+PB_BR_VOL   = 520.6 # [m³] from ./OpenMC/volume_PB_900K_Li60.0_U000.00kgm3/volume_1.csv
+PBCoupon_BR_VOL   = 520.6e-6 # [m³]
 
 # Our PB coupon
 PB_RO       = 830    # [cm] plasma facing outer wall

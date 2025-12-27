@@ -6,14 +6,14 @@ from Python.parameters import *
 from Python.utilities  import *
 
 
-class PB(Reactor):
+class PBHet(Reactor):
 
     def initialize(self):
 
         self.temp_k          = TEMP_K
-        self.breeder_name    = 'PB'
+        self.breeder_name    = 'PBHet'  # Changed from 'PB' to distinguish from PBHomo
         self.breeder_enrich  = ENRICH_PB  # at% 
-        self.breeder_volume  = PB_BR_VOL  
+        self.breeder_volume  = PBCoupon_BR_VOL  
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
         self.name = f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_element}{self.fertile_bulk_density_kgm3:06.2f}kgm3"         
@@ -185,12 +185,12 @@ class PB(Reactor):
             w_Th_in_ThO2 = AMU_Th / M_ThO2
             m_fertile_per_particle_g = m_k_g * w_Th_in_ThO2
         
-        self.V_in  = 135.45 * 1e3    # cm3 volume of inner blanket frustum
-        self.V_out = 385.16 * 1e3    # cm3 vol of outer blanket frustum (new fave vocab word)
+        self.V_in  = 151.678656e-6    # m3 volume of inner blanket frustum
+        self.V_out = 368.481344e-6    # m3 vol of outer blanket frustum (new fave vocab word)
     
         rho_fert_kg_m3 = self.fertile_bulk_density_kgm3
-        m_in_g  = rho_fert_kg_m3 * (self.V_in / 1e3)
-        m_out_g = rho_fert_kg_m3 * (self.V_out / 1e3)
+        m_in_g  = rho_fert_kg_m3 * (self.V_in * 1e3)
+        m_out_g = rho_fert_kg_m3 * (self.V_out * 1e3)
         
         # mass of fertile needed into particle count
         if m_in_g <= 0.0 or m_fertile_per_particle_g <= 0.0:
@@ -284,38 +284,43 @@ class PB(Reactor):
         # ------------------------------------------------------------------
         # Surfaces 
         # ------------------------------------------------------------------
+        # X-direction: transmissive (neutrons can enter/exit front and back)
         x0i = openmc.XPlane(x0=PB_st1_ex, boundary_type='transmission')
         x1i = openmc.XPlane(x0=PB_fw1,   boundary_type='transmission')
-        y0i = openmc.YPlane(y0=-a1/2,    boundary_type='transmission')
-        y1i = openmc.YPlane(y0=+a1/2,    boundary_type='transmission')
-        z0i = openmc.ZPlane(z0=-a1/2,    boundary_type='transmission')
-        z1i = openmc.ZPlane(z0=+a1/2,    boundary_type='transmission')
+        # Y and Z directions: REFLECTIVE (simulates infinite extent, like coupon test)
+        y0i = openmc.YPlane(y0=-a1/2,    boundary_type='reflective')
+        y1i = openmc.YPlane(y0=+a1/2,    boundary_type='reflective')
+        z0i = openmc.ZPlane(z0=-a1/2,    boundary_type='reflective')
+        z1i = openmc.ZPlane(z0=+a1/2,    boundary_type='reflective')
 
         self.inner_cuboid = (+x0i & -x1i & +y0i & -y1i & +z0i & -z1i)
 
+        # X-direction: transmissive (neutrons can enter/exit front and back)
         x0o = openmc.XPlane(x0=PB_fw2,     boundary_type='transmission')
         x1o = openmc.XPlane(x0=PB_st2_ex,  boundary_type='transmission')
-        y0o = openmc.YPlane(y0=-a2/2,      boundary_type='transmission')
-        y1o = openmc.YPlane(y0=+a2/2,      boundary_type='transmission')
-        z0o = openmc.ZPlane(z0=-a2/2,      boundary_type='transmission')
-        z1o = openmc.ZPlane(z0=+a2/2,      boundary_type='transmission')
+        # Y and Z directions: REFLECTIVE (simulates infinite extent, like coupon test)
+        y0o = openmc.YPlane(y0=-a2/2,      boundary_type='reflective')
+        y1o = openmc.YPlane(y0=+a2/2,      boundary_type='reflective')
+        z0o = openmc.ZPlane(z0=-a2/2,      boundary_type='reflective')
+        z1o = openmc.ZPlane(z0=+a2/2,      boundary_type='reflective')
 
         self.outer_cuboid = (+x0o & -x1o & +y0o & -y1o & +z0o & -z1o)
-        
-        margin = 20.0
-        x_min_world = PB_st1_ex - margin
-        x_max_world = PB_st2_ex + margin
-        y_half_world = a2/2 + margin
-        z_half_world = a2/2 + margin
-        # --- World planes (vacuum)
-        x0w = openmc.XPlane(x0=x_min_world, boundary_type='vacuum')
-        x1w = openmc.XPlane(x0=x_max_world, boundary_type='vacuum')
-        y0w = openmc.YPlane(y0=-y_half_world, boundary_type='vacuum')
-        y1w = openmc.YPlane(y0=+y_half_world, boundary_type='vacuum')
-        z0w = openmc.ZPlane(z0=-z_half_world, boundary_type='vacuum')
-        z1w = openmc.ZPlane(z0=+z_half_world, boundary_type='vacuum')
 
-        self.world_region = (+x0w & -x1w & +y0w & -y1w & +z0w & -z1w)
+        p2_BL = (PB_fw2, -a2/2 , -a2/2)
+        p2_BR = (PB_fw2, +a2/2 , -a2/2)
+        p2_TL = (PB_fw2, -a2/2 , +a2/2)
+        p2_TR = (PB_fw2, +a2/2 , +a2/2)
+        p1_BL = (PB_fw1, -a2/2 , -a2/2)
+        p1_BR = (PB_fw1, +a2/2 , -a2/2)
+        p1_TL = (PB_fw1, -a2/2 , +a2/2)
+        p1_TR = (PB_fw1, +a2/2 , +a2/2)
+        y0p_B = openmc.Plane.from_points(p2_BL, p2_BR, p1_BL, boundary_type='reflective')
+        y0p_L = openmc.Plane.from_points(p2_BL, p2_TL, p1_BL, boundary_type='reflective')
+        y0p_T = openmc.Plane.from_points(p2_TL, p2_TR, p1_TL, boundary_type='reflective')
+        y0p_R = openmc.Plane.from_points(p2_BR, p2_TR, p1_BR, boundary_type='reflective')
+
+        self.plasma_region = (+y0p_B & -y0p_R & +y0p_L & -y0p_T & +x1i & -x0o)
+
 
         # --- Inner breeder packing box planes
         x0_in = openmc.XPlane(x0=PB_BR1_exterior)       # inner breeder exterior
@@ -336,9 +341,9 @@ class PB(Reactor):
 
         self.outer_blanket = (+x0_out & -x1_out & +y0_out & -y1_out & +z0_out & -z1_out)
 
-        # --- Vacuum cell
-        cell_vc = openmc.Cell(cell_id=10, region=self.world_region & ~self.inner_cuboid & ~self.outer_cuboid)
-        cell_vc.importance = {'neutron': 1}        
+        # --- Plasma cell
+        cell_vc = openmc.Cell(cell_id=60, region=self.plasma_region, fill=None)
+        cell_vc.importance = {'neutron': 1}
         
         self.surface_st1_ex         = openmc.XPlane(x0=PB_st1_ex)
         self.surface_br1_exterior   = openmc.XPlane(x0=PB_BR1_exterior)
@@ -365,8 +370,8 @@ class PB(Reactor):
 
         # ---------BISO Packing--------
         if self.N_in <=0:
-            cell_insert_in  = openmc.Cell(cell_id=51,  fill=self.blanket, region=self.inner_blanket)
-            cell_insert_out = openmc.Cell(cell_id=52, fill=self.blanket, region=self.outer_blanket)
+            cell_insert_in  = openmc.Cell(cell_id=31,  fill=self.blanket, region=self.inner_blanket)
+            cell_insert_out = openmc.Cell(cell_id=32, fill=self.blanket, region=self.outer_blanket)
 
         else:
             s_k = openmc.Sphere(r=BISO_KERNEL_RADIUS)
@@ -401,8 +406,8 @@ class PB(Reactor):
             u_insert_out = openmc.Universe(name="insert_out", cells=[cell_bg_out] + biso_cells_out)
 
             # Cells that place those universes into the model
-            cell_insert_in  = openmc.Cell(cell_id=51,  fill=u_insert_in,  region=self.inner_blanket)
-            cell_insert_out = openmc.Cell(cell_id=52, fill=u_insert_out, region=self.outer_blanket)
+            cell_insert_in  = openmc.Cell(cell_id=31,  fill=u_insert_in,  region=self.inner_blanket)
+            cell_insert_out = openmc.Cell(cell_id=32, fill=u_insert_out, region=self.outer_blanket)
 
 
         self.cells = [cell_vc,
