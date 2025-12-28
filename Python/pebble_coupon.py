@@ -185,12 +185,12 @@ class PBHet(Reactor):
             w_Th_in_ThO2 = AMU_Th / M_ThO2
             m_fertile_per_particle_g = m_k_g * w_Th_in_ThO2
         
-        self.V_in  = 135.45 * 1e3    # cm3 volume of inner blanket frustum
-        self.V_out = 385.16 * 1e3    # cm3 vol of outer blanket frustum (new fave vocab word)
+        self.V_in  = 135.45 * 1e-6    # m3 volume of inner blanket frustum
+        self.V_out = 385.16 * 1e-6   # m3 vol of outer blanket frustum (new fave vocab word)
     
         rho_fert_kg_m3 = self.fertile_bulk_density_kgm3
-        m_in_g  = rho_fert_kg_m3 * (self.V_in / 1e3)
-        m_out_g = rho_fert_kg_m3 * (self.V_out / 1e3)
+        m_in_g  = rho_fert_kg_m3 * (self.V_in * 1e3)
+        m_out_g = rho_fert_kg_m3 * (self.V_out * 1e3)
         
         # mass of fertile needed into particle count
         if m_in_g <= 0.0 or m_fertile_per_particle_g <= 0.0:
@@ -204,8 +204,8 @@ class PBHet(Reactor):
             self.N_out = int(np.rint(m_out_g / m_fertile_per_particle_g))
         
         # packing fractions
-        pf_in  = (self.N_in  * V_p_cm3) / self.V_in 
-        pf_out = (self.N_out * V_p_cm3) / self.V_out
+        pf_in  = (self.N_in  * V_p_cm3 * 1e-6) / self.V_in 
+        pf_out = (self.N_out * V_p_cm3 * 1e-6) / self.V_out
         print("N_in =", self.N_in, " N_out =", self.N_out)
         print("pf_in =", pf_in, " pf_out =", pf_out)
 
@@ -275,9 +275,9 @@ class PBHet(Reactor):
         PB_st1_pf            = PB_BR1_plasmafacing + PB_ST1_CM
         PB_fw1               = PB_st1_pf + PB_FW_CM
 
-        PB_fw2               = PB_st2_pf - PB_FW_CM
-        PB_st2_pf            = PB_BR2_plasmafacing - PB_ST1_CM
         PB_BR2_plasmafacing  = d_out
+        PB_st2_pf            = PB_BR2_plasmafacing - PB_ST1_CM
+        PB_fw2               = PB_st2_pf - PB_FW_CM
         PB_BR2_exterior      = d_out + h2
         PB_st2_ex            = PB_BR2_exterior + PB_ST2_CM
     
@@ -286,7 +286,7 @@ class PBHet(Reactor):
         # ------------------------------------------------------------------
         # X-direction: REFLECTIVE (fully confined cuboid)
         x0i = openmc.XPlane(x0=PB_st1_ex, boundary_type='reflective')
-        x1i = openmc.XPlane(x0=PB_fw1+0.001,   boundary_type='reflective')
+        x1i = openmc.XPlane(x0=PB_fw1,   boundary_type='reflective')
         # Y and Z directions: REFLECTIVE (simulates infinite extent, like coupon test)
         y0i = openmc.YPlane(y0=-a1/2,    boundary_type='reflective')
         y1i = openmc.YPlane(y0=+a1/2,    boundary_type='reflective')
@@ -296,7 +296,7 @@ class PBHet(Reactor):
         self.inner_cuboid = (+x0i & -x1i & +y0i & -y1i & +z0i & -z1i)
 
         # X-direction: REFLECTIVE (fully confined cuboid)
-        x0o = openmc.XPlane(x0=PB_fw2-0.001,     boundary_type='reflective')
+        x0o = openmc.XPlane(x0=PB_fw2,     boundary_type='reflective')
         x1o = openmc.XPlane(x0=PB_st2_ex,  boundary_type='reflective')
         # Y and Z directions: REFLECTIVE (simulates infinite extent, like coupon test)
         y0o = openmc.YPlane(y0=-a2/2,      boundary_type='reflective')
@@ -305,7 +305,15 @@ class PBHet(Reactor):
         z1o = openmc.ZPlane(z0=+a2/2,      boundary_type='reflective')
 
         self.outer_cuboid = (+x0o & -x1o & +y0o & -y1o & +z0o & -z1o)
-        
+
+        x0v = openmc.XPlane(x0=PB_st1_ex - 0.5,     boundary_type='vacuum')
+        x1v = openmc.XPlane(x0=PB_st2_ex + 0.5,  boundary_type='vacuum')
+        y0v = openmc.YPlane(y0=-a2,      boundary_type='vacuum')
+        y1v = openmc.YPlane(y0=+a2,      boundary_type='vacuum')
+        z0v = openmc.ZPlane(z0=-a2,      boundary_type='vacuum')
+        z1v = openmc.ZPlane(z0=+a2,      boundary_type='vacuum')
+
+        self.void = (+x0v & -x1v & +y0v & -y1v & +z0v & -z1v)        
         # Store first wall plasma-facing surface positions for source setup
         self.inner_fw_pf_x = PB_fw1  # x position of inner first wall plasma-facing surface
         self.outer_fw_pf_x = PB_fw2  # x position of outer first wall plasma-facing surface    
@@ -316,20 +324,19 @@ class PBHet(Reactor):
         # --- Inner breeder packing box planes
         x0_in = openmc.XPlane(x0=PB_BR1_exterior)       # inner breeder exterior
         x1_in = openmc.XPlane(x0=PB_BR1_plasmafacing)   # inner breeder plasma-facing
-        y0_in = openmc.YPlane(y0=-a1/2)
-        y1_in = openmc.YPlane(y0=+a1/2)
-        z0_in = openmc.ZPlane(z0=-a1/2)
-        z1_in = openmc.ZPlane(z0=+a1/2)
+        y0_in = openmc.YPlane(y0=(-a1 + 2*BISO_RADIUS + 0.002)/2)  # Inset by BISO_RADIUS + margin
+        y1_in = openmc.YPlane(y0=(+a1 - 2*BISO_RADIUS - 0.002)/2)
+        z0_in = openmc.ZPlane(z0=(-a1 + 2*BISO_RADIUS + 0.002)/2)  # Inset by BISO_RADIUS + margin
+        z1_in = openmc.ZPlane(z0=(+a1 - 2*BISO_RADIUS - 0.002)/2)
 
         self.inner_blanket = (+x0_in & -x1_in & +y0_in & -y1_in & +z0_in & -z1_in)
         
         x0_out = openmc.XPlane(x0=PB_BR2_plasmafacing)
         x1_out = openmc.XPlane(x0=PB_BR2_exterior)
-        y0_out = openmc.YPlane(y0=-a2/2)
-        y1_out = openmc.YPlane(y0=+a2/2)
-        z0_out = openmc.ZPlane(z0=-a2/2)
-        z1_out = openmc.ZPlane(z0=+a2/2)
-
+        y0_out = openmc.YPlane(y0=(-a2 + 2*BISO_RADIUS + 0.002)/2)  # Inset by BISO_RADIUS + margin
+        y1_out = openmc.YPlane(y0=(+a2 - 2*BISO_RADIUS - 0.002)/2)
+        z0_out = openmc.ZPlane(z0=(-a2 + 2*BISO_RADIUS + 0.002)/2)  # Inset by BISO_RADIUS + margin
+        z1_out = openmc.ZPlane(z0=(+a2 - 2*BISO_RADIUS - 0.002)/2)
         self.outer_blanket = (+x0_out & -x1_out & +y0_out & -y1_out & +z0_out & -z1_out)
         
         self.surface_st1_ex         = openmc.XPlane(x0=PB_st1_ex)
@@ -354,50 +361,58 @@ class PBHet(Reactor):
         cell_st2_pf   = openmc.Cell(cell_id=22, region=self.outer_cuboid & +self.surface_st2_pf  & -self.surface_br2_pf, fill=self.structure)
         cell_st2_ex   = openmc.Cell(cell_id=42, region=self.outer_cuboid & +self.surface_br2_exterior & -self.surface_st2_ex, fill=self.structure)
      
-
+        cell_vc = openmc.Cell(cell_id=10, region=self.void, fill=None)
+        cell_vc.importance = {'neutron': 0}
         # ---------BISO Packing--------
         if self.N_in <=0:
-            cell_insert_in  = openmc.Cell(cell_id=51,  fill=self.blanket, region=self.inner_blanket)
-            cell_insert_out = openmc.Cell(cell_id=52, fill=self.blanket, region=self.outer_blanket)
+            cell_insert_in  = openmc.Cell(cell_id=51,  fill=self.blanket, region=self.inner_cuboid & +self.surface_br1_exterior & -self.surface_br1_pf)
+            cell_insert_out = openmc.Cell(cell_id=52, fill=self.blanket, region=self.outer_cuboid & +self.surface_br2_pf & -self.surface_br2_exterior)
 
         else:
             s_k = openmc.Sphere(r=BISO_KERNEL_RADIUS)
             s_o = openmc.Sphere(r=BISO_RADIUS)
 
-            c_kernel  = openmc.Cell(fill=self.kernel, region=-s_k)
-            c_coating = openmc.Cell(fill=self.sic,    region=+s_k & -s_o)
+            c_kernel  = openmc.Cell(cell_id=100, fill=self.kernel, region=-s_k)
+            c_coating = openmc.Cell(cell_id=101, fill=self.sic,    region=+s_k & -s_o)
 
             self.u_biso = openmc.Universe(name='BISO_universe', cells=[c_kernel, c_coating])
       
             inner_centers = openmc.model.pack_spheres(radius=BISO_RADIUS, region=self.inner_blanket, num_spheres=self.N_in, seed=1)
             outer_centers = openmc.model.pack_spheres(radius=BISO_RADIUS, region=self.outer_blanket, num_spheres=self.N_out, seed=2)
             # Background cells in the insert regions (homogenized blanket, but with sphere voids carved out)
-            cell_bg_in  = openmc.Cell(name="bg_in",  fill=self.blanket, region=self.inner_blanket)
-            cell_bg_out = openmc.Cell(name="bg_out", fill=self.blanket, region=self.outer_blanket)
+            # Build background region as complement of union of all spheres
+            # Start with blanket region, then subtract each sphere interior
+            bg_region_in = self.inner_blanket
+            bg_region_out = self.outer_blanket
+            
             biso_cells_in = []
             for i, (x, y, z) in enumerate(inner_centers):
                 s = openmc.Sphere(x0=float(x), y0=float(y), z0=float(z), r=BISO_RADIUS)
                 c = openmc.Cell(name=f"biso_in_{i}", fill=self.u_biso, region=-s)
                 biso_cells_in.append(c)
-                cell_bg_in.region &= +s   # keep only outside each sphere in the background
+                bg_region_in &= +s   # Intersect with outside of sphere (keep only outside)
 
             biso_cells_out = []
             for i, (x, y, z) in enumerate(outer_centers):
                 s = openmc.Sphere(x0=float(x), y0=float(y), z0=float(z), r=BISO_RADIUS)
                 c = openmc.Cell(name=f"biso_out_{i}", fill=self.u_biso, region=-s)
                 biso_cells_out.append(c)
-                cell_bg_out.region &= +s
+                bg_region_out &= +s   # Intersect with outside of sphere (keep only outside)
+            
+            # Create background cells with the properly constructed regions
+            cell_bg_in  = openmc.Cell(cell_id=102, name="bg_in",  fill=self.blanket, region=bg_region_in)
+            cell_bg_out = openmc.Cell(cell_id=103, name="bg_out", fill=self.blanket, region=bg_region_out)
 
             # Universes that contain background + explicit BISO spheres
             u_insert_in  = openmc.Universe(name="insert_in",  cells=[cell_bg_in]  + biso_cells_in)
             u_insert_out = openmc.Universe(name="insert_out", cells=[cell_bg_out] + biso_cells_out)
 
             # Cells that place those universes into the model
-            cell_insert_in  = openmc.Cell(cell_id=31,  fill=u_insert_in,  region=self.inner_blanket)
-            cell_insert_out = openmc.Cell(cell_id=32, fill=u_insert_out, region=self.outer_blanket)
+            cell_insert_in  = openmc.Cell(cell_id=61,  fill=u_insert_in,  region=self.inner_cuboid & +self.surface_br1_exterior & -self.surface_br1_pf)
+            cell_insert_out = openmc.Cell(cell_id=62, fill=u_insert_out, region=self.outer_cuboid & +self.surface_br2_pf & -self.surface_br2_exterior)
 
 
         self.cells = [cell_fw1, cell_st1_pf, cell_insert_in, cell_st1_ex, 
-                      cell_fw2, cell_st2_pf, cell_insert_out, cell_st2_ex]
+                      cell_fw2, cell_st2_pf, cell_insert_out, cell_st2_ex, cell_vc]
     
         self.geometry = openmc.Geometry(openmc.Universe(cells=self.cells))

@@ -242,9 +242,9 @@ class PBHom(Reactor):
         PB_st1_pf            = PB_BR1_plasmafacing + PB_ST1_CM
         PB_fw1               = PB_st1_pf + PB_FW_CM
 
-        PB_fw2               = PB_st2_pf - PB_FW_CM
-        PB_st2_pf            = PB_BR2_plasmafacing - PB_ST1_CM
         PB_BR2_plasmafacing  = d_out
+        PB_st2_pf            = PB_BR2_plasmafacing - PB_ST1_CM
+        PB_fw2               = PB_st2_pf - PB_FW_CM
         PB_BR2_exterior      = d_out + h2
         PB_st2_ex            = PB_BR2_exterior + PB_ST2_CM
     
@@ -272,6 +272,14 @@ class PBHom(Reactor):
         z1o = openmc.ZPlane(z0=+a2/2,      boundary_type='reflective')
 
         self.outer_cuboid = (+x0o & -x1o & +y0o & -y1o & +z0o & -z1o)
+        x0v = openmc.XPlane(x0=PB_st1_ex - 0.5,     boundary_type='vacuum')
+        x1v = openmc.XPlane(x0=PB_st2_ex + 0.5,  boundary_type='vacuum')
+        y0v = openmc.YPlane(y0=-a2,      boundary_type='vacuum')
+        y1v = openmc.YPlane(y0=+a2,      boundary_type='vacuum')
+        z0v = openmc.ZPlane(z0=-a2,      boundary_type='vacuum')
+        z1v = openmc.ZPlane(z0=+a2,      boundary_type='vacuum')
+
+        self.void = (+x0v & -x1v & +y0v & -y1v & +z0v & -z1v)
         
         # Store first wall plasma-facing surface positions for source setup
         self.inner_fw_pf_x = PB_fw1  # x position of inner first wall plasma-facing surface
@@ -283,19 +291,19 @@ class PBHom(Reactor):
         # --- Inner breeder packing box planes
         x0_in = openmc.XPlane(x0=PB_BR1_exterior)       # inner breeder exterior
         x1_in = openmc.XPlane(x0=PB_BR1_plasmafacing)   # inner breeder plasma-facing
-        y0_in = openmc.YPlane(y0=-a1/2)
-        y1_in = openmc.YPlane(y0=+a1/2)
-        z0_in = openmc.ZPlane(z0=-a1/2)
-        z1_in = openmc.ZPlane(z0=+a1/2)
+        y0_in = openmc.YPlane(y0=-a1/2,      boundary_type='reflective'))
+        y1_in = openmc.YPlane(y0=+a1/2,      boundary_type='reflective'))
+        z0_in = openmc.ZPlane(z0=-a1/2,      boundary_type='reflective'))
+        z1_in = openmc.ZPlane(z0=+a1/2,      boundary_type='reflective'))
 
         self.inner_blanket = (+x0_in & -x1_in & +y0_in & -y1_in & +z0_in & -z1_in)
         
         x0_out = openmc.XPlane(x0=PB_BR2_plasmafacing)
         x1_out = openmc.XPlane(x0=PB_BR2_exterior)
-        y0_out = openmc.YPlane(y0=-a2/2)
-        y1_out = openmc.YPlane(y0=+a2/2)
-        z0_out = openmc.ZPlane(z0=-a2/2)
-        z1_out = openmc.ZPlane(z0=+a2/2)
+        y0_out = openmc.YPlane(y0=-a2/2,      boundary_type='reflective'))
+        y1_out = openmc.YPlane(y0=+a2/2,      boundary_type='reflective'))
+        z0_out = openmc.ZPlane(z0=-a2/2,      boundary_type='reflective'))
+        z1_out = openmc.ZPlane(z0=+a2/2,      boundary_type='reflective'))
 
         self.outer_blanket = (+x0_out & -x1_out & +y0_out & -y1_out & +z0_out & -z1_out)
         
@@ -322,10 +330,11 @@ class PBHom(Reactor):
         cell_st2_pf   = openmc.Cell(cell_id=22, region=self.outer_cuboid & +self.surface_st2_pf  & -self.surface_br2_pf, fill=self.structure)
         cell_br2   = openmc.Cell(cell_id=32, region=self.outer_cuboid & +self.surface_br2_pf & -self.surface_br2_exterior, fill=self.blanket)
         cell_st2_ex   = openmc.Cell(cell_id=42, region=self.outer_cuboid & +self.surface_br2_exterior & -self.surface_st2_ex, fill=self.structure)
-     
+        cell_vc = openmc.Cell(cell_id=10, region=self.void, fill=None)
+        cell_vc.importance = {'neutron': 0}
 
     
         self.cells = [cell_fw1, cell_st1_pf, cell_br1, cell_st1_ex, 
-                      cell_fw2, cell_st2_pf, cell_br2, cell_st2_ex]
+                      cell_fw2, cell_st2_pf, cell_br2, cell_st2_ex, cell_vc]
     
         self.geometry = openmc.Geometry(openmc.Universe(cells=self.cells))

@@ -179,10 +179,10 @@ class Reactor(ABC):
             # Inner first wall plane source (a1 x a1)
             source_inner = openmc.IndependentSource()
             # Use Box distribution: x fixed at plane, y and z uniform over the area
-            a1_half = self.inner_fw_size / 2.0
+            a1_half = (self.inner_fw_size - 0.001) / 2.0
             source_inner.space = openmc.stats.Box(
                 [self.inner_fw_pf_x - 0.01, -a1_half, -a1_half],  # Lower corner (small x thickness for plane)
-                [self.inner_fw_pf_x + 0.01,  a1_half,  a1_half]   # Upper corner
+                [self.inner_fw_pf_x - 0.001,  a1_half,  a1_half]   # Upper corner
             )
             source_inner.particle = 'neutron'
             source_inner.energy = openmc.stats.Discrete([14.0e6], [1.0])  # 14 MeV
@@ -193,7 +193,7 @@ class Reactor(ABC):
             source_outer = openmc.IndependentSource()
             a2_half = self.outer_fw_size / 2.0
             source_outer.space = openmc.stats.Box(
-                [self.outer_fw_pf_x - 0.01, -a2_half, -a2_half],  # Lower corner (small x thickness for plane)
+                [self.outer_fw_pf_x + 0.001, -a2_half, -a2_half],  # Lower corner (small x thickness for plane)
                 [self.outer_fw_pf_x + 0.01,  a2_half,  a2_half]   # Upper corner
             )
             source_outer.particle = 'neutron'
