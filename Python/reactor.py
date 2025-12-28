@@ -56,63 +56,106 @@ class Reactor(ABC):
         """
         self.tallies = openmc.Tallies() # initialize
 
-        # Filters
-        cell_filter = openmc.CellFilter([cell for cell in self.cells if cell.fill is not None])
         energy_filter = openmc.EnergyFilter(logspace_per_decade(1e-5, 20e6, 100)) # './helpers/utilities.py'
         
+        # For PBHet and PBHom: use material-based tallies instead of cell-based
+        if self.breeder_name == 'PBHet' or self.breeder_name == 'PBHom':
+            # Material filters
+            blanket_material_filter = openmc.MaterialFilter([self.blanket])
+            
+            # For PBHet: U/Th is in kernel material (BISO particles)
+            # For PBHom: U/Th is homogenized in blanket material (no BISO, no separate kernel)
+            if self.breeder_name == 'PBHet' and hasattr(self, 'kernel'):
+                # PBHet has BISO particles with kernel material
+                fertile_material_filter = openmc.MaterialFilter([self.kernel])
+            else:
+                # PBHom: U/Th is homogenized in blanket material (no separate kernel material)
+                fertile_material_filter = blanket_material_filter
+            
+            # Flux tally - filtered by blanket material (where most reactions occur)
+            flux_tally = self.make_tally('flux', ['flux'], filters=[blanket_material_filter])
+            flux_energy_tally = self.make_tally('flux spectrum', ['flux'], filters=[blanket_material_filter, energy_filter])
+            self.tallies.extend([flux_tally, flux_energy_tally])
+            
+            # Fertile element (n,gamma) reaction rates
+            if self.fertile_element == 'U':
+                fertile_ng_tally = self.make_tally('U n-gamma', ['(n,gamma)'], 
+                                                   filters=[fertile_material_filter], 
+                                                   nuclides=['U238', 'U235'])
+                fertile_ng_energy_tally = self.make_tally('U n-gamma spectrum', ['(n,gamma)'], 
+                                                          filters=[fertile_material_filter, energy_filter], 
+                                                          nuclides=['U238', 'U235'])
+                self.tallies.extend([fertile_ng_tally, fertile_ng_energy_tally])
+            
+            elif self.fertile_element == 'Th':
+                fertile_ng_tally = self.make_tally('Th n-gamma', ['(n,gamma)'], 
+                                                   filters=[fertile_material_filter], 
+                                                   nuclides=['Th232'])
+                fertile_ng_energy_tally = self.make_tally('Th n-gamma spectrum', ['(n,gamma)'], 
+                                                           filters=[fertile_material_filter, energy_filter], 
+                                                           nuclides=['Th232'])
+                self.tallies.extend([fertile_ng_tally, fertile_ng_energy_tally])
+            
+            # Lithium tritium breeding reactions - filtered by blanket material
+            # Li6 (n,Xt) for tritium production
+            Li6_nt_tally = self.make_tally('Li6 n-Xt', ['(n,Xt)'], 
+                                         filters=[blanket_material_filter], 
+                                         nuclides=['Li6'])
+            Li6_nt_energy_tally = self.make_tally('Li6 n-Xt spectrum', ['(n,Xt)'], 
+                                                  filters=[blanket_material_filter, energy_filter], 
+                                                  nuclides=['Li6'])
+            
+            # Li7 (n,Xt) for tritium production
+            Li7_nt_tally = self.make_tally('Li7 n-Xt', ['(n,Xt)'], 
+                                          filters=[blanket_material_filter], 
+                                          nuclides=['Li7'])
+            Li7_nt_energy_tally = self.make_tally('Li7 n-Xt spectrum', ['(n,Xt)'], 
+                                                  filters=[blanket_material_filter, energy_filter], 
+                                                  nuclides=['Li7'])
+            
+            self.tallies.extend([Li6_nt_tally, Li6_nt_energy_tally, Li7_nt_tally, Li7_nt_energy_tally])
+        
+        else:
+            cell_filter = openmc.CellFilter([cell for cell in self.cells if cell.fill is not None])
+        
+            heat_tally        = self.make_tally('volumetric heating',          ['heating-local'], filters=[cell_filter])
+            heat_energy_tally = self.make_tally('volumetric heating spectrum', ['heating-local'], filters=[cell_filter, energy_filter])
+            self.tallies.extend([heat_tally, heat_energy_tally])
+            
 
-        # ---------------------------------------------------------------
-        # Neutron wall loading and heating tallies 
-        # ---------------------------------------------------------------
-        """
-        nwl_surface_filter = openmc.SurfaceFilter([self.surface_vc.id]) # Surface filter for the plasma-facing surface (inner surface of first wall)
-        nwl_tally        = self.make_tally('neutron wall loading',          ['current'], filters=[nwl_surface_filter])
-        nwl_energy_tally = self.make_tally('neutron wall loading spectrum', ['current'], filters=[nwl_surface_filter, energy_filter])
-        # NWL = neutron current through surface, Using 'current' gives net current, 'partial-current' gives directional
-        self.tallies.extend([nwl_tally, nwl_energy_tally])
-        # I omit these bc our surfaces are openmc.model.Polygon's which SurfaceFilter can NOT read --ppark 2025-09-21
-        """
-
-        # -----------------------------------------------------------------------
-        # Heating tallies (heating-local estimates n+gamma heating using only n)
-        # -----------------------------------------------------------------------
-
-        heat_tally        = self.make_tally('volumetric heating',          ['heating-local'], filters=[cell_filter])
-        heat_energy_tally = self.make_tally('volumetric heating spectrum', ['heating-local'], filters=[cell_filter, energy_filter])
-        self.tallies.extend([heat_tally, heat_energy_tally])
 
 
-        # ---------------------------------------------------------------
-        # Flux and reaction rate tallies 
-        # ---------------------------------------------------------------
+            # ---------------------------------------------------------------
+            # Flux and reaction rate tallies 
+            # ---------------------------------------------------------------
 
-        # Flux tally 
-        flux_tally        = self.make_tally('flux', ['flux'], filters=[cell_filter])
-        flux_energy_tally = self.make_tally('flux spectrum', ['flux'], filters=[cell_filter, energy_filter])
+            # Flux tally 
+            flux_tally        = self.make_tally('flux', ['flux'], filters=[cell_filter])
+            flux_energy_tally = self.make_tally('flux spectrum', ['flux'], filters=[cell_filter, energy_filter])
 
-        # Fertile element reaction rates
-        if self.fertile_element == 'U':
-            fertile_tally        = self.make_tally(f'U rxn rates',          ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter], nuclides=['U238', 'U235'])
-            fertile_energy_tally = self.make_tally(f'U rxn rates spectrum', ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['U238', 'U235'])
+            # Fertile element reaction rates
+            if self.fertile_element == 'U':
+                fertile_tally        = self.make_tally(f'U rxn rates',          ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter], nuclides=['U238', 'U235'])
+                fertile_energy_tally = self.make_tally(f'U rxn rates spectrum', ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['U238', 'U235'])
 
-        elif self.fertile_element == 'Th':
-            fertile_tally        = self.make_tally(f'Th rxn rates',          ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter], nuclides=['Th232'])
-            fertile_energy_tally = self.make_tally(f'Th rxn rates spectrum', ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Th232'])
+            elif self.fertile_element == 'Th':
+                fertile_tally        = self.make_tally(f'Th rxn rates',          ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter], nuclides=['Th232'])
+                fertile_energy_tally = self.make_tally(f'Th rxn rates spectrum', ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Th232'])
 
-        # Lithium reaction rates
-        Li_tally        = self.make_tally('Li rxn rates',          ['(n,gamma)', '(n,Xt)', 'elastic'], filters=[cell_filter], nuclides=['Li6', 'Li7'])
-        Li_energy_tally = self.make_tally('Li rxn rates spectrum', ['(n,gamma)', '(n,Xt)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Li6', 'Li7'])
+            # Lithium reaction rates
+            Li_tally        = self.make_tally('Li rxn rates',          ['(n,gamma)', '(n,Xt)', 'elastic'], filters=[cell_filter], nuclides=['Li6', 'Li7'])
+            Li_energy_tally = self.make_tally('Li rxn rates spectrum', ['(n,gamma)', '(n,Xt)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Li6', 'Li7'])
 
-        # Fluorine reaction rates
-        F_tally        = self.make_tally('F rxn rates', ['(n,gamma)', 'elastic'], filters=[cell_filter], nuclides=['F19'])
-        F_energy_tally = self.make_tally('F rxn rates spectrum', ['(n,gamma)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['F19'])
+            # Fluorine reaction rates
+            F_tally        = self.make_tally('F rxn rates', ['(n,gamma)', 'elastic'], filters=[cell_filter], nuclides=['F19'])
+            F_energy_tally = self.make_tally('F rxn rates spectrum', ['(n,gamma)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['F19'])
 
-        # Beryllium reaction rates
-        Be_tally        = self.make_tally('Be rxn rates', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter], nuclides=['Be9'])
-        Be_energy_tally = self.make_tally('Be rxn rates spectrum', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Be9'])
+            # Beryllium reaction rates
+            Be_tally        = self.make_tally('Be rxn rates', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter], nuclides=['Be9'])
+            Be_energy_tally = self.make_tally('Be rxn rates spectrum', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Be9'])
 
-        self.tallies.extend([flux_tally, fertile_tally, Li_tally, F_tally, Be_tally])
-        self.tallies.extend([flux_energy_tally, fertile_energy_tally, Li_energy_tally, F_energy_tally, Be_energy_tally])
+            self.tallies.extend([flux_tally, fertile_tally, Li_tally, F_tally, Be_tally])
+            self.tallies.extend([flux_energy_tally, fertile_energy_tally, Li_energy_tally, F_energy_tally, Be_energy_tally])
 
 
     def make_tally(self, name, scores, filters:list=None, nuclides:list=None):
@@ -127,16 +170,39 @@ class Reactor(ABC):
 
     def settings(self):
         """ SETTINGS """
-        if self.breeder_name == 'PB':
-            y_src = 0.0
-            z_src = 0.0
-            x_src = 620
-
-            source = openmc.IndependentSource()
-            source.space = openmc.stats.Point((x_src, y_src, z_src))
-            source.particle = 'neutron'
-            source.energy   = openmc.stats.Discrete([14.0e6], [1.0])  # 14 MeV
-            source.angle    = openmc.stats.Isotropic()
+        if self.breeder_name == 'PBHet' or self.breeder_name == 'PBHom':
+            # Create plane sources on first wall plasma-facing surfaces
+            # Split neutron count 50/50 between inner and outer sources
+            inner_weight = 0.5
+            outer_weight = 0.5
+            
+            # Inner first wall plane source (a1 x a1)
+            source_inner = openmc.IndependentSource()
+            # Use Box distribution: x fixed at plane, y and z uniform over the area
+            a1_half = self.inner_fw_size / 2.0
+            source_inner.space = openmc.stats.Box(
+                [self.inner_fw_pf_x - 0.01, -a1_half, -a1_half],  # Lower corner (small x thickness for plane)
+                [self.inner_fw_pf_x + 0.01,  a1_half,  a1_half]   # Upper corner
+            )
+            source_inner.particle = 'neutron'
+            source_inner.energy = openmc.stats.Discrete([14.0e6], [1.0])  # 14 MeV
+            source_inner.angle = openmc.stats.Isotropic()
+            source_inner.strength = inner_weight
+            
+            # Outer first wall plane source (a2 x a2)
+            source_outer = openmc.IndependentSource()
+            a2_half = self.outer_fw_size / 2.0
+            source_outer.space = openmc.stats.Box(
+                [self.outer_fw_pf_x - 0.01, -a2_half, -a2_half],  # Lower corner (small x thickness for plane)
+                [self.outer_fw_pf_x + 0.01,  a2_half,  a2_half]   # Upper corner
+            )
+            source_outer.particle = 'neutron'
+            source_outer.energy = openmc.stats.Discrete([14.0e6], [1.0])  # 14 MeV
+            source_outer.angle = openmc.stats.Isotropic()
+            source_outer.strength = outer_weight
+            
+            # Use list of sources for multiple sources
+            sources = [source_inner, source_outer]
         else:
             source = openmc.IndependentSource()
             source.space = openmc.stats.CylindricalIndependent(
@@ -147,10 +213,11 @@ class Reactor(ABC):
             source.particle = 'neutron'
             source.energy   = openmc.stats.Discrete([14.0e6], [1.0])  # 14 MeV
             source.angle    = openmc.stats.Isotropic()
+            sources = source
 
-        # Create settings and assign source
+        # Create settings and assign source(s)
         self.settings = openmc.Settings()
-        self.settings.source = source
+        self.settings.source = sources
 
         """ Run type """
         self.settings.run_mode  = 'fixed source'
@@ -326,93 +393,247 @@ class Reactor(ABC):
         # Read tallies
         print(f"Reading tallies...")
 
-        flux      = sp.get_tally(name='flux').get_pandas_dataframe()
-        flux_spec = sp.get_tally(name='flux spectrum').get_pandas_dataframe()
-        Li        = sp.get_tally(name='Li rxn rates').get_pandas_dataframe()
-        Li_spec   = sp.get_tally(name='Li rxn rates spectrum').get_pandas_dataframe()
-        fertile      = sp.get_tally(name=f'{self.fertile_element} rxn rates').get_pandas_dataframe()
-        fertile_spec = sp.get_tally(name=f'{self.fertile_element} rxn rates spectrum').get_pandas_dataframe()
-
-        # Add new column for energy bin midpoint (for plotting)
-        for df in [flux_spec, fertile_spec, Li_spec]:
-            df['energy mid [eV]'] = (df['energy low [eV]'] + df['energy high [eV]'])/ 2
-
-        """
-        flux, U, and Li dataframes should have column headers: 
-            (index), cell, nuclide, score, mean, std. dev.
-        flux_spec, U_spec, and Li_spec should have column headers: 
-            (index), cell, energy low [eV], energy high [eV], nuclide, score, mean, std. dev., energy mid [eV]
-        """
-
-        """ Reaction rates for every fertile loading and for every energy bin """
-        U238_ng_Ebin_df  = fertile_spec[(fertile_spec['nuclide'] == self.fertile_isotope) & (fertile_spec['score'] == '(n,gamma)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        U238_fis_Ebin_df = fertile_spec[(fertile_spec['nuclide'] == self.fertile_isotope) & (fertile_spec['score'] == 'fission')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        Li6_nt_Ebin_df   = Li_spec[(Li_spec['nuclide'] == 'Li6') & (Li_spec['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        Li7_nt_Ebin_df   = Li_spec[(Li_spec['nuclide'] == 'Li7') & (Li_spec['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-
-
-        # Flux
-        flux_list = flux['mean'].tolist()
-
-        # Lithium reaction rates 
-        Li6_nt = Li[(Li['nuclide']=='Li6') & (Li['score']=='(n,Xt)')][['cell','score','mean','std. dev.']] # Li6_rr.get_pandas_dataframe()
-        Li7_nt = Li[(Li['nuclide']=='Li7') & (Li['score']=='(n,Xt)')][['cell','score','mean','std. dev.']] 
-        
-        Li6_nt_list     = Li6_nt['mean'].tolist()
-        Li7_nt_list     = Li7_nt['mean'].tolist() 
-        Li6_nt_err_list = Li6_nt['std. dev.'].tolist()
-        Li7_nt_err_list = Li7_nt['std. dev.'].tolist()
-        
-        tbr_list = [x + y for x, y in zip(Li6_nt_list, Li7_nt_list)] # will look like: [0.0, 0.0, 0.094, 0.0, 1.074, 0.0]
-        tbr_err_list = [x + y for x, y in zip(Li6_nt_err_list, Li7_nt_err_list)]
-
-        # U-238 or Th-232 reaction rates for each mtu loading summed over all energies
-        U238              = fertile[(fertile['nuclide']==self.fertile_isotope)][['cell','score','mean','std. dev.']]
-        U238_fis_list     = U238[U238['score'] == 'fission'][['mean']]['mean'].tolist()
-        U238_fis_err_list = U238[U238['score'] == 'fission'][['std. dev.']]['std. dev.'].tolist()
-        U238_ng_list      = U238[U238['score'] == '(n,gamma)'][['mean']]['mean'].tolist()
-        U238_ng_err_list  = U238[U238['score'] == '(n,gamma)'][['std. dev.']]['std. dev.'].tolist()
-
-        # Plutonium kg per year
-        fissile_per_yr_list = []
-        for Pu_per_srcn in U238_ng_list:
+        # For PBHet and PBHom: use material-based tallies
+        if self.breeder_name == 'PBHet' or self.breeder_name == 'PBHom':
+            # Read tallies - similar structure to cell-based
+            flux = sp.get_tally(name='flux').get_pandas_dataframe()
+            flux_spec = sp.get_tally(name='flux spectrum').get_pandas_dataframe()
+            
+            # Read fertile element tallies (U or Th) - using similar naming
             if self.fertile_element == 'U':
-                fissile_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3) # kg/yr
+                fertile = sp.get_tally(name='U n-gamma').get_pandas_dataframe()
+                fertile_spec = sp.get_tally(name='U n-gamma spectrum').get_pandas_dataframe()
             elif self.fertile_element == 'Th':
-                fissile_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_U233 / AVO / 1e3) # kg/yr
+                fertile = sp.get_tally(name='Th n-gamma').get_pandas_dataframe()
+                fertile_spec = sp.get_tally(name='Th n-gamma spectrum').get_pandas_dataframe()
+            
+            # Read Li tallies - combine into single dataframe like cell-based
+            Li6_nt_df = sp.get_tally(name='Li6 n-Xt').get_pandas_dataframe()
+            Li7_nt_df = sp.get_tally(name='Li7 n-Xt').get_pandas_dataframe()
+            # Combine Li6 and Li7 into single dataframe (like cell-based 'Li rxn rates')
+            Li = pd.concat([Li6_nt_df, Li7_nt_df], ignore_index=True)
+            
+            Li6_nt_spec = sp.get_tally(name='Li6 n-Xt spectrum').get_pandas_dataframe()
+            Li7_nt_spec = sp.get_tally(name='Li7 n-Xt spectrum').get_pandas_dataframe()
+            # Combine spectra
+            Li_spec = pd.concat([Li6_nt_spec, Li7_nt_spec], ignore_index=True)
 
+            # Add new column for energy bin midpoint (for plotting)
+            for df in [flux_spec, fertile_spec, Li_spec]:
+                df['energy mid [eV]'] = (df['energy low [eV]'] + df['energy high [eV]'])/ 2
 
-        """Create list of cell IDs randomly assigned by OpenMC to match mtu loading to cell ID"""
-        cell_ids = [str(x) for x in flux['cell'].unique().tolist()]
-        # turn into str to add 'total' at end -- otherwise gets pandas error for type mismatch -- ppark 2025-10-07
-        print("unique cells in Li  :", len(Li['cell'].unique()),   " rows:", len(Li))
-        print("unique cells in fertile:", len(fertile['cell'].unique()), " rows:", len(fertile))
+            """ Reaction rates for every fertile loading and for every energy bin """
+            # Use 'material' column instead of 'cell', but same structure
+            fertile_ng_Ebin_df = fertile_spec[(fertile_spec['nuclide'] == self.fertile_isotope)][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'material', 'mean', 'std. dev.']]
+            Li6_nt_Ebin_df = Li_spec[(Li_spec['nuclide'] == 'Li6')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'material', 'mean', 'std. dev.']]
+            Li7_nt_Ebin_df = Li_spec[(Li_spec['nuclide'] == 'Li7')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'material', 'mean', 'std. dev.']]
 
-        print("\n-- list lengths --")
-        print("cell_ids           :", len(cell_ids))
-        print("flux_list          :", len(flux_list))
-        print("Li6_nt_list        :", len(Li6_nt_list))
-        print("Li6_nt_err_list    :", len(Li6_nt_err_list))
-        print("Li7_nt_list        :", len(Li7_nt_list))
-        print("Li7_nt_err_list    :", len(Li7_nt_err_list))
-        print("tbr_list           :", len(tbr_list))
-        print("tbr_err_list       :", len(tbr_err_list))
-        print("U238_fis_list      :", len(U238_fis_list))
-        print("U238_fis_err_list  :", len(U238_fis_err_list))
-        print("U238_ng_list       :", len(U238_ng_list))
-        print("U238_ng_err_list   :", len(U238_ng_err_list))
-        print("fissile_per_yr_list:", len(fissile_per_yr_list))
+            # Lithium reaction rates - filter by nuclide like cell-based
+            Li6_nt = Li[(Li['nuclide']=='Li6')][['material','nuclide','mean','std. dev.']]
+            Li7_nt = Li[(Li['nuclide']=='Li7')][['material','nuclide','mean','std. dev.']]
+            
+            Li6_nt_list = Li6_nt['mean'].tolist()
+            Li7_nt_list = Li7_nt['mean'].tolist()
+            Li6_nt_err_list = Li6_nt['std. dev.'].tolist()
+            Li7_nt_err_list = Li7_nt['std. dev.'].tolist()
+            
+            tbr_list = [x + y for x, y in zip(Li6_nt_list, Li7_nt_list)]
+            tbr_err_list = [np.sqrt(x**2 + y**2) for x, y in zip(Li6_nt_err_list, Li7_nt_err_list)]
 
-        # Show which cells each list corresponds to (quick sanity)
-        print("\n-- head of cell columns --")
-        print("flux cells head:", flux['cell'].head(10).tolist())
-        print("Li cells head:", Li['cell'].head(10).tolist())
-        print("fertile cells head:", fertile['cell'].head(10).tolist())
-        print("cell_ids:", cell_ids)
-        print("=== END DEBUG ===\n")
+            # Fertile element reaction rates - same structure as cell-based
+            fertile_ng = fertile[(fertile['nuclide']==self.fertile_isotope)][['material','nuclide','mean','std. dev.']]
+            fertile_ng_list = fertile_ng['mean'].tolist()
+            fertile_ng_err_list = fertile_ng['std. dev.'].tolist()
 
+            # Fissile production
+            fissile_per_yr_list = []
+            for ng_per_srcn in fertile_ng_list:
+                if self.fertile_element == 'U':
+                    fissile_per_yr_list.append(ng_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3) # kg/yr
+                elif self.fertile_element == 'Th':
+                    fissile_per_yr_list.append(ng_per_srcn * NPS_FUS * SEC_PER_YR * AMU_U233 / AVO / 1e3) # kg/yr
 
-        df = pd.DataFrame({'cell': cell_ids,
+            """Create list of material IDs - similar to cell IDs"""
+            all_material_ids = set(flux['material'].unique().tolist())
+            all_material_ids.update(Li['material'].unique().tolist())
+            all_material_ids.update(fertile['material'].unique().tolist())
+            material_ids = [str(x) for x in sorted(all_material_ids)]
+            
+            print("unique materials in flux   :", len(flux['material'].unique()),   " rows:", len(flux))
+            print("unique materials in Li     :", len(Li['material'].unique()),   " rows:", len(Li))
+            print("unique materials in fertile:", len(fertile['material'].unique()), " rows:", len(fertile))
+            print("total unique materials     :", len(material_ids))
+
+            # Create dictionaries keyed by material ID - same structure as cell-based
+            flux_dict = dict(zip(flux['material'], flux['mean']))
+            Li6_nt_dict = dict(zip(Li6_nt['material'], Li6_nt['mean']))
+            Li7_nt_dict = dict(zip(Li7_nt['material'], Li7_nt['mean']))
+            Li6_nt_err_dict = dict(zip(Li6_nt['material'], Li6_nt['std. dev.']))
+            Li7_nt_err_dict = dict(zip(Li7_nt['material'], Li7_nt['std. dev.']))
+            fertile_ng_dict = dict(zip(fertile_ng['material'], fertile_ng['mean']))
+            fertile_ng_err_dict = dict(zip(fertile_ng['material'], fertile_ng['std. dev.']))
+
+            # Build lists aligned by material_id, using 0.0 as default for missing values
+            flux_list = [flux_dict.get(mid, 0.0) for mid in material_ids]
+            Li6_nt_list = [Li6_nt_dict.get(mid, 0.0) for mid in material_ids]
+            Li7_nt_list = [Li7_nt_dict.get(mid, 0.0) for mid in material_ids]
+            Li6_nt_err_list = [Li6_nt_err_dict.get(mid, 0.0) for mid in material_ids]
+            Li7_nt_err_list = [Li7_nt_err_dict.get(mid, 0.0) for mid in material_ids]
+            tbr_list = [x + y for x, y in zip(Li6_nt_list, Li7_nt_list)]
+            tbr_err_list = [np.sqrt(x**2 + y**2) for x, y in zip(Li6_nt_err_list, Li7_nt_err_list)]
+            fertile_ng_list = [fertile_ng_dict.get(mid, 0.0) for mid in material_ids]
+            fertile_ng_err_list = [fertile_ng_err_dict.get(mid, 0.0) for mid in material_ids]
+
+            # Fissile production
+            fissile_per_yr_list = []
+            for ng_per_srcn in fertile_ng_list:
+                if self.fertile_element == 'U':
+                    fissile_per_yr_list.append(ng_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3) # kg/yr
+                elif self.fertile_element == 'Th':
+                    fissile_per_yr_list.append(ng_per_srcn * NPS_FUS * SEC_PER_YR * AMU_U233 / AVO / 1e3) # kg/yr
+
+            print("\n-- list lengths (should all match) --")
+            print("material_ids       :", len(material_ids))
+            print("flux_list          :", len(flux_list))
+            print("Li6_nt_list        :", len(Li6_nt_list))
+            print("Li7_nt_list        :", len(Li7_nt_list))
+            print("tbr_list           :", len(tbr_list))
+            print("fertile_ng_list    :", len(fertile_ng_list))
+            print("fissile_per_yr_list:", len(fissile_per_yr_list))
+            print("=== END DEBUG ===\n")
+
+            # Create DataFrame - use 'cell' column name for compatibility, but contains material IDs
+            df = pd.DataFrame({'cell': material_ids,
+                           'flux': flux_list,
+                           'Li6(n,t)': Li6_nt_list,
+                           'Li6(n,t)_stdev': Li6_nt_err_list,
+                           'Li7(n,t)': Li7_nt_list,
+                           'Li7(n,t)_stdev': Li7_nt_err_list,
+                           'tbr': tbr_list,
+                           'tbr_stdev': tbr_err_list,
+                           f'{self.fertile_isotope}(n,g)': fertile_ng_list,
+                           f'{self.fertile_isotope}(n,g)_stdev': fertile_ng_err_list,
+                           f'{self.fissile_isotope}_kg/yr': fissile_per_yr_list})
+
+            # Sum to get totals - same as cell-based
+            totals = df.sum(numeric_only=True)
+            totals['cell'] = 'total'
+            df = pd.concat([df, pd.DataFrame([totals])], ignore_index=True)
+            
+            df.to_csv(f'./{self.path}/tallies_summary.csv', index=False)
+            
+            # Energy-binned data - group by energy and sum over materials
+            fertile_ng_Ebin_df = fertile_ng_Ebin_df.groupby('energy mid [eV]', as_index=False).agg({
+                'energy low [eV]': 'first',
+                'energy high [eV]': 'first',
+                'mean': 'sum',
+                'std. dev.': lambda x: np.sqrt((x**2).sum())
+            })
+            fertile_ng_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_n-gamma_Ebins.csv', index=False)
+            
+        else:
+            # Original cell-based tallies for other reactor types
+            flux      = sp.get_tally(name='flux').get_pandas_dataframe()
+            flux_spec = sp.get_tally(name='flux spectrum').get_pandas_dataframe()
+            Li        = sp.get_tally(name='Li rxn rates').get_pandas_dataframe()
+            Li_spec   = sp.get_tally(name='Li rxn rates spectrum').get_pandas_dataframe()
+            fertile      = sp.get_tally(name=f'{self.fertile_element} rxn rates').get_pandas_dataframe()
+            fertile_spec = sp.get_tally(name=f'{self.fertile_element} rxn rates spectrum').get_pandas_dataframe()
+
+            # Add new column for energy bin midpoint (for plotting)
+            for df in [flux_spec, fertile_spec, Li_spec]:
+                df['energy mid [eV]'] = (df['energy low [eV]'] + df['energy high [eV]'])/ 2
+
+            """ Reaction rates for every fertile loading and for every energy bin """
+            U238_ng_Ebin_df  = fertile_spec[(fertile_spec['nuclide'] == self.fertile_isotope) & (fertile_spec['score'] == '(n,gamma)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+            U238_fis_Ebin_df = fertile_spec[(fertile_spec['nuclide'] == self.fertile_isotope) & (fertile_spec['score'] == 'fission')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+            Li6_nt_Ebin_df   = Li_spec[(Li_spec['nuclide'] == 'Li6') & (Li_spec['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+            Li7_nt_Ebin_df   = Li_spec[(Li_spec['nuclide'] == 'Li7') & (Li_spec['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
+
+            # Lithium reaction rates 
+            Li6_nt = Li[(Li['nuclide']=='Li6') & (Li['score']=='(n,Xt)')][['cell','score','mean','std. dev.']]
+            Li7_nt = Li[(Li['nuclide']=='Li7') & (Li['score']=='(n,Xt)')][['cell','score','mean','std. dev.']] 
+            
+            Li6_nt_list     = Li6_nt['mean'].tolist()
+            Li7_nt_list     = Li7_nt['mean'].tolist() 
+            Li6_nt_err_list = Li6_nt['std. dev.'].tolist()
+            Li7_nt_err_list = Li7_nt['std. dev.'].tolist()
+            
+            tbr_list = [x + y for x, y in zip(Li6_nt_list, Li7_nt_list)]
+            tbr_err_list = [x + y for x, y in zip(Li6_nt_err_list, Li7_nt_err_list)]
+
+            # U-238 or Th-232 reaction rates for each mtu loading summed over all energies
+            U238              = fertile[(fertile['nuclide']==self.fertile_isotope)][['cell','score','mean','std. dev.']]
+            U238_fis_list     = U238[U238['score'] == 'fission'][['mean']]['mean'].tolist()
+            U238_fis_err_list = U238[U238['score'] == 'fission'][['std. dev.']]['std. dev.'].tolist()
+            U238_ng_list      = U238[U238['score'] == '(n,gamma)'][['mean']]['mean'].tolist()
+            U238_ng_err_list  = U238[U238['score'] == '(n,gamma)'][['std. dev.']]['std. dev.'].tolist()
+
+            # Plutonium kg per year
+            fissile_per_yr_list = []
+            for Pu_per_srcn in U238_ng_list:
+                if self.fertile_element == 'U':
+                    fissile_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3) # kg/yr
+                elif self.fertile_element == 'Th':
+                    fissile_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_U233 / AVO / 1e3) # kg/yr
+
+            """Create list of cell IDs - get union of all cells from all tallies"""
+            all_cell_ids = set(flux['cell'].unique().tolist())
+            all_cell_ids.update(Li['cell'].unique().tolist())
+            all_cell_ids.update(fertile['cell'].unique().tolist())
+            cell_ids = [str(x) for x in sorted(all_cell_ids)]
+            
+            print("unique cells in flux   :", len(flux['cell'].unique()),   " rows:", len(flux))
+            print("unique cells in Li    :", len(Li['cell'].unique()),   " rows:", len(Li))
+            print("unique cells in fertile:", len(fertile['cell'].unique()), " rows:", len(fertile))
+            print("total unique cells     :", len(cell_ids))
+
+            # Create dictionaries keyed by cell ID to ensure proper alignment
+            flux_dict = dict(zip(flux['cell'], flux['mean']))
+            Li6_nt_dict = dict(zip(Li6_nt['cell'], Li6_nt['mean']))
+            Li7_nt_dict = dict(zip(Li7_nt['cell'], Li7_nt['mean']))
+            Li6_nt_err_dict = dict(zip(Li6_nt['cell'], Li6_nt['std. dev.']))
+            Li7_nt_err_dict = dict(zip(Li7_nt['cell'], Li7_nt['std. dev.']))
+            U238_fis_dict = dict(zip(U238[U238['score'] == 'fission']['cell'], 
+                                      U238[U238['score'] == 'fission']['mean']))
+            U238_fis_err_dict = dict(zip(U238[U238['score'] == 'fission']['cell'], 
+                                          U238[U238['score'] == 'fission']['std. dev.']))
+            U238_ng_dict = dict(zip(U238[U238['score'] == '(n,gamma)']['cell'], 
+                                    U238[U238['score'] == '(n,gamma)']['mean']))
+            U238_ng_err_dict = dict(zip(U238[U238['score'] == '(n,gamma)']['cell'], 
+                                         U238[U238['score'] == '(n,gamma)']['std. dev.']))
+
+            # Build lists aligned by cell_id, using 0.0 as default for missing values
+            flux_list = [flux_dict.get(cid, 0.0) for cid in cell_ids]
+            Li6_nt_list = [Li6_nt_dict.get(cid, 0.0) for cid in cell_ids]
+            Li7_nt_list = [Li7_nt_dict.get(cid, 0.0) for cid in cell_ids]
+            Li6_nt_err_list = [Li6_nt_err_dict.get(cid, 0.0) for cid in cell_ids]
+            Li7_nt_err_list = [Li7_nt_err_dict.get(cid, 0.0) for cid in cell_ids]
+            tbr_list = [x + y for x, y in zip(Li6_nt_list, Li7_nt_list)]
+            tbr_err_list = [x + y for x, y in zip(Li6_nt_err_list, Li7_nt_err_list)]
+            U238_fis_list = [U238_fis_dict.get(cid, 0.0) for cid in cell_ids]
+            U238_fis_err_list = [U238_fis_err_dict.get(cid, 0.0) for cid in cell_ids]
+            U238_ng_list = [U238_ng_dict.get(cid, 0.0) for cid in cell_ids]
+            U238_ng_err_list = [U238_ng_err_dict.get(cid, 0.0) for cid in cell_ids]
+
+            # Plutonium kg per year
+            fissile_per_yr_list = []
+            for Pu_per_srcn in U238_ng_list:
+                if self.fertile_element == 'U':
+                    fissile_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3) # kg/yr
+                elif self.fertile_element == 'Th':
+                    fissile_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_U233 / AVO / 1e3) # kg/yr
+
+            print("\n-- list lengths (should all match) --")
+            print("cell_ids           :", len(cell_ids))
+            print("Li6_nt_list        :", len(Li6_nt_list))
+            print("Li7_nt_list        :", len(Li7_nt_list))
+            print("tbr_list           :", len(tbr_list))
+            print("U238_ng_list       :", len(U238_ng_list))
+            print("fissile_per_yr_list:", len(fissile_per_yr_list))
+            print("=== END DEBUG ===\n")
+
+            df = pd.DataFrame({'cell': cell_ids,
                            'flux': flux_list,
                            'Li6(n,t)'          : Li6_nt_list,
                            'Li6(n,t)_stdev'    : Li6_nt_err_list,
@@ -420,19 +641,19 @@ class Reactor(ABC):
                            'Li7(n,t)_stdev'    : Li7_nt_err_list,
                            'tbr'               : tbr_list,
                            'tbr_stdev'         : tbr_err_list,
-                           f'{self.fertile_isotope}(n,fis)'       : Li7_nt_list,
-                           f'{self.fertile_isotope}(n,fis)_stdev' : U238_fis_list,
+                           f'{self.fertile_isotope}(n,fis)'       : U238_fis_list,
+                           f'{self.fertile_isotope}(n,fis)_stdev' : U238_fis_err_list,
                            f'{self.fertile_isotope}(n,g)'         : U238_ng_list,
                            f'{self.fertile_isotope}(n,g)_stdev'   : U238_ng_err_list,
                            f'{self.fissile_isotope}_kg/yr'        : fissile_per_yr_list,   })
 
-        totals = df.sum(numeric_only=True)
-        totals['cell'] = 'total'
-        df = pd.concat([df, pd.DataFrame([totals])], ignore_index=True)
-        
-        df.to_csv(f'./{self.path}/tallies_summary.csv', index=False)
-        
-        U238_ng_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_n-gamma_Ebins.csv', index=False)
+            totals = df.sum(numeric_only=True)
+            totals['cell'] = 'total'
+            df = pd.concat([df, pd.DataFrame([totals])], ignore_index=True)
+            
+            df.to_csv(f'./{self.path}/tallies_summary.csv', index=False)
+            
+            U238_ng_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_n-gamma_Ebins.csv', index=False)
 
 
 

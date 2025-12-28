@@ -12,6 +12,7 @@ from Python.flibe      import *
 from Python.pbli       import *
 from Python.pebble     import *
 from Python.pebble_coupon import *
+from Python.pebble_coupon_hom import *
 from Python.parameters import *
 from Python.utilities  import *
 
@@ -54,7 +55,8 @@ def main():
 
     elif run_type == 'tallies':
 
-        for breeder in ['PB']: # 'ARC','ARCBall','PB', make this match class name
+        #for breeder in ['ARC','ARCBall','FLiBe','LL', 'PB', 'PBHet', 'PBHom']: # 'ARC','ARCBall','PB', make this match class name
+        for breeder in ['PBHet', 'PBHom']:
             for fertile_element in ['U','Th']: # ,'Th']:
                 for fbd_kgm3 in FERTILE_BULK_DENSITY_KGM3: # [FERTILE_BULK_DENSITY_KGM3[0]]: # 
                     
@@ -98,12 +100,12 @@ def build_reactor(breeder:str, **kwargs):
 def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
 
     if fertile_element == 'U':
-        df_all   = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'Li6(n,t)', 'Li7(n,Xt)','U238(n,g)','tbr','Pu239_kg/yr'])
+        df_all   = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'Li6(n,t)', 'Li7(n,t)','U238(n,g)','tbr','Pu239_kg/yr'])
         fertile_isotope = 'U238'
         fissile_isotope = 'Pu239'
 
     elif fertile_element == 'Th':
-        df_all = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'Li6(n,t)', 'Li7(n,Xt)','Th232(n,g)','tbr','Pu239_kg/yr'])
+        df_all = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'Li6(n,t)', 'Li7(n,t)','Th232(n,g)','tbr','U233_kg/yr'])
         fertile_isotope = 'Th232'
         fissile_isotope =  'U233'
 
@@ -155,7 +157,7 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
                               'fertile_kg/m3': fertile,
                                  'fertile_mt': mt,
                                    'Li6(n,t)': li6,
-                                  'Li7(n,Xt)': li7,
+                                   'Li7(n,t)': li7,
                     f'{fertile_isotope}(n,g)': u238,
                                         'tbr': tbr,
                    f'{fissile_isotope}_kg/yr': pu }

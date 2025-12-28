@@ -6,12 +6,12 @@ from Python.parameters import *
 from Python.utilities  import *
 
 
-class PBHet(Reactor):
+class PBHom(Reactor):
 
     def initialize(self):
 
         self.temp_k          = TEMP_K
-        self.breeder_name    = 'PBHet'  # Changed from 'PB' to distinguish from PBHom
+        self.breeder_name    = 'PBHom'  # Changed from 'PB' to distinguish from PBHet
         self.breeder_enrich  = ENRICH_PB  # at% 
         self.breeder_volume  = PBCoupon_BR_VOL  
 
@@ -155,98 +155,65 @@ class PBHet(Reactor):
         he.set_density('g/cm3', 0.004279) # Helium density at 900 K ~80 bar 
         he.add_element('He', 1) 
         
-
-        # ------------------------------------------------------------------
+# ------------------------------------------------------------------
         # Fertile material - BISO Particle
         # ------------------------------------------------------------------
-        # --- Kernel volume [cm^3]
-        V_k_cm3 = (4.0/3.0) * np.pi * (BISO_KERNEL_RADIUS**3)
-
-        # --- Outer particle volume [cm^3] (for packing fraction)
-        V_p_cm3 = (4.0/3.0) * np.pi * (BISO_RADIUS**3)
-       
-        # --- Kernel mass [g]
-        if self.fertile_element == 'U':
-            rho_k = DENSITY_UO2  # g/cm3
-            m_k_g = rho_k * V_k_cm3
-
-            # mass fraction of U in UO2 (enrichment only changes U molar mass slightly)
-            fert_enrich = ENRICH_U * 0.01
-            M_U = (1-fert_enrich)*AMU_U238 + fert_enrich*AMU_U235
-            M_UO2 = M_U + 2.0*AMU_O
-            w_U_in_UO2 = M_U / M_UO2
-
-            m_fertile_per_particle_g = m_k_g * w_U_in_UO2
-
-        elif self.fertile_element == 'Th':
-            rho_k = DENSITY_ThO2
-            m_k_g = rho_k * V_k_cm3
-            M_ThO2 = AMU_Th + 2.0*AMU_O
-            w_Th_in_ThO2 = AMU_Th / M_ThO2
-            m_fertile_per_particle_g = m_k_g * w_Th_in_ThO2
-        
-        self.V_in  = 135.45 * 1e3    # cm3 volume of inner blanket frustum
-        self.V_out = 385.16 * 1e3    # cm3 vol of outer blanket frustum (new fave vocab word)
-    
-        rho_fert_kg_m3 = self.fertile_bulk_density_kgm3
-        m_in_g  = rho_fert_kg_m3 * (self.V_in / 1e3)
-        m_out_g = rho_fert_kg_m3 * (self.V_out / 1e3)
-        
-        # mass of fertile needed into particle count
-        if m_in_g <= 0.0 or m_fertile_per_particle_g <= 0.0:
-            self.N_in = 0
-        else:
-            self.N_in = int(np.rint(m_in_g / m_fertile_per_particle_g))
-
-        if m_out_g <= 0.0 or m_fertile_per_particle_g <= 0.0:
-            self.N_out = 0
-        else:
-            self.N_out = int(np.rint(m_out_g / m_fertile_per_particle_g))
-        
-        # packing fractions
-        pf_in  = (self.N_in  * V_p_cm3) / self.V_in 
-        pf_out = (self.N_out * V_p_cm3) / self.V_out
-        print("N_in =", self.N_in, " N_out =", self.N_out)
-        print("pf_in =", pf_in, " pf_out =", pf_out)
 
         if self.fertile_element == 'U':
-            self.kernel = openmc.Material(name='UO2', temperature=self.temp_k)
-            self.kernel.add_elements_from_formula('UO2', enrichment=ENRICH_U)
-            self.kernel.set_density('g/cm3', DENSITY_UO2) 
-            self.kernel.depletable = False 
+            kernel = openmc.Material(name='UO2', temperature=self.temp_k)
+            kernel.add_elements_from_formula('UO2', enrichment=ENRICH_U)
+            kernel.set_density('g/cm3', DENSITY_UO2)  
 
         elif self.fertile_element == 'Th': 
-            self.kernel = openmc.Material(name='ThO2', temperature=self.temp_k)
-            self.kernel.add_elements_from_formula('ThO2', enrichment=ENRICH_U)
-            self.kernel.set_density('g/cm3', DENSITY_ThO2) 
-            self.kernel.depletable = False 
+            kernel = openmc.Material(name='ThO2', temperature=self.temp_k) 
+            kernel.add_elements_from_formula('ThO2') 
+            kernel.set_density('g/cm3', DENSITY_ThO2) 
 
         # SiC coating
-        self.sic = openmc.Material(name='SiC', temperature=self.temp_k)
-        self.sic.add_elements_from_formula('SiC')
-        self.sic.set_density('g/cm3', 3.2)
-        self.sic.depletable = False 
-        
+        sic = openmc.Material(name='SiC', temperature=self.temp_k)
+        sic.add_elements_from_formula('SiC')
+        sic.set_density('g/cm3', 3.2)
+
+        # BISO particle
+        biso = openmc.Material.mix_materials([kernel, sic], [BISO_KERNEL_VOL_FRAC, BISO_COAT_VOL_FRAC], 'vo') 
+        # biso.set_density( )  # get BISO density from mix_materials
+
+
+        # ------------------------------------------------------------------
+        # Breeder and fertile material mixed in the blanket breeding regions 
+        # - changed old mass frac function with new/simpler vol frac function --ppark 2025-11-07
+        # - changed fertile kg/m³ to be per Li+Be vol, not whole breeder vol
+        # 
+        # We want "fertile bulk density" to be kg of U-238 per m³ of *breeding* material
+        # so we mix Li4SiO4 + Be first, and then mix Li4SiO4-Be + BISO,
+        # and then mix Li4SiO4-Be-BISO with the Eurofer and He coolant
+        # ------------------------------------------------------------------
+
         # Volume fractions from Lu (2017) Table 2 
         vf_li4sio4 = 0.1304 ; vf_be = 0.3790 ; vf_eurofer = 0.1176 ; vf_he = 1 - (vf_li4sio4 + vf_be + vf_eurofer) 
-        print("Li4SiO4 nuclides:", len(li4sio4.nuclides), li4sio4.nuclides[:3])
-        print("Be nuclides:", len(be.nuclides), be.nuclides[:3])
-        print("vf sum:", vf_li4sio4 + vf_be)
+        
 
         # Mix Li4SiO4 and Be (should be 25.6, 74.4 vol% respectively)
-        breeder = openmc.Material.mix_materials([li4sio4, be], [vf_li4sio4/(vf_li4sio4+vf_be), vf_be/(vf_li4sio4+vf_be)], 'vo') 
+        li4sio4_be = openmc.Material.mix_materials([li4sio4, be], [vf_li4sio4/(vf_li4sio4+vf_be), vf_be/(vf_li4sio4+vf_be)], 'vo') 
 
+        # Mix Li4SiO4-Be with BISO
+        vol_li4sio4_be = self.breeder_volume*(vf_li4sio4+vf_be)
+        
+        vf_li4sio4_be, vf_biso = calc_biso_blanket_vol_fracs(self.fertile_bulk_density_kgm3, vol_li4sio4_be, fertile_element=self.fertile_element)
+        
+        breeder = openmc.Material.mix_materials([li4sio4_be, biso], [vf_li4sio4_be, vf_biso], 'vo')
+        
         # So now we mix in Li4SiO4-Be-BISO with the Eurofer structure and He coolant materials
         # Li4SiO4-Be-BISO should be the volume fractions of Li4SiO4 (0.1304) + Be (0.3790) = 0.5094
         self.blanket = openmc.Material.mix_materials([breeder, self.structure, he], [(vf_li4sio4+vf_be), vf_eurofer, vf_he], 'vo') 
-        self.blanket.name, self.blanket.temperature = self.name, self.temp_k
+        self.blanket.name, self.blanket.temperature = self.name, self.temp_k    
 
 
         # ------------------------------------------------------------------
         # Add materials 
         # ------------------------------------------------------------------
 
-        self.materials = openmc.Materials([self.firstwall, self.structure, self.blanket, self.kernel, self.sic]) 
+        self.materials = openmc.Materials([self.firstwall, self.structure, self.blanket]) 
 
 
     def geometry(self):
@@ -286,7 +253,7 @@ class PBHet(Reactor):
         # ------------------------------------------------------------------
         # X-direction: REFLECTIVE (fully confined cuboid)
         x0i = openmc.XPlane(x0=PB_st1_ex, boundary_type='reflective')
-        x1i = openmc.XPlane(x0=PB_fw1+0.001,   boundary_type='reflective')
+        x1i = openmc.XPlane(x0=PB_fw1,   boundary_type='reflective')
         # Y and Z directions: REFLECTIVE (simulates infinite extent, like coupon test)
         y0i = openmc.YPlane(y0=-a1/2,    boundary_type='reflective')
         y1i = openmc.YPlane(y0=+a1/2,    boundary_type='reflective')
@@ -296,7 +263,7 @@ class PBHet(Reactor):
         self.inner_cuboid = (+x0i & -x1i & +y0i & -y1i & +z0i & -z1i)
 
         # X-direction: REFLECTIVE (fully confined cuboid)
-        x0o = openmc.XPlane(x0=PB_fw2-0.001,     boundary_type='reflective')
+        x0o = openmc.XPlane(x0=PB_fw2,     boundary_type='reflective')
         x1o = openmc.XPlane(x0=PB_st2_ex,  boundary_type='reflective')
         # Y and Z directions: REFLECTIVE (simulates infinite extent, like coupon test)
         y0o = openmc.YPlane(y0=-a2/2,      boundary_type='reflective')
@@ -348,56 +315,17 @@ class PBHet(Reactor):
 
         cell_fw1   = openmc.Cell(cell_id=11, region=self.inner_cuboid & -self.surface_fw1 & +self.surface_st1_pf,  fill=self.firstwall)
         cell_st1_pf   = openmc.Cell(cell_id=21, region=self.inner_cuboid & -self.surface_st1_pf & +self.surface_br1_pf, fill=self.structure)
+        cell_br1   = openmc.Cell(cell_id=31, region=self.inner_cuboid & +self.surface_br1_pf & -self.surface_br1_exterior, fill=self.blanket)
         cell_st1_ex   = openmc.Cell(cell_id=41, region=self.inner_cuboid & -self.surface_br1_exterior & +self.surface_st1_ex, fill=self.structure)
 
         cell_fw2    = openmc.Cell(cell_id=12, region=self.outer_cuboid & +self.surface_fw2 & -self.surface_st2_pf,  fill=self.firstwall)
         cell_st2_pf   = openmc.Cell(cell_id=22, region=self.outer_cuboid & +self.surface_st2_pf  & -self.surface_br2_pf, fill=self.structure)
+        cell_br2   = openmc.Cell(cell_id=32, region=self.outer_cuboid & +self.surface_br2_pf & -self.surface_br2_exterior, fill=self.blanket)
         cell_st2_ex   = openmc.Cell(cell_id=42, region=self.outer_cuboid & +self.surface_br2_exterior & -self.surface_st2_ex, fill=self.structure)
      
 
-        # ---------BISO Packing--------
-        if self.N_in <=0:
-            cell_insert_in  = openmc.Cell(cell_id=51,  fill=self.blanket, region=self.inner_blanket)
-            cell_insert_out = openmc.Cell(cell_id=52, fill=self.blanket, region=self.outer_blanket)
-
-        else:
-            s_k = openmc.Sphere(r=BISO_KERNEL_RADIUS)
-            s_o = openmc.Sphere(r=BISO_RADIUS)
-
-            c_kernel  = openmc.Cell(fill=self.kernel, region=-s_k)
-            c_coating = openmc.Cell(fill=self.sic,    region=+s_k & -s_o)
-
-            self.u_biso = openmc.Universe(name='BISO_universe', cells=[c_kernel, c_coating])
-      
-            inner_centers = openmc.model.pack_spheres(radius=BISO_RADIUS, region=self.inner_blanket, num_spheres=self.N_in, seed=1)
-            outer_centers = openmc.model.pack_spheres(radius=BISO_RADIUS, region=self.outer_blanket, num_spheres=self.N_out, seed=2)
-            # Background cells in the insert regions (homogenized blanket, but with sphere voids carved out)
-            cell_bg_in  = openmc.Cell(name="bg_in",  fill=self.blanket, region=self.inner_blanket)
-            cell_bg_out = openmc.Cell(name="bg_out", fill=self.blanket, region=self.outer_blanket)
-            biso_cells_in = []
-            for i, (x, y, z) in enumerate(inner_centers):
-                s = openmc.Sphere(x0=float(x), y0=float(y), z0=float(z), r=BISO_RADIUS)
-                c = openmc.Cell(name=f"biso_in_{i}", fill=self.u_biso, region=-s)
-                biso_cells_in.append(c)
-                cell_bg_in.region &= +s   # keep only outside each sphere in the background
-
-            biso_cells_out = []
-            for i, (x, y, z) in enumerate(outer_centers):
-                s = openmc.Sphere(x0=float(x), y0=float(y), z0=float(z), r=BISO_RADIUS)
-                c = openmc.Cell(name=f"biso_out_{i}", fill=self.u_biso, region=-s)
-                biso_cells_out.append(c)
-                cell_bg_out.region &= +s
-
-            # Universes that contain background + explicit BISO spheres
-            u_insert_in  = openmc.Universe(name="insert_in",  cells=[cell_bg_in]  + biso_cells_in)
-            u_insert_out = openmc.Universe(name="insert_out", cells=[cell_bg_out] + biso_cells_out)
-
-            # Cells that place those universes into the model
-            cell_insert_in  = openmc.Cell(cell_id=31,  fill=u_insert_in,  region=self.inner_blanket)
-            cell_insert_out = openmc.Cell(cell_id=32, fill=u_insert_out, region=self.outer_blanket)
-
-
-        self.cells = [cell_fw1, cell_st1_pf, cell_insert_in, cell_st1_ex, 
-                      cell_fw2, cell_st2_pf, cell_insert_out, cell_st2_ex]
+    
+        self.cells = [cell_fw1, cell_st1_pf, cell_br1, cell_st1_ex, 
+                      cell_fw2, cell_st2_pf, cell_br2, cell_st2_ex]
     
         self.geometry = openmc.Geometry(openmc.Universe(cells=self.cells))
