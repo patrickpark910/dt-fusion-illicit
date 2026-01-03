@@ -18,12 +18,12 @@ class ARC(Reactor):
         self.R0, self.a, self.kappa, self.delta = ARC_R0, ARC_A, ARC_KAPPA, ARC_DELTA 
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
-        self.name = f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_element}{self.fertile_bulk_density_kgm3:06.2f}kgm3"         
+        self.name = f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_kgm3:06.2f}kgm3"         
         self.path = f"./OpenMC/{self.name}"
         
         os.makedirs(self.path, exist_ok=True)
 
-        start_msg = f"\n======== {self.breeder_name} reactor - {self.fertile_element} {self.fertile_bulk_density_kgm3:6.2f} kg/m3 - {self.breeder_enrich:4.1f}%-enriched Li - {self.temp_k} K ========"
+        start_msg = f"\n======== {self.breeder_name} reactor - {self.fertile_isotope} {self.fertile_kgm3:6.2f} kg/m3 - {self.breeder_enrich:4.1f}%-enriched Li - {self.temp_k} K ========"
         print(f"{Colors.BLUE}{start_msg}{Colors.END}")
 
 
@@ -111,29 +111,29 @@ class ARC(Reactor):
         # Breeder and fertile material mixed in the blanket breeding regions 
         # ------------------------------------------------------------------        
 
-        if self.fertile_element == 'U':
+        if self.fertile_isotope == 'U238':
 
             self.fertile = openmc.Material(name='fertile', temperature=self.temp_k)
             self.fertile.add_elements_from_formula('UF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
             self.fertile.set_density('g/cm3', DENSITY_UF4) 
 
-            breeder_mass_frac, fertile_compound_mass_frac = calc_blanket_mass_fracs(self.fertile_bulk_density_kgm3, 
+            breeder_mass_frac, fertile_compound_mass_frac = calc_blanket_mass_fracs(self.fertile_kgm3, 
                                                                                     self.breeder_volume,
-                                                                                    fertile_element=self.fertile_element, 
+                                                                                    fertile_isotope=self.fertile_isotope, 
                                                                                     fertile_enrich=ENRICH_U, 
                                                                                     breeder_density_kgm3=DENSITY_FLIBE*1e3)
             self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [breeder_mass_frac, fertile_compound_mass_frac], 'wo') # fractions in 'mix_materials' MUST add up to 1
             self.blanket.name, self.blanket.temperature = self.name, self.temp_k
 
-        elif self.fertile_element == 'Th':
+        elif self.fertile_isotope == 'Th232':
 
             self.fertile = openmc.Material(name='fertile', temperature=self.temp_k)
             self.fertile.add_elements_from_formula('ThF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
             self.fertile.set_density('g/cm3', DENSITY_ThF4) 
 
-            breeder_mass_frac, fertile_compound_mass_frac = calc_blanket_mass_fracs(self.fertile_bulk_density_kgm3, 
+            breeder_mass_frac, fertile_compound_mass_frac = calc_blanket_mass_fracs(self.fertile_kgm3, 
                                                                                     self.breeder_volume,
-                                                                                    fertile_element=self.fertile_element, 
+                                                                                    fertile_isotope=self.fertile_isotope, 
                                                                                     fertile_enrich=100, 
                                                                                     breeder_density_kgm3=DENSITY_FLIBE*1e3)
             print(breeder_mass_frac, fertile_compound_mass_frac)

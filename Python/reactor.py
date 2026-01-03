@@ -12,17 +12,15 @@ from Python.utilities import *
 
 class Reactor(ABC):
 
-    def __init__(self, breeder_name='FLiBe', fertile_element='U', fertile_bulk_density_kgm3=0.0, run_type='tallies', run_openmc=False):
+    def __init__(self, breeder_name, fertile_kgm3=0.0, fertile_isotope='U238', run_type='tallies', run_openmc=False):
 
-        self.fertile_bulk_density_kgm3 = fertile_bulk_density_kgm3
+        self.fertile_kgm3 = fertile_kgm3
+        self.fertile_str  = f"{fertile_kgm3:06.2f}"
 
-
-        self.fertile_element = fertile_element
-        if fertile_element == 'U': 
-            self.fertile_isotope = 'U238'
+        self.fertile_isotope = fertile_isotope
+        if fertile_isotope == 'U238': 
             self.fissile_isotope = 'Pu239'
-        elif fertile_element == 'Th': 
-            self.fertile_isotope = 'Th232'
+        elif fertile_isotope == 'Th232': 
             self.fissile_isotope = 'U233'
 
         self.run_type    = run_type
@@ -36,7 +34,7 @@ class Reactor(ABC):
         self.breeder_density = None # DENSITY_FLIBE # g/cm³
         self.breeder_enrich  = None # ENRICH_FLIBE  # wt%
         self.breeder_volume  = None # ARC_BR_VOL    # m³
-        self.name = None # f"{run_type}_{breeder_name}_{self.fertile_element}{fertile_bulk_density_kgm3:3.2f}kgm3_Li{self.breeder_enrich:04.1f}_{self.temp_k}K"         
+        self.name = None # f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}{self.fertile_kgm3:06.2f}kgm3"
         self.path = None # f"./OpenMC/{self.name}"
 
 
@@ -109,15 +107,12 @@ class Reactor(ABC):
         # ---------------------------------------------------------------
 
         # Fertile element reaction rates
-        if self.fertile_element == 'U':
-            fertile_tally        = self.make_tally(f'U rxn rates',          ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter], nuclides=['U238', 'U235'])
-            fertile_energy_tally = self.make_tally(f'U rxn rates spectrum', ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['U238', 'U235'])
-
-        elif self.fertile_element == 'Th':
-            fertile_tally        = self.make_tally(f'Th rxn rates',          ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter], nuclides=['Th232'])
-            fertile_energy_tally = self.make_tally(f'Th rxn rates spectrum', ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Th232'])
+        fertile_tally_tot    = self.make_tally(f'Total fertile rxn rate',     ['(n,gamma)', 'fission', 'elastic'], nuclides=['U238', 'U235', 'Th232'])
+        fertile_tally        = self.make_tally(f'Fertile rxn rates',          ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter], nuclides=['U238', 'U235', 'Th232'])
+        fertile_energy_tally = self.make_tally(f'Fertile rxn rates spectrum', ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['U238', 'U235', 'Th232'])
 
         # Lithium reaction rates
+        Li_tally_tot    = self.make_tally('Total Li rxn rate',     ['(n,gamma)', '(n,Xt)', 'elastic'], nuclides=['Li6', 'Li7'])
         Li_tally        = self.make_tally('Li rxn rates',          ['(n,gamma)', '(n,Xt)', 'elastic'], filters=[cell_filter], nuclides=['Li6', 'Li7'])
         Li_energy_tally = self.make_tally('Li rxn rates spectrum', ['(n,gamma)', '(n,Xt)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Li6', 'Li7'])
 
@@ -129,6 +124,7 @@ class Reactor(ABC):
         Be_tally        = self.make_tally('Be rxn rates', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter], nuclides=['Be9'])
         Be_energy_tally = self.make_tally('Be rxn rates spectrum', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Be9'])
 
+        self.tallies.extend([fertile_tally_tot, Li_tally_tot])
         self.tallies.extend([fertile_tally, Li_tally, F_tally, Be_tally])
         self.tallies.extend([fertile_energy_tally, Li_energy_tally, F_energy_tally, Be_energy_tally])
 
@@ -341,8 +337,8 @@ class Reactor(ABC):
         flux_spec = sp.get_tally(name='flux spectrum').get_pandas_dataframe()
         Li        = sp.get_tally(name='Li rxn rates').get_pandas_dataframe()
         Li_spec   = sp.get_tally(name='Li rxn rates spectrum').get_pandas_dataframe()
-        fertile      = sp.get_tally(name=f'{self.fertile_element} rxn rates').get_pandas_dataframe()
-        fertile_spec = sp.get_tally(name=f'{self.fertile_element} rxn rates spectrum').get_pandas_dataframe()
+        fertile      = sp.get_tally(name=f'Fertile rxn rates').get_pandas_dataframe()
+        fertile_spec = sp.get_tally(name=f'Fertile rxn rates spectrum').get_pandas_dataframe()
 
         # Add new column for energy bin midpoint (for plotting)
         for df in [flux_spec, fertile_spec, Li_spec]:
@@ -396,9 +392,9 @@ class Reactor(ABC):
         # Plutonium kg per year
         fissile_per_yr_list = []
         for Pu_per_srcn in U238_ng_list:
-            if self.fertile_element == 'U':
+            if self.fertile_isotope == 'U238':
                 fissile_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3) # kg/yr
-            elif self.fertile_element == 'Th':
+            elif self.fertile_isotope == 'Th232':
                 fissile_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_U233 / AVO / 1e3) # kg/yr
 
 

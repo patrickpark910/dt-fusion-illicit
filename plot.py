@@ -32,24 +32,24 @@ class Plot:
     def __init__(self, save=False, show=True):
 
         # Dataframes of reaction rates (rr)
-        self.flibe_u_rr_df  = pd.read_csv('./Figures/Data/FLiBe_U_rxns_900K.csv')
-        self.flibe_th_rr_df = pd.read_csv('./Figures/Data/FLiBe_Th_rxns_900K.csv')
-        self.dcll_u_rr_df   = pd.read_csv('./Figures/Data/DCLL_U_rxns_900K.csv')
-        self.dcll_th_rr_df  = pd.read_csv('./Figures/Data/DCLL_Th_rxns_900K.csv')
-        self.hcpb_u_rr_df   = pd.read_csv('./Figures/Data/HCPB_U_rxns_900K.csv')
-        self.hcpb_th_rr_df  = pd.read_csv('./Figures/Data/HCPB_Th_rxns_900K.csv')
+        self.flibe_u_rr_df  = pd.read_csv('./Figures/Data/FLiBe_U238_rxns_900K.csv')
+        self.flibe_th_rr_df = pd.read_csv('./Figures/Data/FLiBe_Th232_rxns_900K.csv')
+        self.dcll_u_rr_df   = pd.read_csv('./Figures/Data/DCLL_U238_rxns_900K.csv')
+        self.dcll_th_rr_df  = pd.read_csv('./Figures/Data/DCLL_Th232_rxns_900K.csv')
+        self.hcpb_u_rr_df   = pd.read_csv('./Figures/Data/HCPB_U238_rxns_900K.csv')
+        self.hcpb_th_rr_df  = pd.read_csv('./Figures/Data/HCPB_Th232_rxns_900K.csv')
 
-        self.flibe_u_ng_df  = pd.read_csv('./Figures/Data/FLiBe_U_n-gamma_900K.csv')
-        self.flibe_th_ng_df = pd.read_csv('./Figures/Data/FLiBe_Th_n-gamma_900K.csv')
-        self.dcll_u_ng_df   = pd.read_csv('./Figures/Data/DCLL_U_n-gamma_900K.csv')
-        self.dcll_th_ng_df  = pd.read_csv('./Figures/Data/DCLL_Th_n-gamma_900K.csv')
-        self.hcpb_u_ng_df   = pd.read_csv('./Figures/data/HCPB_U_n-gamma_900K.csv') 
-        self.hcpb_th_ng_df  = pd.read_csv('./Figures/data/HCPB_Th_n-gamma_900K.csv') 
+        self.flibe_u_ng_df  = pd.read_csv('./Figures/Data/FLiBe_U238_n-gamma_900K.csv')
+        self.flibe_th_ng_df = pd.read_csv('./Figures/Data/FLiBe_Th232_n-gamma_900K.csv')
+        self.dcll_u_ng_df   = pd.read_csv('./Figures/Data/DCLL_U238_n-gamma_900K.csv')
+        self.dcll_th_ng_df  = pd.read_csv('./Figures/Data/DCLL_Th232_n-gamma_900K.csv')
+        self.hcpb_u_ng_df   = pd.read_csv('./Figures/data/HCPB_U238_n-gamma_900K.csv') 
+        self.hcpb_th_ng_df  = pd.read_csv('./Figures/data/HCPB_Th232_n-gamma_900K.csv') 
 
-        self.flibe_u_flux_df  = pd.read_csv('./Figures/Data/FLiBe_U_flux_900K.csv')
-        self.flibe_th_flux_df = pd.read_csv('./Figures/Data/FLiBe_Th_flux_900K.csv')
-        self.dcll_u_flux_df   = pd.read_csv('./Figures/Data/DCLL_U_flux_900K.csv')
-        self.dcll_th_flux_df  = pd.read_csv('./Figures/Data/DCLL_Th_flux_900K.csv')
+        self.flibe_u_flux_df  = pd.read_csv('./Figures/Data/FLiBe_U238_flux_900K.csv')
+        self.flibe_th_flux_df = pd.read_csv('./Figures/Data/FLiBe_Th232_flux_900K.csv')
+        self.dcll_u_flux_df   = pd.read_csv('./Figures/Data/DCLL_U238_flux_900K.csv')
+        self.dcll_th_flux_df  = pd.read_csv('./Figures/Data/DCLL_Th232_flux_900K.csv')
 
         self.save, self.show = save, show
         # self.name = 'All_Blankets'

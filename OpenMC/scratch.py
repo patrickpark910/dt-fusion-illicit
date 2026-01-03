@@ -24,6 +24,30 @@ def rename_tally_folders(directory="."):
         else:
             print(f"Skipped (already correct): {folder}")
 
+def rename_folders(directory="."):
+
+    # Define the target pattern and the replacement
+    # We look for "U000" and replace it with "U238_000"
+    search_str = "U000.00"
+    replace_str = "U238_000.00"
+    count = 0
+
+    # List everything in the directory
+    for foldername in os.listdir(directory):
+        # Construct the full path
+        old_path = os.path.join(directory, foldername)
+        
+        # Check if it is a directory and contains our search string
+        if os.path.isdir(old_path) and search_str in foldername:
+            new_name = foldername.replace(search_str, replace_str)
+            new_path = os.path.join(directory, new_name)
+            
+            print(f"Renaming: {foldername} -> {new_name}")
+            os.rename(old_path, new_path)
+            count += 1
+            
+    print(f"\nFinished. {count} folders renamed.")
+
 
 
 def delete_target_files(root_dir, target_name="fertile_n-gamma.csv"):
@@ -45,5 +69,7 @@ def delete_target_files(root_dir, target_name="fertile_n-gamma.csv"):
 
 
 if __name__ == "__main__":
-    rename_tally_folders(".")
+    print('1')
+    rename_folders()
+    print('2')
     # delete_target_files(".")

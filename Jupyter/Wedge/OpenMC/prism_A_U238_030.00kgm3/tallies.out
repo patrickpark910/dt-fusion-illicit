@@ -1,0 +1,1090 @@
+ ==================>     TALLY 31: TOTAL U RXN RATE     <===================
+
+ U238
+   (n,gamma)                            0.00954664 +/- 4.11955e-05
+   Fission Rate                         0.000870936 +/- 1.1273e-06
+   (n,elastic)                          0.0841076 +/- 5.99482e-05
+ U235
+   (n,gamma)                            7.39072e-05 +/- 9.65562e-08
+   Fission Rate                         0.000192256 +/- 1.86861e-07
+   (n,elastic)                          0.00041942 +/- 2.2641e-07
+ =====================>     TALLY 32: U RXN RATES     <=====================
+
+ Cell 11
+   U238
+     (n,gamma)                            0 +/- 0
+     Fission Rate                         0 +/- 0
+     (n,elastic)                          0 +/- 0
+   U235
+     (n,gamma)                            0 +/- 0
+     Fission Rate                         0 +/- 0
+     (n,elastic)                          0 +/- 0
+ Cell 12
+   U238
+     (n,gamma)                            0 +/- 0
+     Fission Rate                         0 +/- 0
+     (n,elastic)                          0 +/- 0
+   U235
+     (n,gamma)                            0 +/- 0
+     Fission Rate                         0 +/- 0
+     (n,elastic)                          0 +/- 0
+ Cell 13
+   U238
+     (n,gamma)                            0.00321723 +/- 2.55572e-05
+     Fission Rate                         0.000241 +/- 4.36018e-07
+     (n,elastic)                          0.0277126 +/- 6.86448e-05
+   U235
+     (n,gamma)                            2.48504e-05 +/- 5.70589e-08
+     Fission Rate                         6.36639e-05 +/- 1.28914e-07
+     (n,elastic)                          0.000137297 +/- 2.07302e-07
+ Cell 14
+   U238
+     (n,gamma)                            0 +/- 0
+     Fission Rate                         0 +/- 0
+     (n,elastic)                          0 +/- 0
+   U235
+     (n,gamma)                            0 +/- 0
+     Fission Rate                         0 +/- 0
+     (n,elastic)                          0 +/- 0
+ Cell 21
+   U238
+     (n,gamma)                            0 +/- 0
+     Fission Rate                         0 +/- 0
+     (n,elastic)                          0 +/- 0
+   U235
+     (n,gamma)                            0 +/- 0
+     Fission Rate                         0 +/- 0
+     (n,elastic)                          0 +/- 0
+ Cell 22
+   U238
+     (n,gamma)                            0 +/- 0
+     Fission Rate                         0 +/- 0
+     (n,elastic)                          0 +/- 0
+   U235
+     (n,gamma)                            0 +/- 0
+     Fission Rate                         0 +/- 0
+     (n,elastic)                          0 +/- 0
+ Cell 23
+   U238
+     (n,gamma)                            0.00632941 +/- 2.31977e-05
+     Fission Rate                         0.000629936 +/- 8.34536e-07
+     (n,elastic)                          0.056395 +/- 5.89143e-05
+   U235
+     (n,gamma)                            4.90569e-05 +/- 7.94361e-08
+     Fission Rate                         0.000128592 +/- 1.80073e-07
+     (n,elastic)                          0.000282123 +/- 2.70356e-07
+ Cell 24
+   U238
+     (n,gamma)                            0 +/- 0
+     Fission Rate                         0 +/- 0
+     (n,elastic)                          0 +/- 0
+   U235
+     (n,gamma)                            0 +/- 0
+     Fission Rate                         0 +/- 0
+     (n,elastic)                          0 +/- 0
+ ================>     TALLY 33: U RXN RATES SPECTRUM     <=================
+
+ Cell 11
+   Incoming Energy [0, 0.01)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [0.01, 0.1)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [0.1, 1)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1, 10)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [10, 100)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [100, 1000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1000, 10000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [10000, 100000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [100000, 1000000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1000000, 10000000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+ Cell 12
+   Incoming Energy [0, 0.01)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [0.01, 0.1)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [0.1, 1)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1, 10)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [10, 100)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [100, 1000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1000, 10000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [10000, 100000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [100000, 1000000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1000000, 10000000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+ Cell 13
+   Incoming Energy [0, 0.01)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [0.01, 0.1)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [0.1, 1)
+     U238
+       (n,gamma)                            7.77884e-11 +/- 4.10868e-11
+       Fission Rate                         5.06762e-16 +/- 2.67692e-16
+       (n,elastic)                          1.39604e-09 +/- 7.37284e-10
+     U235
+       (n,gamma)                            1.10635e-11 +/- 5.80779e-12
+       Fission Rate                         6.69199e-11 +/- 3.51995e-11
+       (n,elastic)                          1.41743e-11 +/- 7.48637e-12
+   Incoming Energy [1, 10)
+     U238
+       (n,gamma)                            5.92363e-05 +/- 2.94076e-06
+       Fission Rate                         2.64306e-11 +/- 1.27641e-12
+       (n,elastic)                          1.0127e-05 +/- 2.56309e-07
+     U235
+       (n,gamma)                            1.66385e-07 +/- 4.70875e-09
+       Fission Rate                         2.86038e-07 +/- 9.26024e-09
+       (n,elastic)                          5.3081e-08 +/- 1.1872e-09
+   Incoming Energy [10, 100)
+     U238
+       (n,gamma)                            0.00112855 +/- 2.05455e-05
+       Fission Rate                         1.74753e-09 +/- 2.81158e-11
+       (n,elastic)                          0.00153233 +/- 2.26888e-05
+     U235
+       (n,gamma)                            5.20422e-06 +/- 3.22689e-08
+       Fission Rate                         9.3698e-06 +/- 4.76467e-08
+       (n,elastic)                          2.9189e-06 +/- 1.02633e-08
+   Incoming Energy [100, 1000)
+     U238
+       (n,gamma)                            0.00123827 +/- 5.91158e-06
+       Fission Rate                         1.296e-07 +/- 2.57319e-09
+       (n,elastic)                          0.00571183 +/- 2.89816e-05
+     U235
+       (n,gamma)                            1.00271e-05 +/- 2.44361e-08
+       Fission Rate                         2.17796e-05 +/- 5.45735e-08
+       (n,elastic)                          1.68928e-05 +/- 3.5588e-08
+   Incoming Energy [1000, 10000)
+     U238
+       (n,gamma)                            0.000482452 +/- 1.21238e-06
+       Fission Rate                         6.94341e-08 +/- 8.05241e-10
+       (n,elastic)                          0.00727005 +/- 1.64332e-05
+     U235
+       (n,gamma)                            5.58256e-06 +/- 1.02266e-08
+       Fission Rate                         1.4469e-05 +/- 2.77513e-08
+       (n,elastic)                          3.48686e-05 +/- 6.25883e-08
+   Incoming Energy [10000, 100000)
+     U238
+       (n,gamma)                            0.000218952 +/- 3.83807e-07
+       Fission Rate                         4.49819e-08 +/- 1.75825e-10
+       (n,elastic)                          0.00699991 +/- 1.20831e-05
+     U235
+       (n,gamma)                            2.72144e-06 +/- 4.57461e-09
+       Fission Rate                         8.08258e-06 +/- 1.35169e-08
+       (n,elastic)                          4.24281e-05 +/- 6.95392e-08
+   Incoming Energy [100000, 1000000)
+     U238
+       (n,gamma)                            7.61387e-05 +/- 1.38977e-07
+       Fission Rate                         8.42358e-07 +/- 1.1556e-09
+       (n,elastic)                          0.0048746 +/- 9.08407e-06
+     U235
+       (n,gamma)                            1.04078e-06 +/- 1.90533e-09
+       Fission Rate                         5.603e-06 +/- 1.03995e-08
+       (n,elastic)                          3.05287e-05 +/- 5.69601e-08
+   Incoming Energy [1000000, 10000000)
+     U238
+       (n,gamma)                            1.35266e-05 +/- 3.64758e-08
+       Fission Rate                         0.000116488 +/- 2.45102e-07
+       (n,elastic)                          0.000997521 +/- 2.33074e-06
+     U235
+       (n,gamma)                            1.06935e-07 +/- 2.88122e-10
+       Fission Rate                         2.46172e-06 +/- 5.36516e-09
+       (n,elastic)                          7.36585e-06 +/- 1.74218e-08
+ Cell 14
+   Incoming Energy [0, 0.01)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [0.01, 0.1)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [0.1, 1)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1, 10)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [10, 100)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [100, 1000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1000, 10000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [10000, 100000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [100000, 1000000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1000000, 10000000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+ Cell 21
+   Incoming Energy [0, 0.01)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [0.01, 0.1)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [0.1, 1)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1, 10)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [10, 100)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [100, 1000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1000, 10000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [10000, 100000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [100000, 1000000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1000000, 10000000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+ Cell 22
+   Incoming Energy [0, 0.01)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [0.01, 0.1)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [0.1, 1)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1, 10)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [10, 100)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [100, 1000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1000, 10000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [10000, 100000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [100000, 1000000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1000000, 10000000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+ Cell 23
+   Incoming Energy [0, 0.01)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [0.01, 0.1)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [0.1, 1)
+     U238
+       (n,gamma)                            2.0251e-10 +/- 6.55921e-11
+       Fission Rate                         1.34274e-15 +/- 4.34624e-16
+       (n,elastic)                          3.32783e-09 +/- 1.08587e-09
+     U235
+       (n,gamma)                            2.34283e-11 +/- 7.48779e-12
+       Fission Rate                         1.60917e-10 +/- 5.16132e-11
+       (n,elastic)                          3.43638e-11 +/- 1.11985e-11
+   Incoming Energy [1, 10)
+     U238
+       (n,gamma)                            0.000118779 +/- 6.72289e-06
+       Fission Rate                         5.29634e-11 +/- 2.92915e-12
+       (n,elastic)                          1.90178e-05 +/- 4.65609e-07
+     U235
+       (n,gamma)                            2.99042e-07 +/- 7.58139e-09
+       Fission Rate                         5.09681e-07 +/- 1.60389e-08
+       (n,elastic)                          9.6476e-08 +/- 1.22554e-09
+   Incoming Energy [10, 100)
+     U238
+       (n,gamma)                            0.00220032 +/- 1.93507e-05
+       Fission Rate                         3.39213e-09 +/- 3.51862e-11
+       (n,elastic)                          0.00299435 +/- 2.79614e-05
+     U235
+       (n,gamma)                            1.01022e-05 +/- 4.64893e-08
+       Fission Rate                         1.81279e-05 +/- 7.95651e-08
+       (n,elastic)                          5.67184e-06 +/- 1.84721e-08
+   Incoming Energy [100, 1000)
+     U238
+       (n,gamma)                            0.00242113 +/- 1.11645e-05
+       Fission Rate                         2.47115e-07 +/- 2.62908e-09
+       (n,elastic)                          0.0112671 +/- 3.23634e-05
+     U235
+       (n,gamma)                            1.96676e-05 +/- 3.93992e-08
+       Fission Rate                         4.27641e-05 +/- 7.80065e-08
+       (n,elastic)                          3.32308e-05 +/- 5.76906e-08
+   Incoming Energy [1000, 10000)
+     U238
+       (n,gamma)                            0.000955653 +/- 2.0456e-06
+       Fission Rate                         1.36776e-07 +/- 1.13556e-09
+       (n,elastic)                          0.0144306 +/- 2.24697e-05
+     U235
+       (n,gamma)                            1.10615e-05 +/- 1.60629e-08
+       Fission Rate                         2.86514e-05 +/- 4.37194e-08
+       (n,elastic)                          6.91952e-05 +/- 9.97572e-08
+   Incoming Energy [10000, 100000)
+     U238
+       (n,gamma)                            0.000440745 +/- 3.59765e-07
+       Fission Rate                         9.05451e-08 +/- 2.59766e-10
+       (n,elastic)                          0.0141379 +/- 1.16627e-05
+     U235
+       (n,gamma)                            5.48679e-06 +/- 4.75064e-09
+       Fission Rate                         1.6309e-05 +/- 1.39635e-08
+       (n,elastic)                          8.5714e-05 +/- 7.11981e-08
+   Incoming Energy [100000, 1000000)
+     U238
+       (n,gamma)                            0.000161375 +/- 7.69496e-08
+       Fission Rate                         1.86448e-06 +/- 2.28776e-09
+       (n,elastic)                          0.0102921 +/- 5.15937e-06
+     U235
+       (n,gamma)                            2.1899e-06 +/- 9.85627e-10
+       Fission Rate                         1.18732e-05 +/- 5.96813e-09
+       (n,elastic)                          6.4443e-05 +/- 3.14981e-08
+   Incoming Energy [1000000, 10000000)
+     U238
+       (n,gamma)                            3.11293e-05 +/- 3.65647e-08
+       Fission Rate                         0.000284982 +/- 6.18095e-07
+       (n,elastic)                          0.00237664 +/- 3.91087e-06
+     U235
+       (n,gamma)                            2.47123e-07 +/- 2.7519e-10
+       Fission Rate                         5.88019e-06 +/- 9.56822e-09
+       (n,elastic)                          1.75555e-05 +/- 2.87045e-08
+ Cell 24
+   Incoming Energy [0, 0.01)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [0.01, 0.1)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [0.1, 1)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1, 10)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [10, 100)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [100, 1000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1000, 10000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [10000, 100000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [100000, 1000000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+   Incoming Energy [1000000, 10000000)
+     U238
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+     U235
+       (n,gamma)                            0 +/- 0
+       Fission Rate                         0 +/- 0
+       (n,elastic)                          0 +/- 0
+ ========================>     TALLY 29: FLUX     <=========================
+
+ Cell 11
+   Total Material
+     Flux                                 0.847062 +/- 0.00155429
+ Cell 12
+   Total Material
+     Flux                                 9.68893 +/- 0.0200045
+ Cell 13
+   Total Material
+     Flux                                 55.9408 +/- 0.0841452
+ Cell 14
+   Total Material
+     Flux                                 0.843342 +/- 0.00511631
+ Cell 21
+   Total Material
+     Flux                                 1.5258 +/- 0.00248914
+ Cell 22
+   Total Material
+     Flux                                 18.1752 +/- 0.0232289
+ Cell 23
+   Total Material
+     Flux                                 118.682 +/- 0.104955
+ Cell 24
+   Total Material
+     Flux                                 0.129997 +/- 0.00212774
+ ====================>     TALLY 30: FLUX SPECTRUM     <====================
+
+ Cell 11
+   Incoming Energy [0, 0.01)
+     Total Material
+       Flux                                 0 +/- 0
+   Incoming Energy [0.01, 0.1)
+     Total Material
+       Flux                                 0 +/- 0
+   Incoming Energy [0.1, 1)
+     Total Material
+       Flux                                 3.15527e-07 +/- 3.15527e-07
+   Incoming Energy [1, 10)
+     Total Material
+       Flux                                 0.000137482 +/- 7.35945e-06
+   Incoming Energy [10, 100)
+     Total Material
+       Flux                                 0.00762522 +/- 0.000115237
+   Incoming Energy [100, 1000)
+     Total Material
+       Flux                                 0.0388045 +/- 0.000261894
+   Incoming Energy [1000, 10000)
+     Total Material
+       Flux                                 0.0920255 +/- 0.000453207
+   Incoming Energy [10000, 100000)
+     Total Material
+       Flux                                 0.159777 +/- 0.000687885
+   Incoming Energy [100000, 1000000)
+     Total Material
+       Flux                                 0.301503 +/- 0.000835614
+   Incoming Energy [1000000, 10000000)
+     Total Material
+       Flux                                 0.118811 +/- 0.000341167
+ Cell 12
+   Incoming Energy [0, 0.01)
+     Total Material
+       Flux                                 0 +/- 0
+   Incoming Energy [0.01, 0.1)
+     Total Material
+       Flux                                 0 +/- 0
+   Incoming Energy [0.1, 1)
+     Total Material
+       Flux                                 5.86534e-06 +/- 5.86534e-06
+   Incoming Energy [1, 10)
+     Total Material
+       Flux                                 0.0022797 +/- 0.00017877
+   Incoming Energy [10, 100)
+     Total Material
+       Flux                                 0.104991 +/- 0.00140935
+   Incoming Energy [100, 1000)
+     Total Material
+       Flux                                 0.537964 +/- 0.0027426
+   Incoming Energy [1000, 10000)
+     Total Material
+       Flux                                 1.17623 +/- 0.00515418
+   Incoming Energy [10000, 100000)
+     Total Material
+       Flux                                 1.99808 +/- 0.00784596
+   Incoming Energy [100000, 1000000)
+     Total Material
+       Flux                                 3.54198 +/- 0.00785851
+   Incoming Energy [1000000, 10000000)
+     Total Material
+       Flux                                 1.3386 +/- 0.00354716
+ Cell 13
+   Incoming Energy [0, 0.01)
+     Total Material
+       Flux                                 0 +/- 0
+   Incoming Energy [0.01, 0.1)
+     Total Material
+       Flux                                 0 +/- 0
+   Incoming Energy [0.1, 1)
+     Total Material
+       Flux                                 4.00363e-06 +/- 2.11439e-06
+   Incoming Energy [1, 10)
+     Total Material
+       Flux                                 0.0170117 +/- 0.000375621
+   Incoming Energy [10, 100)
+     Total Material
+       Flux                                 0.920484 +/- 0.00324928
+   Incoming Energy [100, 1000)
+     Total Material
+       Flux                                 5.18948 +/- 0.0114209
+   Incoming Energy [1000, 10000)
+     Total Material
+       Flux                                 10.2903 +/- 0.0184656
+   Incoming Energy [10000, 100000)
+     Total Material
+       Flux                                 13.8258 +/- 0.0225043
+   Incoming Energy [100000, 1000000)
+     Total Material
+       Flux                                 15.8036 +/- 0.0297771
+   Incoming Energy [1000000, 10000000)
+     Total Material
+       Flux                                 6.96043 +/- 0.0156936
+ Cell 14
+   Incoming Energy [0, 0.01)
+     Total Material
+       Flux                                 0 +/- 0
+   Incoming Energy [0.01, 0.1)
+     Total Material
+       Flux                                 0 +/- 0
+   Incoming Energy [0.1, 1)
+     Total Material
+       Flux                                 4.59234e-06 +/- 4.59234e-06
+   Incoming Energy [1, 10)
+     Total Material
+       Flux                                 0.00088233 +/- 0.000162791
+   Incoming Energy [10, 100)
+     Total Material
+       Flux                                 0.0266345 +/- 0.000834069
+   Incoming Energy [100, 1000)
+     Total Material
+       Flux                                 0.104901 +/- 0.00159164
+   Incoming Energy [1000, 10000)
+     Total Material
+       Flux                                 0.162222 +/- 0.0011522
+   Incoming Energy [10000, 100000)
+     Total Material
+       Flux                                 0.197185 +/- 0.0020823
+   Incoming Energy [100000, 1000000)
+     Total Material
+       Flux                                 0.243213 +/- 0.00230171
+   Incoming Energy [1000000, 10000000)
+     Total Material
+       Flux                                 0.0898417 +/- 0.00123229
+ Cell 21
+   Incoming Energy [0, 0.01)
+     Total Material
+       Flux                                 0 +/- 0
+   Incoming Energy [0.01, 0.1)
+     Total Material
+       Flux                                 0 +/- 0
+   Incoming Energy [0.1, 1)
+     Total Material
+       Flux                                 2.62143e-07 +/- 2.62143e-07
+   Incoming Energy [1, 10)
+     Total Material
+       Flux                                 0.000203232 +/- 1.30007e-05
+   Incoming Energy [10, 100)
+     Total Material
+       Flux                                 0.011765 +/- 0.000123068
+   Incoming Energy [100, 1000)
+     Total Material
+       Flux                                 0.0609013 +/- 0.000465856
+   Incoming Energy [1000, 10000)
+     Total Material
+       Flux                                 0.146395 +/- 0.00063766
+   Incoming Energy [10000, 100000)
+     Total Material
+       Flux                                 0.257963 +/- 0.0012009
+   Incoming Energy [100000, 1000000)
+     Total Material
+       Flux                                 0.538635 +/- 0.00100065
+   Incoming Energy [1000000, 10000000)
+     Total Material
+       Flux                                 0.22882 +/- 0.000635989
+ Cell 22
+   Incoming Energy [0, 0.01)
+     Total Material
+       Flux                                 0 +/- 0
+   Incoming Energy [0.01, 0.1)
+     Total Material
+       Flux                                 0 +/- 0
+   Incoming Energy [0.1, 1)
+     Total Material
+       Flux                                 7.46328e-07 +/- 7.46328e-07
+   Incoming Energy [1, 10)
+     Total Material
+       Flux                                 0.00359945 +/- 0.000184798
+   Incoming Energy [10, 100)
+     Total Material
+       Flux                                 0.169676 +/- 0.00124149
+   Incoming Energy [100, 1000)
+     Total Material
+       Flux                                 0.871763 +/- 0.0060742
+   Incoming Energy [1000, 10000)
+     Total Material
+       Flux                                 1.92916 +/- 0.0048515
+   Incoming Energy [10000, 100000)
+     Total Material
+       Flux                                 3.32104 +/- 0.00776718
+   Incoming Energy [100000, 1000000)
+     Total Material
+       Flux                                 6.45795 +/- 0.0152154
+   Incoming Energy [1000000, 10000000)
+     Total Material
+       Flux                                 2.76359 +/- 0.00516296
+ Cell 23
+   Incoming Energy [0, 0.01)
+     Total Material
+       Flux                                 0 +/- 0
+   Incoming Energy [0.01, 0.1)
+     Total Material
+       Flux                                 0 +/- 0
+   Incoming Energy [0.1, 1)
+     Total Material
+       Flux                                 9.51043e-06 +/- 3.10409e-06
+   Incoming Energy [1, 10)
+     Total Material
+       Flux                                 0.0309578 +/- 0.000356126
+   Incoming Energy [10, 100)
+     Total Material
+       Flux                                 1.78787 +/- 0.00586929
+   Incoming Energy [100, 1000)
+     Total Material
+       Flux                                 10.2117 +/- 0.0179004
+   Incoming Energy [1000, 10000)
+     Total Material
+       Flux                                 20.423 +/- 0.0293916
+   Incoming Energy [10000, 100000)
+     Total Material
+       Flux                                 27.9458 +/- 0.0230481
+   Incoming Energy [100000, 1000000)
+     Total Material
+       Flux                                 33.5654 +/- 0.0183952
+   Incoming Energy [1000000, 10000000)
+     Total Material
+       Flux                                 16.5824 +/- 0.0260639
+ Cell 24
+   Incoming Energy [0, 0.01)
+     Total Material
+       Flux                                 0 +/- 0
+   Incoming Energy [0.01, 0.1)
+     Total Material
+       Flux                                 0 +/- 0
+   Incoming Energy [0.1, 1)
+     Total Material
+       Flux                                 0 +/- 0
+   Incoming Energy [1, 10)
+     Total Material
+       Flux                                 0.000178037 +/- 5.07423e-05
+   Incoming Energy [10, 100)
+     Total Material
+       Flux                                 0.00426662 +/- 0.000335575
+   Incoming Energy [100, 1000)
+     Total Material
+       Flux                                 0.0156295 +/- 0.000475682
+   Incoming Energy [1000, 10000)
+     Total Material
+       Flux                                 0.0256964 +/- 0.00066959
+   Incoming Energy [10000, 100000)
+     Total Material
+       Flux                                 0.0312449 +/- 0.000317435
+   Incoming Energy [100000, 1000000)
+     Total Material
+       Flux                                 0.037498 +/- 0.00119719
+   Incoming Energy [1000000, 10000000)
+     Total Material
+       Flux                                 0.013336 +/- 0.000428505

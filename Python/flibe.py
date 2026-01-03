@@ -18,12 +18,12 @@ class FLiBe(Reactor):
         self.R0, self.a, self.kappa, self.delta = FLIBE_R0, FLIBE_A, FLIBE_KAPPA, FLIBE_DELTA 
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
-        self.name = f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_element}{self.fertile_bulk_density_kgm3:06.2f}kgm3"         
+        self.name = f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_kgm3:06.2f}kgm3"         
         self.path = f"./OpenMC/{self.name}"
         
         os.makedirs(self.path, exist_ok=True)
 
-        start_msg = f"\n======== {self.breeder_name} reactor - {self.fertile_element} {self.fertile_bulk_density_kgm3:6.2f} kg/m3 - {self.breeder_enrich:4.1f}%-enriched Li - {self.temp_k} K ========"
+        start_msg = f"\n======== {self.breeder_name} reactor - {self.fertile_element} {self.fertile_kgm3:6.2f} kg/m3 - {self.breeder_enrich:4.1f}%-enriched Li - {self.temp_k} K ========"
         print(f"{Colors.CYAN}{start_msg}{Colors.END}")
 
 
@@ -117,7 +117,7 @@ class FLiBe(Reactor):
             self.fertile.add_elements_from_formula('UF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
             self.fertile.set_density('g/cm3', DENSITY_UF4) 
 
-            breeder_mass_frac, fertile_compound_mass_frac = calc_blanket_mass_fracs(self.fertile_bulk_density_kgm3, 
+            breeder_mass_frac, fertile_compound_mass_frac = calc_blanket_mass_fracs(self.fertile_kgm3, 
                                                                                     self.breeder_volume,
                                                                                     fertile_element=self.fertile_element, 
                                                                                     fertile_enrich=ENRICH_U, 
@@ -131,7 +131,7 @@ class FLiBe(Reactor):
             self.fertile.add_elements_from_formula('ThF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
             self.fertile.set_density('g/cm3', DENSITY_ThF4) 
 
-            breeder_mass_frac, fertile_compound_mass_frac = calc_blanket_mass_fracs(self.fertile_bulk_density_kgm3, 
+            breeder_mass_frac, fertile_compound_mass_frac = calc_blanket_mass_fracs(self.fertile_kgm3, 
                                                                                     self.breeder_volume,
                                                                                     fertile_element=self.fertile_element, 
                                                                                     fertile_enrich=100, 

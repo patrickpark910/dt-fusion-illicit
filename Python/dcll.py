@@ -18,12 +18,12 @@ class DCLL(Reactor):
         self.R0, self.a, self.kappa, self.delta = DCLL_R0, DCLL_A, DCLL_KAPPA, DCLL_DELTA
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
-        self.name = f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_element}{self.fertile_bulk_density_kgm3:06.2f}kgm3"         
+        self.name = f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_kgm3:06.2f}kgm3"         
         self.path = f"./OpenMC/{self.name}"
         
         os.makedirs(self.path, exist_ok=True)
 
-        start_msg = f"\n======== {self.breeder_name} reactor - {self.fertile_element} {self.fertile_bulk_density_kgm3:6.2f} kg/m3 - {self.breeder_enrich:4.1f}%-enriched Li - {self.temp_k} K ========"
+        start_msg = f"\n======== {self.breeder_name} reactor - {self.fertile_isotope} {self.fertile_kgm3:6.2f} kg/m3 - {self.breeder_enrich:4.1f}%-enriched Li - {self.temp_k} K ========"
         print(f"{Colors.MAGENTA}{start_msg}{Colors.END}")
 
 
@@ -132,12 +132,12 @@ class DCLL(Reactor):
         # Fertile material - BISO Particle
         # ------------------------------------------------------------------
 
-        if self.fertile_element == 'U':
+        if self.fertile_isotope == 'U238':
             kernel = openmc.Material(name='UO2')
             kernel.add_elements_from_formula('UO2', enrichment=ENRICH_U)
             kernel.set_density('g/cm3', DENSITY_UO2)  
 
-        elif self.fertile_element == 'Th': 
+        elif self.fertile_isotope == 'Th232': 
             kernel = openmc.Material(name='ThO2') 
             kernel.add_elements_from_formula('ThO2') 
             kernel.set_density('g/cm3', DENSITY_ThO2) 
@@ -167,7 +167,7 @@ class DCLL(Reactor):
         
         # Mix Pb-Li with BISO
         vol_ll = self.breeder_volume*vf_ll
-        vf_pbli, vf_biso = calc_biso_blanket_vol_fracs(self.fertile_bulk_density_kgm3, vol_ll, fertile_element=self.fertile_element)
+        vf_pbli, vf_biso = calc_biso_blanket_vol_fracs(self.fertile_kgm3, vol_ll, fertile_isotope=self.fertile_isotope)
 
         print(f"\n\n******volume fractions are: PbLi vf {vf_pbli}, biso vf {vf_biso}\n\n")
 

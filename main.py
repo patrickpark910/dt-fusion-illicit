@@ -53,31 +53,34 @@ def main():
 
     elif run_type == 'tallies':
 
-        for breeder in ['DCLL',]: # 'ARC','ARCB','DCLL','FLiBe','HCPB' make this match class name
-            for fertile_element in ['U','Th']: # ,'Th']:
-                for fbd_kgm3 in FERTILE_BULK_DENSITY_KGM3: # [FERTILE_BULK_DENSITY_KGM3[0]]: # 
+        for breeder in ['HCPB',]: # 'ARC','ARCB','DCLL','FLiBe','HCPB' make this match class name
+            for fertile_isotope in ['U238',]:  # 
+                for f_kgm3 in FERTILE_KGM3: # [FERTILE_KGM3[0]]: # 
                     
                     current_run = build_reactor(breeder, breeder_name=breeder,
-                                                fertile_element=fertile_element,
-                                                fertile_bulk_density_kgm3=fbd_kgm3, 
+                                                fertile_isotope=fertile_isotope,
+                                                fertile_kgm3=f_kgm3, 
                                                 run_type='tallies',
                                                 run_openmc=True)
 
                     print(f"Check if '{current_run.path}' exists: {os.path.isdir(current_run.path)}")
 
-                    if has_statepoint(current_run.path):
-                        print(f"{Colors.YELLOW}Warning.{Colors.END} File {current_run.path}/statepoint.h5 already exists, so this OpenMC run will be skipped...")
-                    elif current_run.run_openmc:
-                        current_run.openmc()
+                    if current_run.run_openmc:
+                        if has_statepoint(current_run.path):
+                            print(f"{Colors.YELLOW}Warning.{Colors.END} File {current_run.path}/statepoint.h5 already exists, so this OpenMC run will be skipped...")
+                        else:
+                            current_run.openmc()
+                            current_run.extract_tallies()
 
-                    if os.path.exists(f"{current_run.path}/tallies_summary.csv"): 
-                        print(f"{Colors.YELLOW}Warning.{Colors.END} File {current_run.path}/tallies_summary.csv already exists, so tally extraction will be skipped...")
-                        current_run.extract_tallies()
-                    elif current_run.run_openmc:
-                        current_run.extract_tallies()
+                    # if os.path.exists(f"{current_run.path}/tallies_summary.csv"): 
+                    #     print(f"{Colors.YELLOW}Warning.{Colors.END} File {current_run.path}/tallies_summary.csv already exists, so tally extraction will be skipped...")
+                    #     current_run.extract_tallies()
+                    # elif current_run.run_openmc:
+                    #     pass
+                    #     # current_run.extract_tallies()
 
-                print(f"Collating tallies for {breeder} {fertile_element} at {current_run.temp_k} and breeder vol {current_run.breeder_volume} m3")
-                collate_tallies(breeder, fertile_element, current_run.temp_k, current_run.breeder_volume)
+                print(f"Collating tallies for {breeder} {fertile_isotope} at {current_run.temp_k} and breeder vol {current_run.breeder_volume} m3")
+                collate_tallies(breeder, fertile_isotope, current_run.temp_k, current_run.breeder_volume)
 
 
 
@@ -95,21 +98,19 @@ def build_reactor(breeder:str, **kwargs):
     return reactor
 
 
-def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
+def collate_tallies(breeder,fertile_isotope,temp_k,vol_m3):
 
-    if fertile_element == 'U':
+    if fertile_isotope == 'U238':
         df_all   = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'Li6(n,t)', 'Li7(n,Xt)','U238(n,g)','tbr','Pu239_kg/yr'])
-        fertile_isotope = 'U238'
         fissile_isotope = 'Pu239'
 
-    elif fertile_element == 'Th':
+    elif fertile_isotope == 'Th232':
         df_all = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'Li6(n,t)', 'Li7(n,Xt)','Th232(n,g)','tbr','Pu239_kg/yr'])
-        fertile_isotope = 'Th232'
         fissile_isotope =  'U233'
 
     # df_flux_collated  = pd.DataFrame(columns=['filename','br_vol_m3','fertile_kg/m3', 'fertile_mt', 'energy mid [eV]', 'mean'])
     # df_ng_collated    = pd.DataFrame(columns=['filename','br_vol_m3','fertile_kg/m3', 'fertile_mt', 'energy mid [eV]', 'mean'])
-    tally_folders = [x for x in os.listdir("./OpenMC/") if (x.startswith(f"tallies_{breeder}_{temp_k}K")) and x.split("_")[-1].startswith(fertile_element)]
+    tally_folders = [x for x in os.listdir("./OpenMC/") if (x.startswith(f"tallies_{breeder}_{temp_k}K")) and x.split("_")[-1].startswith(fertile_isotope)]
 
     # Use lists instead of empty DataFrames
     flux_list = []
@@ -119,7 +120,7 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
 
         # Extract the fertile loading
         part = folder.split("_")[-1]
-        fertile = float(part.replace("kgm3", "").lstrip(fertile_element))
+        fertile = float(part.replace("kgm3", "").lstrip(fertile_isotope))
         mt = fertile*vol_m3/1e3 # metric tons of fertile isotope
 
         tally_summary = f"./OpenMC/{folder}/tallies_summary.csv"
@@ -189,8 +190,8 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
         df_flux_collated = df_flux_collated[['filename', 'fertile_kg/m3', 'fertile_mt', 'br_vol_m3', 
                                              'energy mid [eV]', 'mean', 'energy low [eV]', 'energy high [eV]']]
 
-        df_ng_collated.to_csv(f"./Figures/Data/{breeder}_{fertile_element}_n-gamma_{temp_k}K.csv",index=False)
-        df_flux_collated.to_csv(f"./Figures/Data/{breeder}_{fertile_element}_flux_{temp_k}K.csv",index=False)
+        df_ng_collated.to_csv(f"./Figures/Data/{breeder}_{fertile_isotope}_n-gamma_{temp_k}K.csv",index=False)
+        df_flux_collated.to_csv(f"./Figures/Data/{breeder}_{fertile_isotope}_flux_{temp_k}K.csv",index=False)
 
         df_all.loc[len(df_all)] = {'filename': folder,
                               'fertile_kg/m3': fertile,
@@ -201,7 +202,7 @@ def collate_tallies(breeder,fertile_element,temp_k,vol_m3):
                                         'tbr': tbr,
                    f'{fissile_isotope}_kg/yr': pu }
 
-        dst = f"./Figures/Data/{breeder}_{fertile_element}_rxns_{temp_k}K.csv"
+        dst = f"./Figures/Data/{breeder}_{fertile_isotope}_rxns_{temp_k}K.csv"
         df_all.to_csv(dst, index=False)
 
     print(f"{Colors.GREEN}Comment.{Colors.END} Collated tallies for {breeder} at {temp_k} K to: {dst}")

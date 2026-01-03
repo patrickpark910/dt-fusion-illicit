@@ -19,11 +19,11 @@ AMU_U = 238.02891 # for natural enrichment
 AMU_U235 = 235.0439299
 AMU_U238 = 238.05078826
 AMU_O = 15.999
-AMU_Th = 232.0381
+AMU_Th232 = 232.0381
 AMU_UF4 = AMU_U + 4 * AMU_F19
-AMU_ThF4 = AMU_Th + 4 * AMU_F19
+AMU_ThF4 = AMU_Th232 + 4 * AMU_F19
 AMU_UO2 = AMU_U + 2 * AMU_O
-AMU_ThO2 = AMU_Th + 2 * AMU_O
+AMU_ThO2 = AMU_Th232 + 2 * AMU_O
 AMU_FLIBE = 98.89 # g/mol
 AMU_PU239 = 239.0521634
 AMU_U233 = 233.039635207
@@ -92,14 +92,14 @@ def log_midpoints(points):
     return [float(np.sqrt(points[i] * points[i + 1])) for i in range(len(points) - 1)]
 
 
-def calc_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertile_element='U', fertile_enrich=0.71, breeder_density_kgm3=1.94e3):
+def calc_blanket_mass_fracs(fertile_kgm3, breeder_volume_m3, fertile_element='U', fertile_enrich=0.71, breeder_density_kgm3=1.94e3):
     """
     Calculate the mass fractions of FLiBe and (UF4 or ThF4). 
     Assumes UF4/ThF4 dissolution does NOT change FLiBe volume
       after conversaion with J.L. Ball --ppark 2025-07-03
 
     Args:
-        fertile_bulk_density_kgm3 : float : desired bulk density kg/m³ of U-238 or Th-232 in blanket
+        fertile_kgm3 : float : desired bulk density kg/m³ of U-238 or Th-232 in blanket
         breeder_volume_m3    : float : total volume m³ of breeding regions in tokamak
         fertile_element      : 'U' or 'Th' : identifies U-238 or Th-232 as the fertile isotope
         fertile_enrich       : float : wt% enrichment of the fertile material
@@ -112,7 +112,7 @@ def calc_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertil
     fertile_enrich = fertile_enrich*0.01 # OpenMC uses this in % but we want fraction
 
     if fertile_element == 'U':
-        uf4_bulk_density_kgm3 = fertile_bulk_density_kgm3 / (1-fertile_enrich) * AMU_UF4 / AMU_U
+        uf4_bulk_density_kgm3 = fertile_kgm3 / (1-fertile_enrich) * AMU_UF4 / AMU_U
         uf4_mass_kg           = uf4_bulk_density_kgm3 * breeder_volume_m3
         breeder_mass_kg       =  breeder_density_kgm3 * breeder_volume_m3
         blanket_mass_kg       = uf4_mass_kg + breeder_mass_kg
@@ -121,7 +121,7 @@ def calc_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertil
         return breeder_mass_frac, uf4_mass_frac
 
     elif fertile_element == 'Th':
-        thf4_bulk_density_kgm3 = fertile_bulk_density_kgm3 * AMU_ThF4 / AMU_Th
+        thf4_bulk_density_kgm3 = fertile_kgm3 * AMU_ThF4 / AMU_Th232
         thf4_mass_kg           = thf4_bulk_density_kgm3 * breeder_volume_m3
         breeder_mass_kg        =  breeder_density_kgm3 * breeder_volume_m3
         blanket_mass_kg        = thf4_mass_kg + breeder_mass_kg
@@ -130,8 +130,16 @@ def calc_blanket_mass_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertil
         return breeder_mass_frac, thf4_mass_frac
 
 
+def fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope='U238'):
+    # vol_kernel = V_KERNEL # 4/3 * np.pi * 0.04**3
+    if fertile_isotope == 'U238':
+        biso_per_cc = fertile_kgm3 * AMU_UO2 / AMU_U238 / KERNEL_VOLUME / DENSITY_UO2 / 100**3 * 1000
+    elif fertile_isotope == 'Th232':
+        biso_per_cc = fertile_kgm3 * AMU_ThO2 / AMU_Th232 / KERNEL_VOLUME / DENSITY_ThO2 / 100**3 * 1000
+    return biso_per_cc
 
-def calc_biso_blanket_vol_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertile_element='U', fertile_enrich=0.71):
+
+def calc_biso_breeder_vol_fracs(fertile_kgm3, fertile_isotope='U238'):
     """
     Calculate volume fractions of breeding material and BISO particles.
     Per Glaser & Goldston (2012), we assume the BISO/TRISO particles are homogenized 
@@ -139,49 +147,23 @@ def calc_biso_blanket_vol_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fe
     relative mass or volume fractions of fertile vs. coating material.
     
     Args:
-        fertile_bulk_density_kgm3 : desired bulk density of fertile isotope in blanket [kg/m³]
-        breeder_volume_m3         : breeding region volume [m³]
-        fertile_element           : 'U' or 'Th'
-        fertile_enrich            : enrichment fraction of fertile isotope [wt%]
-        breeder_density_kgm3      : density of PbLi [kg/m³]
+        fertile_kgm3     : desired bulk density of fertile isotope in blanket [kg/m³]
+        vf_breeder_br    : volume fraction of breeder (Li4SiO4-Be or Pb-Li) in breeding region
+        fertile_element  : 'U238' or 'Th232'
     """
-    fertile_enrich = fertile_enrich*0.01 # OpenMC uses this in % but we want fraction
+    # Number of BISO spheres per cc of breeding volume
+    biso_per_cc_bv = fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope=fertile_isotope)
+    vf_biso_bv     = biso_per_cc_bv * BISO_VOLUME
 
-    if fertile_element == 'U':
+    if vf_biso_bv > 1.0:
+        print(f"Fatal. Your fertile kg/m³ exceeds what can physically fit in the breeding volume!")
+        print(f"Fatal. That is, your volume of BISO per cm³ of breeding volume exceeds 1.")
+        sys.exit()
 
-        # Total mass of elemental uranium to be added to system [g]
-        U_mass_g = (fertile_bulk_density_kgm3*1e3 * breeder_volume_m3) / (1 - fertile_enrich)
+    # New volume ratios of everything w.r.t. breeders in the breeder volume
+    vf_breeder_bv = 1 - vf_biso_bv
 
-        # Total mass of UO2 [g]
-        U_molar_mass = (1 - fertile_enrich) * AMU_U238 + fertile_enrich * AMU_U235
-        UO2_mass_g = U_mass_g * ((U_molar_mass+2*AMU_O)/U_molar_mass)
-
-        # Total volume of BISO [cm³] 
-        biso_vol_cm3 = UO2_mass_g / DENSITY_UO2 * BISO_RADIUS**3 / BISO_KERNEL_RADIUS**3
-
-        # Volume fractions
-        biso_vf    = biso_vol_cm3 / (breeder_volume_m3*1e6)
-        breeder_vf = 1 - biso_vf
-
-        return breeder_vf, biso_vf
-
-
-    if fertile_element == 'Th':
-
-        # Total mass of elemental uranium to be added to system [g]
-        Th_mass_g = (fertile_bulk_density_kgm3*1e3 * breeder_volume_m3) # / (1 - fertile_enrich)
-
-        # Total mass of UO2 [g]
-        ThO2_mass_g = Th_mass_g * ((AMU_Th+2*AMU_O)/AMU_Th)
-
-        # Total volume of BISO [cm³] 
-        biso_vol_cm3 = ThO2_mass_g / DENSITY_ThO2 * BISO_RADIUS**3 / BISO_KERNEL_RADIUS**3
-
-        # Volume fractions
-        biso_vf    = biso_vol_cm3 / (breeder_volume_m3*1e6)
-        breeder_vf = 1 - biso_vf
-
-        return breeder_vf, biso_vf
+    return vf_biso_bv, vf_breeder_bv, biso_per_cc_bv
 
 
 def set_xs_path():
@@ -311,8 +293,8 @@ def has_statepoint(directory_path):
 
 if __name__ == "__main__":
     """ Use this to test any of the functions """
-    # calc_biso_blanket_vol_fracs(fertile_bulk_density_kgm3, breeder_volume_m3, fertile_element='U', fertile_enrich=0.71)
-    print(calc_biso_blanket_vol_fracs(1000, LL_BR_VOL, fertile_element='Th', fertile_enrich=0.71))
+    # calc_biso_blanket_vol_fracs(fertile_kgm3, breeder_volume_m3, fertile_isotope='U238', fertile_enrich=0.71)
+    print(calc_biso_blanket_vol_fracs(1000, LL_BR_VOL, fertile_isotope='Th232'))
     # for 1000, LL_BR_VOL, 'U', 0.71: (0.7874738114760764, 0.21252618852392352)
 
 

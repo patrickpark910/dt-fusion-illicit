@@ -16,13 +16,17 @@ class HCPB(Reactor):
         self.breeder_volume  = HCPB_BR_VOL  
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
-        self.name = f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_element}{self.fertile_bulk_density_kgm3:06.2f}kgm3"         
+        self.name = f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_str}kgm3"         
         self.path = f"./OpenMC/{self.name}"
         
         os.makedirs(self.path, exist_ok=True)
 
-        start_msg = f"\n======== {self.breeder_name} reactor - {self.fertile_element} {self.fertile_bulk_density_kgm3:6.2f} kg/m3 - {self.breeder_enrich:4.1f}%-enriched Li - {self.temp_k} K ========"
+        start_msg = f"\n======== {self.breeder_name} reactor - {self.fertile_isotope} {self.fertile_str} kg/m3 - {self.breeder_enrich:4.1f}%-enriched Li - {self.temp_k} K ========"
         print(f"{Colors.MAGENTA}{start_msg}{Colors.END}")
+
+        self.summary = ""
+
+        self.helpers()
 
 
     def materials(self):
@@ -104,7 +108,7 @@ class HCPB(Reactor):
         # ------------------------------------------------------------------
 
         li4sio4 = openmc.Material(name='Li4SiO4', temperature=self.temp_k) 
-        li4sio4.set_density('g/cm3', DENSITY_LI4SIO4)  # normalized for ceramic porosity and 900 K (pure, room temp g/cm3 = 2.42)
+        li4sio4.set_density('g/cm3', DENSITY_LI4SIO4)  
         li4sio4.add_elements_from_formula('Li4SiO4', enrichment_target='Li6', enrichment_type='ao', enrichment=ENRICH_HCPB) 
         # self.lithium_ceramic.add_elements('Li', 22.415, percent_type='wo', enrichment_target='Li6', enrichment_type='ao', enrichment=ENRICH_HCPB) 
         # self.lithium_ceramic.add_element('Si', 24.077, percent_type='wo') 
@@ -128,7 +132,7 @@ class HCPB(Reactor):
         
         # Beryllium 
         be = openmc.Material(name='Beryllium') 
-        be.set_density('g/cm3', DENSITY_BE)  # normalized from 1.85 for 900 K
+        be.set_density('g/cm3', DENSITY_BE)  
         be.add_element('Be', 1, percent_type='wo') 
         # self.beryllium.add_element('Be', 98.749, percent_type='wo') 
         # self.beryllium.add_element('O', 0.9, percent_type='wo') 
@@ -159,12 +163,12 @@ class HCPB(Reactor):
         # Fertile material - BISO Particle
         # ------------------------------------------------------------------
 
-        if self.fertile_element == 'U':
+        if self.fertile_isotope == 'U238':
             kernel = openmc.Material(name='UO2')
             kernel.add_elements_from_formula('UO2', enrichment=ENRICH_U)
             kernel.set_density('g/cm3', DENSITY_UO2)  
 
-        elif self.fertile_element == 'Th': 
+        elif self.fertile_isotope == 'Th232': 
             kernel = openmc.Material(name='ThO2') 
             kernel.add_elements_from_formula('ThO2') 
             kernel.set_density('g/cm3', DENSITY_ThO2) 
@@ -178,35 +182,17 @@ class HCPB(Reactor):
         biso = openmc.Material.mix_materials([kernel, sic], [BISO_KERNEL_VOL_FRAC, BISO_COAT_VOL_FRAC], 'vo') 
         # biso.set_density( )  # get BISO density from mix_materials
 
+        vf_li_bv = self.vf_breeder_bv * VF_LI_NOM / (VF_LI_NOM + VF_BE_NOM)
+        vf_be_bv = self.vf_breeder_bv * VF_BE_NOM / (VF_LI_NOM + VF_BE_NOM)
 
-        # ------------------------------------------------------------------
-        # Breeder and fertile material mixed in the blanket breeding regions 
-        # - changed old mass frac function with new/simpler vol frac function --ppark 2025-11-07
-        # - changed fertile kg/m³ to be per Li+Be vol, not whole breeder vol
-        # 
-        # We want "fertile bulk density" to be kg of U-238 per m³ of *breeding* material
-        # so we mix Li4SiO4 + Be first, and then mix Li4SiO4-Be + BISO,
-        # and then mix Li4SiO4-Be-BISO with the Eurofer and He coolant
-        # ------------------------------------------------------------------
-
-        # Volume fractions from Lu (2017) Table 2 
-        vf_li4sio4 = 0.1304 ; vf_be = 0.3790 ; vf_eurofer = 0.1176 ; vf_he = 1 - (vf_li4sio4 + vf_be + vf_eurofer) 
-        
-        # Mix Li4SiO4 and Be (should be 25.6, 74.4 vol% respectively)
-        # li4sio4_be = openmc.Material.mix_materials([li4sio4, be], [vf_li4sio4/(vf_li4sio4+vf_be), vf_be/(vf_li4sio4+vf_be)], 'vo') 
-
-        # Mix Li4SiO4-Be with BISO
-        vol_li4sio4_be = self.breeder_volume*(vf_li4sio4+vf_be)
-        vf_li4sio4_be, vf_biso = calc_biso_blanket_vol_fracs(self.fertile_bulk_density_kgm3, vol_li4sio4_be, fertile_element=self.fertile_element)
-
-        print(f"\n\n******volume fractions are: Li vf {vf_li4sio4/(vf_li4sio4+vf_be)*vf_li4sio4_be}, Be vf {vf_be/(vf_li4sio4+vf_be)*vf_li4sio4_be}, biso vf {vf_biso}\n\n")
-        
-        breeder = openmc.Material.mix_materials([li4sio4, be, biso], [vf_li4sio4/(vf_li4sio4+vf_be)*vf_li4sio4_be, vf_be/(vf_li4sio4+vf_be)*vf_li4sio4_be, vf_biso], 'vo')
+        breeder = openmc.Material.mix_materials([li4sio4, be, biso], [vf_li_bv, vf_be_bv, self.vf_biso_bv], 'vo')
         
         # So now we mix in Li4SiO4-Be-BISO with the Eurofer structure and He coolant materials
-        # Li4SiO4-Be-BISO should be the volume fractions of Li4SiO4 (0.1304) + Be (0.3790) = 0.5094
-        self.blanket = openmc.Material.mix_materials([breeder, self.structure, he], [(vf_li4sio4+vf_be), vf_eurofer, vf_he], 'vo') 
-        self.blanket.name, self.blanket.temperature = self.name, self.temp_k    
+        self.blanket = openmc.Material.mix_materials([breeder, self.structure, he], [(VF_LI_NOM+VF_BE_NOM), VF_EU_NOM, VF_HE_NOM], 'vo') 
+        self.blanket.name = (f"{self.fertile_str} kg/m3"
+                             f" | {self.biso_per_cc_bv:.4f} spheres/cc = {(self.vf_biso_bv*100):.4f} vol% in breeder volume"
+                             f" | {self.biso_per_cc_br:.4f} spheres/cc = {(self.vf_biso_br*100):.4f} vol% in breeding region")
+        self.blanket.temperature = self.temp_k    
 
 
         # ------------------------------------------------------------------
@@ -288,3 +274,45 @@ class HCPB(Reactor):
                       cell_void_i, cell_void_o,]
     
         self.geometry = openmc.Geometry(openmc.Universe(cells=self.cells))
+
+
+    def helpers(self):
+
+        ''' 
+        Nominally, the volume fracs are: Li4SiO4 = 13.04%, Be = 37.90%, Eurofer = 11.76%, He = 37.30%
+        We want to deduct the BISO volume we add from the Li4SiO4.
+
+        Here I use: "breeder" = Li4SiO4, Be
+                    "breeding region" (br) = the physical blanket layer that contains the breeder
+                                             this layer usually contains breeder + structure + coolant
+                    "breeding volume" (bv) = amount of volume nominally occupied in blanket by breeder
+
+        That is, if the breeding region has volume 100 m³ of which 60% is (Li4SiO4 + Be) and the other 
+        40% is (Eurofer + Be), then 60 m³ is the breeding volume.
+            
+        Given fertile_kgm3 [kg U-238 / m³ breeder] we convert this to m³ of BISO.
+
+        **Be careful NOT to renormalize everything. DEDUCT the volume fraction of BISO from 1, and then
+        set THAT as the volume fraction of breeder, which then subdivides into Li4SiO4 and Be in a 
+        13.04:37.90 ratio.
+
+        We use the fact that 13.04 vol% Li4SiO4 = 0.1304 m³ of Li4SiO4 per m³ of blanket to do our work 
+        below in terms of volume fractions.
+        '''
+
+        self.vf_biso_bv, self.vf_breeder_bv, self.biso_per_cc_bv = calc_biso_breeder_vol_fracs(self.fertile_kgm3, fertile_isotope=self.fertile_isotope)
+
+        # Multiply nominal volume fractions of Li4SiO4, Be in bv by the new volume fraction of breeders in bv
+        vf_li_bv     = VF_LI_NOM / (VF_LI_NOM + VF_BE_NOM) * self.vf_breeder_bv
+        vf_be_bv     = VF_BE_NOM / (VF_LI_NOM + VF_BE_NOM) * self.vf_breeder_bv
+        # vf_checksum1 = self.vf_biso_bv + vf_li_bv + vf_be_bv  # should equal 1
+
+        # New volume ratios of everyting w.r.t. everything else in the breeding region
+        self.vf_biso_br = self.vf_biso_bv * (VF_LI_NOM + VF_BE_NOM)
+        vf_li_br   = vf_li_bv * (VF_LI_NOM + VF_BE_NOM)
+        vf_be_br   = vf_be_bv * (VF_LI_NOM + VF_BE_NOM)
+        # vol frac of Eurofer and He-4 doesn't change
+        vf_checksum2 = self.vf_biso_br + vf_li_br + vf_be_br + VF_EU_NOM + VF_HE_NOM  # should equal 1
+
+        # Number of BISO spheres per cc of breeding region
+        self.biso_per_cc_br = self.vf_biso_br / BISO_VOLUME

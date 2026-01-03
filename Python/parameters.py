@@ -2,7 +2,7 @@
 """ Universal parameters for ALL models """
 
 # Run settings
-FERTILE_BULK_DENSITY_KGM3 = [0, 0.1, 0.5, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150,] #  250, 500, 750, 1000]
+FERTILE_KGM3 = [0, 0.1, 0.5, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99] #  250, 500, 750, 1000]
 BREEDERS = ['ARC','ARCB','FLiBe','DCLL','HCPB']
 BLANKET_COVERAGE = 0.8 # Assume blanket covers 80% of plasma surface, rest for divertor
 TEMP_K = 900 # [K] ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
@@ -20,8 +20,8 @@ DENSITY_DCLL    =  9.40  # [g/cm³]
 ENRICH_DCLL     = 90.00  # at% enrich of Li-6
 
 # Pebble bed (HCPB, Li4SiO4-Be)
-DENSITY_LI4SIO4 =  2.17  # [g/cm³] # normalized for ceramic porosity and 900 K (pure, room temp g/cm3 = 2.42)
-DENSITY_BE      =  1.80  # [g/cm³] # normalized from 1.85 for 900 K
+DENSITY_LI4SIO4 =  2.42  # [g/cm³] # should we normalize to ~2.17 for ceramic porosity and 900 K? (pure, room temp g/cm3 = 2.42) --ppark
+DENSITY_BE      =  1.85  # [g/cm³] # could normalize to 1.80 for 900 K from 1.85 at STP
 ENRICH_HCPB     = 60.00  # at% enrich of Li-6 
 
 
@@ -37,8 +37,8 @@ DENSITY_SiC  =  3.20 # [g/cm³]
 
 BISO_KERNEL_RADIUS   = 0.04 # [cm]  (400 μm / 800 μm wide)
 BISO_RADIUS          = 0.05 # [cm]  (500 μm / 100 μm thick)
-BISO_VOLUME          = (4/3)*3.1416*(BISO_RADIUS)**3         # volume of single BISO particle
-KERNEL_VOLUME        = (4/3)*3.1416*(BISO_KERNEL_RADIUS)**3  # volume of UO2/ThO2 kernel in single BISO particle
+BISO_VOLUME          = (4/3)*3.14159265359*(BISO_RADIUS)**3         # volume of single BISO particle - trying to avoid np import in this file
+KERNEL_VOLUME        = (4/3)*3.14159265359*(BISO_KERNEL_RADIUS)**3  # volume of UO2/ThO2 kernel in single BISO particle
 BISO_KERNEL_VOL_FRAC = KERNEL_VOLUME / BISO_VOLUME           # (= 0.512) volume fraction of the kernel in BISO
 BISO_COAT_VOL_FRAC   = 1.0 - BISO_KERNEL_VOL_FRAC            # (= 0.488) volume fraction of the SiC coating
 
@@ -133,7 +133,11 @@ HCPB_BR1_O_CM =  82.0  # [cm]   breeding region outboard
 HCPB_BR1_I_CM =  45.0  # [cm]   breeding region inboard
 HCPB_ST2_CM   =   3.0  # [cm] structural region 2
 
-
+# Volume fractions of material in breeding regions of HCPB blanket (Lu et al. 2017, Tb.2)
+VF_LI_NOM = 0.1304  # Li4SiO4 (ceramic)
+VF_BE_NOM = 0.3790  # Be (metal)
+VF_EU_NOM = 0.1176  # Eurofer
+VF_HE_NOM = 0.3730  # He-4 (gas)
 
 
 

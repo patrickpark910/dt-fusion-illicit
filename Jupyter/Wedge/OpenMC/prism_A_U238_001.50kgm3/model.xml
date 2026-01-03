@@ -1,0 +1,155 @@
+<?xml version='1.0' encoding='utf-8'?>
+<model>
+  <materials>
+    <material id="21" name="firstwall" temperature="900">
+      <density units="g/cm3" value="19.0"/>
+      <nuclide ao="0.0012" name="W180"/>
+      <nuclide ao="0.265" name="W182"/>
+      <nuclide ao="0.1431" name="W183"/>
+      <nuclide ao="0.3064" name="W184"/>
+      <nuclide ao="0.2843" name="W186"/>
+    </material>
+    <material id="22" name="Eurofer" temperature="900">
+      <density units="g/cm3" value="7.8"/>
+      <nuclide name="Fe54" wo="5.044870827810846"/>
+      <nuclide name="Fe56" wo="82.12320611741701"/>
+      <nuclide name="Fe57" wo="1.9305053931796552"/>
+      <nuclide name="Fe58" wo="0.2614176615924942"/>
+      <nuclide name="C12" wo="0.10868075295942553"/>
+      <nuclide name="C13" wo="0.0013192470405744823"/>
+      <nuclide name="Cr50" wo="0.3756317960446482"/>
+      <nuclide name="Cr52" wo="7.532942611621131"/>
+      <nuclide name="Cr53" wo="0.8706228136807665"/>
+      <nuclide name="Cr54" wo="0.22080277865345527"/>
+      <nuclide name="W180" wo="0.0012920330845320965"/>
+      <nuclide name="W182" wo="0.2884975442391606"/>
+      <nuclide name="W183" wo="0.15664662781291616"/>
+      <nuclide name="W184" wo="0.33724011296121414"/>
+      <nuclide name="W186" wo="0.3163236819021772"/>
+      <nuclide name="Mn55" wo="0.4"/>
+      <nuclide name="N14" wo="0.029882316399278866"/>
+      <nuclide name="N15" wo="0.00011768360072113027"/>
+    </material>
+    <material depletable="true" id="30" name="001.50 kg/m3 | 0.6045 spheres/cc = 0.0316 vol% in breeder volume | 0.3079 spheres/cc = 0.0161 vol% in breeding region" temperature="900">
+      <density units="g/cm3" value="1.9363907831320006"/>
+      <nuclide ao="0.05412614462904233" name="Li6"/>
+      <nuclide ao="0.03608409641936156" name="Li7"/>
+      <nuclide ao="0.020848900659332145" name="Si28"/>
+      <nuclide ao="0.0010586476892444812" name="Si29"/>
+      <nuclide ao="0.0006978652876109275" name="Si30"/>
+      <nuclide ao="0.09004950314705636" name="O16"/>
+      <nuclide ao="3.42101613506521e-05" name="O17"/>
+      <nuclide ao="0.00018056466165130463" name="O18"/>
+      <nuclide ao="0.654673053715313" name="Be9"/>
+      <nuclide ao="1.4589968846701017e-09" name="U234"/>
+      <nuclide ao="1.946409917993225e-07" name="U235"/>
+      <nuclide ao="2.682236083854012e-05" name="U238"/>
+      <nuclide ao="0.0007515530436797627" name="C12"/>
+      <nuclide ao="8.418969967180841e-06" name="C13"/>
+      <nuclide ao="0.0072214630687177225" name="Fe54"/>
+      <nuclide ao="0.11336152650250231" name="Fe56"/>
+      <nuclide ao="0.002618012017555664" name="Fe57"/>
+      <nuclide ao="0.0003484093388158079" name="Fe58"/>
+      <nuclide ao="0.0005806898008666223" name="Cr50"/>
+      <nuclide ao="0.01119802479282242" name="Cr52"/>
+      <nuclide ao="0.0012697661215267616" name="Cr53"/>
+      <nuclide ao="0.00031607166376284505" name="Cr54"/>
+      <nuclide ao="5.543865012732886e-07" name="W180"/>
+      <nuclide ao="0.00012242701903118457" name="W182"/>
+      <nuclide ao="6.611059027683966e-05" name="W183"/>
+      <nuclide ao="0.000141553353325113" name="W184"/>
+      <nuclide ao="0.00013134340192666328" name="W186"/>
+      <nuclide ao="0.0005621726813437262" name="Mn55"/>
+      <nuclide ao="0.00016476835547176328" name="N14"/>
+      <nuclide ao="6.057654047707439e-07" name="N15"/>
+      <nuclide ao="6.713048591423159e-09" name="He3"/>
+      <nuclide ao="0.003356517582662988" name="He4"/>
+    </material>
+  </materials>
+  <geometry>
+    <cell id="10" material="void" region="-142 -141 -144 -143 134 -135" universe="3"/>
+    <cell id="11" material="21" region="111 -112 121 -122 133 -134" universe="3"/>
+    <cell id="12" material="22" region="111 -112 121 -122 132 -133" universe="3"/>
+    <cell id="13" material="30" region="111 -112 121 -122 131 -132" universe="3"/>
+    <cell id="14" material="22" region="111 -112 121 -122 130 -131" universe="3"/>
+    <cell id="21" material="21" region="113 -114 123 -124 135 -136" universe="3"/>
+    <cell id="22" material="22" region="113 -114 123 -124 136 -137" universe="3"/>
+    <cell id="23" material="30" region="113 -114 123 -124 137 -138" universe="3"/>
+    <cell id="24" material="22" region="113 -114 123 -124 138 -139" universe="3"/>
+    <cell id="90" material="void" region="-134 (-130 | -111 | 112 | -121 | 122)" universe="3"/>
+    <cell id="91" material="void" region="134 -135 (141 | 142 | 143 | 144)" universe="3"/>
+    <cell id="92" material="void" region="135 (139 | -113 | 114 | -123 | 124)" universe="3"/>
+    <surface boundary="reflective" coeffs="-3.0706085" id="111" type="x-plane"/>
+    <surface boundary="reflective" coeffs="3.0706085" id="112" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-3.8402285" id="113" type="x-plane"/>
+    <surface boundary="reflective" coeffs="3.8402285" id="114" type="x-plane"/>
+    <surface boundary="reflective" coeffs="-3.0706085" id="121" type="y-plane"/>
+    <surface boundary="reflective" coeffs="3.0706085" id="122" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-3.8402285" id="123" type="y-plane"/>
+    <surface boundary="reflective" coeffs="3.8402285" id="124" type="y-plane"/>
+    <surface boundary="reflective" coeffs="-2.5" id="130" type="z-plane"/>
+    <surface coeffs="0.0" id="131" type="z-plane"/>
+    <surface coeffs="45.0" id="132" type="z-plane"/>
+    <surface coeffs="47.5" id="133" type="z-plane"/>
+    <surface coeffs="47.7" id="134" type="z-plane"/>
+    <surface coeffs="447.7" id="135" type="z-plane"/>
+    <surface coeffs="447.9" id="136" type="z-plane"/>
+    <surface coeffs="450.4" id="137" type="z-plane"/>
+    <surface coeffs="532.4" id="138" type="z-plane"/>
+    <surface boundary="reflective" coeffs="534.9" id="139" type="z-plane"/>
+    <surface boundary="reflective" coeffs="1.0 0.0 -0.0019240499999999994 2.978831315" id="141" type="plane"/>
+    <surface boundary="reflective" coeffs="-1.0 0.0 -0.0019240499999999994 2.978831315" id="142" type="plane"/>
+    <surface boundary="reflective" coeffs="0.0 1.0 -0.0019240499999999994 2.978831315" id="143" type="plane"/>
+    <surface boundary="reflective" coeffs="0.0 -1.0 -0.0019240499999999994 2.978831315" id="144" type="plane"/>
+  </geometry>
+  <settings>
+    <run_mode>fixed source</run_mode>
+    <particles>100000</particles>
+    <batches>10</batches>
+    <source particle="neutron" strength="1.0" type="independent">
+      <space type="cartesian">
+        <x parameters="-3.0706085 3.0706085" type="uniform"/>
+        <y type="discrete">
+          <parameters>0.0 1.0</parameters>
+        </y>
+        <z type="discrete">
+          <parameters>247.7 1.0</parameters>
+        </z>
+      </space>
+      <angle type="isotropic"/>
+      <energy type="discrete">
+        <parameters>14000000.0 1.0</parameters>
+      </energy>
+    </source>
+  </settings>
+  <tallies>
+    <filter id="5" type="cell">
+      <bins>11 12 13 14 21 22 23 24</bins>
+    </filter>
+    <filter id="6" type="energy">
+      <bins>0.0 0.01 0.1 1.0 10.0 100.0 1000.0 10000.0 100000.0 1000000.0 10000000.0</bins>
+    </filter>
+    <tally id="17" name="Total U rxn rate">
+      <nuclides>U238 U235</nuclides>
+      <scores>(n,gamma) fission elastic</scores>
+    </tally>
+    <tally id="18" name="U rxn rates">
+      <filters>5</filters>
+      <nuclides>U238 U235</nuclides>
+      <scores>(n,gamma) fission elastic</scores>
+    </tally>
+    <tally id="19" name="U rxn rates spectrum">
+      <filters>5 6</filters>
+      <nuclides>U238 U235</nuclides>
+      <scores>(n,gamma) fission elastic</scores>
+    </tally>
+    <tally id="15" name="flux">
+      <filters>5</filters>
+      <scores>flux</scores>
+    </tally>
+    <tally id="16" name="flux spectrum">
+      <filters>5 6</filters>
+      <scores>flux</scores>
+    </tally>
+  </tallies>
+</model>
