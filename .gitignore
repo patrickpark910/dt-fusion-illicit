@@ -10,6 +10,8 @@ test/
 *.r
 **.DS_Store
 *rssa
+~$*
+runtp*
 .gitattributes
 Jupyter/BISO_combined/statepoint.10.h5
 Jupyter/BISO_combined/summary.h5
