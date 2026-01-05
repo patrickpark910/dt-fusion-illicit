@@ -11,10 +11,10 @@ from Python.utilities  import *
 # for this to work, python -m Python.wedgie_initialize
 
 # set parameters ###################################################
-hom = False ### heterogeneous - homogenize eurofer and breeder, but pack in discrete biso particles
-fertile_bulk_density_kgm3 = 0.1
-n_inner = 23.78
-n_outer = 29.75 # [cm]
+hom = True ### heterogeneous - homogenize eurofer and breeder, but pack in discrete biso particles
+fertile_bulk_density_kgm3 = 1000
+n_inner = 0.24
+n_outer = 0.30 # [cm]
 fertile_element = 'U'
 
 current_dir = os.getcwd()
@@ -49,10 +49,10 @@ eurofer.add_element('Mn',  0.40, percent_type='wo')
 eurofer.add_element('N' ,  0.03, percent_type='wo')
 
 li4sio4 = openmc.Material(name='Li4SiO4', temperature=TEMP_K) 
-li4sio4.set_density('g/cm3', DENSITY_LI4SIO4)  # normalized for ceramic porosity and 900 K (pure, room temp g/cm3 = 2.42)
+li4sio4.set_density('g/cm3', 2.42)  # normalized for ceramic porosity and 900 K (pure, room temp g/cm3 = 2.42)
 li4sio4.add_elements_from_formula('Li4SiO4', enrichment_target='Li6', enrichment_type='ao', enrichment=ENRICH_HCPB) 
 be = openmc.Material(name='Beryllium') 
-be.set_density('g/cm3', DENSITY_BE)  # normalized from 1.85 for 900 K
+be.set_density('g/cm3', 1.85)  # normalized from 1.85 for 900 K
 be.add_element('Be', 1, percent_type='wo') 
 he = openmc.Material(name='Helium') 
 he.set_density('g/cm3', 0.004279) # Helium density at 900 K ~80 bar 
