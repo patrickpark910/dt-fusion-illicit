@@ -1,0 +1,248 @@
+HCPB Unit Prism (December 2025) - Case A - 000.50 kg/m3
+c
+c
+c ==============================================================================
+c Case: 000.50 kg/cm³
+c 
+c Dimensions (inboard, outboard):
+c  XY face half-lengths c1, c2: 5.318450, 6.651471 [cm]
+c  XY face lengths      b1, b2: 10.636900, 13.302942 [cm]
+c  XY face areas        A1, A2: 113.143648, 176.968271 [cm²]
+c  Breeding region vols V1, V2: 5091.464182, 14511.398198 [cm³]
+c  Fraction of fluence  f1, f2: 0.390000, 0.610000 
+c 
+c 'breeder' = Li4SiO4, Be 
+c 'breeding region' (br) = the physical blanket layer that contains the breeder 
+c                          this layer usually contains breeder + structure + coolant 
+c 'breeding volume' (bv) = volume nominally occupied in breeding region by breeder 
+c 
+c With respect to the BREEDER material, i.e., per 1 m³ of breeder volume, we have these new volume fractions:
+c   vf_biso_breeder_new =  0.010550 vol%
+c   vf_li_breeder_new   =  25.596043 vol%
+c   vf_be_breeder_new   =  74.393407 vol%
+c   check they add up   = 100.000000 vol%
+c 
+c With respect to the whole BREEDING REGION, we have these new volume fractions:
+c   vf_biso_br =  0.005374 vol%
+c   vf_li_br   =  13.038624 vol%
+c   vf_be_br   =  37.896002 vol%
+c   VF_EU_NOM  =  11.760000 vol%
+c   VF_HE_NOM  =  37.300000 vol%
+c   check they add up   = 100.000000 vol%
+c   check that BISO + Li4SiO4 + Be adds up to the nominal Li4SiO4 + Be fraction
+c   vf_biso_br + vf_li_br + vf_be_br = 50.940000 : VF_LI_NOM + VF_BE_NOM = 50.940000
+c 
+c Check BISO volume fraction wrt breeding region is correct:
+c   Inboard : N1 * BISO_VOLUME / (b1**2 * h1) = 0.005265 vol%
+c   Outboard: N2 * BISO_VOLUME / (b2**2 * h2) = 0.005412 vol%
+c   Total   : (N1+N2) * BISO_VOLUME / (b1**2 * h1 + b2**2 * h2) = 0.005374 vol%
+c   ...should match                                  vf_biso_br = 0.005374 vol%
+c 
+c BISO spheres per cc of breeding volume: 0.201488 spheres/cm³
+c              per cc of breeding region: 0.102638 spheres/cm³
+c 
+c
+c
+c       CELL CARDS *************************************************************
+c
+c       Void cells -------------------------------------------------------------
+  90    0           -134 (-130:-111:+112:-121:+122)  imp:n=0  $  void around inboard blanket
+  91    0           +134 -135 (+141:+142:+143:+144)  imp:n=0  $  void around plasma chamber
+  92    0           +135 (+139:-113:+114:-123:+124)  imp:n=0  $  void around outboard blanket
+c
+c
+c       Plasma chamber cell ----------------------------------------------------
+  10    0           -142 -141 -144 -143 +134 -135  imp:n=1  tmp=7.76e-8  $ plasma chamber
+c
+c
+c       Inboard blanket  cells -------------------------------------------------
+  11    1  -19.000     +111 -112 +121 -122 +133 -134  imp:n=1  tmp=7.76e-8  vol=2.262873e+01  $  first wall
+  12    2   -7.800     +111 -112 +121 -122 +132 -133  imp:n=1  tmp=7.76e-8  vol=2.828591e+02  $  eurofer inner
+  14    2   -7.800     +111 -112 +121 -122 +130 -131  imp:n=1  tmp=7.76e-8  vol=2.828591e+02  $  eurofer outer
+  13    3   -1.935860  +111 -112 +121 -122 +131 -132  imp:n=1  tmp=7.76e-8  vol=5.091464e+03  $  breeder region
+c
+c
+c       Outboard blanket cells -------------------------------------------------
+  21    1  -19.000     +113 -114 +123 -124 +135 -136  imp:n=1  tmp=7.76e-8  vol=3.539365e+01  $  first wall
+  22    2   -7.800     +113 -114 +123 -124 +136 -137  imp:n=1  tmp=7.76e-8  vol=4.424207e+02  $  eurofer inner
+  24    2   -7.800     +113 -114 +123 -124 +138 -139  imp:n=1  tmp=7.76e-8  vol=4.424207e+02  $  eurofer outer
+  23    3   -1.935860  +113 -114 +123 -124 +137 -138  imp:n=1  tmp=7.76e-8  vol=1.451140e+04  $  breeder region                
+c
+c
+
+c       SURFACE CARDS *********************************************************
+c
+c
+*111 px -5.31845  $ inboard face -x
+*112 px +5.31845  $ inboard face +x
+*113 px -6.651471  $ outboard face -x
+*114 px +6.651471  $ outboard face +x
+c
+*121 py -5.31845  $ inboard face -y
+*122 py +5.31845  $ inboard face +y
+*123 py -6.651471  $ outboard face -y
+*124 py +6.651471  $ outboard face +y
+c
+ 130 pz   -2.5   $ 
+ 131 pz    0.0   $   2.5 cm - inboard outer eurofer
+ 132 pz   45.0   $  45.0 cm - inboard breeding region
+ 133 pz   47.5   $   2.5 cm - inboard inner eurofer
+ 134 pz   47.7   $   0.2 cm - inboard W first wall
+ 135 pz  447.7   $ 400.0 cm - plasma chamber
+ 136 pz  447.9   $   0.2 cm - outboard W first wall 
+ 137 pz  450.4   $   2.5 cm - outboard inner eurofer
+ 138 pz  532.4   $  82.0 cm - outboard breeding region 
+ 139 pz  534.9   $   2.5 cm - outboard outer eurofer
+c
+c
+c 
+c Slope: dx/dz = (6.651471-5.31845)/(447.7-47.7)
+c
+c Plane normal card entries: Ax + By + Cz âˆ’ D = 0
+c Plane normal: (1, 0, -dx/dz) normalized, passing through (5.31845, 0, 47.7)
+c +X side: connects x=+5.31845 at z=47.7 to x=+6.651471 at z=447.7
+c -X side: connects x=-5.31845 at z=47.7 to x=-6.651471 at z=447.7
+c +Y side: connects y=+5.31845 at z=47.7 to y=+6.651471 at z=447.7
+c -Y side: connects y=-5.31845 at z=47.7 to y=-6.651471 at z=447.7
+c
+*141  p   1.0   0.0  -6.665105e-03   1.031897e+01   $ +X tilted plane
+*142  p  -1.0   0.0  -6.665105e-03   1.031897e+01   $ -X tilted plane
+*143  p   0.0   1.0  -6.665105e-03   1.031897e+01   $ +Y tilted plane
+*144  p   0.0  -1.0  -6.665105e-03   1.031897e+01   $ -Y tilted plane
+c 
+c
+
+c       DATA CARDS ************************************************************
+c
+c
+c       Tungsten (19.0 g/cc, 900 K) -------------------------------------------
+c
+m1      74180.02c  0.0012
+        74182.02c  0.2650
+        74183.02c  0.1431
+        74184.02c  0.3064
+        74186.02c  0.2843
+c
+c
+c       Eurofer (7.8 g/cc, 900 K)  --------------------------------------------
+c
+m2      26054.02c  -0.05044870828    $ Fe-54
+        26056.02c  -0.82123206117    $ Fe-56
+        26057.02c  -0.01930505394    $ Fe-57
+        26058.02c  -0.00261417662    $ Fe-58
+         6012.02c  -0.00108680753    $ C-12
+         6013.02c  -0.00001319247    $ C-13
+        24050.02c  -0.00375631796    $ Cr-50
+        24052.02c  -0.07532942612    $ Cr-52
+        24053.02c  -0.00870622281    $ Cr-53
+        24054.02c  -0.00220802779    $ Cr-54
+        74180.02c  -0.00001292033    $ W-180
+        74182.02c  -0.00288497544    $ W-182
+        74183.02c  -0.00156646628    $ W-183
+        74184.02c  -0.00337240113    $ W-184
+        74186.02c  -0.00316323682    $ W-186
+        25055.02c  -0.00400000000    $ Mn-55
+         7014.02c  -0.00029882316    $ N-14
+         7015.02c  -0.00000117684    $ N-15
+c
+mt2     fe-56.45t   $ 800 K
+c
+c
+c       Breeder material (1.935860 g/cc, 900 K)  ------------------------------
+c       Converted from OpenMC XML by 'wedge_A_convert.py'
+c
+m3         3006.02c   0.05413450957  $ Li-6
+           3007.02c   0.03608967304  $ Li-7
+          14028.02c   0.02081961664  $ Si-28
+          14029.02c   0.00105716073  $ Si-29
+          14030.02c   0.00069688508  $ Si-30
+           8016.02c   0.09002747162  $ O-16
+           8017.02c   0.00003420179  $ O-17
+           8018.02c   0.00018052048  $ O-18
+           4009.02c   0.65477423032  $ Be-9
+          92234.02c   0.00000000049  $ U-234
+          92235.02c   0.00000006488  $ U-235
+          92238.02c   0.00000894028  $ U-238
+           6012.02c   0.00071666730  $ C-12
+           6013.02c   0.00000802818  $ C-13
+          26054.02c   0.00722105500  $ Fe-54
+          26056.02c   0.11335512072  $ Fe-56
+          26057.02c   0.00261786408  $ Fe-57
+          26058.02c   0.00034838965  $ Fe-58
+          24050.02c   0.00058065699  $ Cr-50
+          24052.02c   0.01119739202  $ Cr-52
+          24053.02c   0.00126969437  $ Cr-53
+          24054.02c   0.00031605380  $ Cr-54
+          74180.02c   0.00000055436  $ W-180
+          74182.02c   0.00012242010  $ W-182
+          74183.02c   0.00006610685  $ W-183
+          74184.02c   0.00014154535  $ W-184
+          74186.02c   0.00013133598  $ W-186
+          25055.02c   0.00056214091  $ Mn-55
+           7014.02c   0.00016475904  $ N-14
+           7015.02c   0.00000060573  $ N-15
+           2003.02c   0.00000000671  $ He-3
+           2004.02c   0.00335632791  $ He-4
+c
+mt3     be-met.45t  $ 800 K 
+         fe-56.45t  $ 800 K
+         u-uo2.45t  $ 800 K
+         o-uo2.45t  $ 800 K
+        si-sic.45t  $ 800 K
+         c-sic.45t  $ 800 K
+c
+c
+c       Lithium tally material ------------------------------------------------
+c
+ m31     3006.02c  0.600000  $  60.000 at% in Li
+         3007.02c  0.400000  $  40.000 at% in Li
+c
+c
+c       U-238 tally material --------------------------------------------------
+m51     92238.02c  1
+c
+c
+c       SOURCE DEFINITION *****************************************************
+c       Point source at center of plasma chamber
+sdef    pos=0 0 247.7  erg=14.0  par=n
+c
+c
+c       TALLIES ***************************************************************
+c
+fc4     flux
+f4:n    13  23   T  $ inboard, outboard, total
+e4      1e-6 1e-5 1e-4 1e-3 1e-2 1e-1 1e0 1e1 20
+c
+c       this output is (1/cm2)
+c
+c
+fc14    60 at%-enriched Li (n,Xt) micro_xs * flux
+f14:n   13  23   T  $ inboard, outboard, total
+fm14     1  31 205  $ tally mat 31, reaction (n,Xt)
+e14     1e-6 1e-5 1e-4 1e-3 1e-2 1e-1 1e0 1e1 20
+c
+c       this output is (b/at) (1/cm2), offline multiply (at/b-cm)
+c
+c
+fc24    U-238 (n,gamma) micro_xs * flux
+f24:n   13  23    T
+fm24     1  51  102
+e24     1e-6 1e-5 1e-4 1e-3 1e-2 1e-1 1e0 1e1 20
+c
+c this output is (b/at) (1/cm2), offline multiply (at/b-cm)
+c
+c
+c       ***********************************************************************
+c
+  MODE  N 
+  NPS   1e7 
+c
+  PRINT 100 126 
+c prints table  72 cell temperatures
+c        table 100 cross section tables
+c        table 126 particle activity in each cell
+c does not print all other basic tables
+c
+c       -----------------------------------------------------------------------
+
+c       BLANK LINE TERMINATOR -------------------------------------------------

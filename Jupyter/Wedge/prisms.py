@@ -53,7 +53,7 @@ def has_statepoint(directory_path):
 
 class Prism():
 
-    def __init__(self, case, fertile_kgm3, isotope='U238', run_openmc=False,):
+    def __init__(self, case, fertile_kgm3, isotope='U238', write_openmc=True, run_openmc=False,):
 
         self.case = case
         self.fertile_kgm3 = fertile_kgm3
@@ -61,12 +61,11 @@ class Prism():
         self.isotope = isotope 
         self.name = f"prism_{self.case}_{self.isotope}_{self.fertile_str}kgm3"         
         self.path = f"./OpenMC/{self.name}"
-        self.run_openmc = run_openmc
 
         os.makedirs(self.path, exist_ok=True)
 
 
-    def materials(self):
+    def materials(self, debug=False):
 
         # Tungsten | First wall
         self.tungsten = openmc.Material(name='firstwall', temperature=TEMP_K)
@@ -100,7 +99,7 @@ class Prism():
         li4sio4.add_elements_from_formula('Li4SiO4', enrichment_target='Li6', enrichment_type='ao', enrichment=60.0)
 
         # Beryllium | Neutron multiplier
-        be = openmc.Material(name='Beryllium') 
+        be = openmc.Material(name='Beryllium', temperature=TEMP_K) 
         be.set_density('g/cm3', 1.85) 
         be.add_element('Be', 1, percent_type='wo')     
         # be.add_s_alpha_beta('c_Be')  # NotImplementedError   
@@ -109,19 +108,19 @@ class Prism():
         ''' BISO particle '''
         # Fertile material
         if self.isotope == 'U238':
-            self.kernel = openmc.Material(name='UO2')
+            self.kernel = openmc.Material(name='UO2', temperature=TEMP_K)
             self.kernel.add_elements_from_formula('UO2')
             self.kernel.set_density('g/cm3', DENSITY_UO2)  
             # self.kernel.add_s_alpha_beta('c_U_in_UO2')  # NotImplementedError
             # self.kernel.add_s_alpha_beta('c_O_in_UO2')  # NotImplementedError
 
         elif self.isotope == 'Th232': 
-            self.kernel = openmc.Material(name='ThO2') 
+            self.kernel = openmc.Material(name='ThO2', temperature=TEMP_K) 
             self.kernel.add_elements_from_formula('ThO2') 
             self.kernel.set_density('g/cm3', DENSITY_ThO2)   
 
         # SiC coating
-        self.sic = openmc.Material(name='SiC')
+        self.sic = openmc.Material(name='SiC', temperature=TEMP_K)
         self.sic.add_elements_from_formula('SiC')
         self.sic.set_density('g/cm3', 3.2)
         # self.sic.add_s_alpha_beta('c_Si_in_SiC')  # NotImplementedError
@@ -142,6 +141,23 @@ class Prism():
 
             self.materials = openmc.Materials([self.tungsten, self.eurofer, self.blanket]) 
 
+            if debug:
+                print(f"BISO materials mix")
+                print(f"  Vol frac kernel : {(KERNEL_VOLUME/BISO_VOLUME):.6f}")
+                print(f"  Vol frac coat   : {(1-(KERNEL_VOLUME/BISO_VOLUME)):.6f}")
+                print(f"")
+                print(f"Breeding material mix")
+                print(f"  Vol frac Li4SiO4: {self.vf_li_bv:.6f}")
+                print(f"  Vol frac Be(met): {self.vf_be_bv:.6f}")
+                print(f"  Vol frac BISO   : {self.vf_biso_bv:.6f}")
+                print(f"")
+                print(f"Blanket mix")
+                print(f"  Vol frac breeder: {(VF_LI_NOM+VF_BE_NOM):.6f}")
+                print(f"  Vol frac Eurofer: {VF_EU_NOM:.6f}")
+                print(f"  Vol frac He-4(g): {VF_HE_NOM:.6f}")
+                print(f"")
+
+
         if case in ['B','C']:
 
             self.blanket = openmc.Material.mix_materials([li4sio4, be, self.eurofer, he], [VF_LI_NOM, VF_BE_NOM, VF_EU_NOM, VF_HE_NOM], 'vo') 
@@ -150,7 +166,7 @@ class Prism():
             self.materials = openmc.Materials([self.tungsten, self.eurofer, self.blanket, self.kernel, self.sic]) 
 
 
-    def geometry(self, target_total_biso=2012):
+    def geometry(self, target_total_biso=2012, debug=False):
 
         # -----------------------------------
         # SURFACES
@@ -169,7 +185,7 @@ class Prism():
         s124 = openmc.YPlane(surface_id=124, y0= +self.geom['c2'], boundary_type="reflective")
 
         # Z-planes
-        s130 = openmc.ZPlane(surface_id=130, z0=  -2.5, boundary_type="reflective")  # 
+        s130 = openmc.ZPlane(surface_id=130, z0=  -2.5)  # 
         s131 = openmc.ZPlane(surface_id=131, z0=   0.0)  #   2.5 cm - inboard outer eurofer
         s132 = openmc.ZPlane(surface_id=132, z0=  45.0)  #  45.0 cm - inboard breeding region
         s133 = openmc.ZPlane(surface_id=133, z0=  47.5)  #   2.5 cm - inboard inner eurofer
@@ -178,7 +194,7 @@ class Prism():
         s136 = openmc.ZPlane(surface_id=136, z0= 447.9)  #   0.2 cm - outboard W first wall 
         s137 = openmc.ZPlane(surface_id=137, z0= 450.4)  #   2.5 cm - outboard inner eurofer
         s138 = openmc.ZPlane(surface_id=138, z0= 532.4)  #  82.0 cm - outboard breeding region 
-        s139 = openmc.ZPlane(surface_id=139, z0= 534.9, boundary_type="reflective")  #   2.5 cm - outboard outer eurofer
+        s139 = openmc.ZPlane(surface_id=139, z0= 534.9)  #   2.5 cm - outboard outer eurofer
 
         # Plasma chamber boundaries
         # Plane normal card entries: Ax + By + Cz - D = 0
@@ -215,58 +231,88 @@ class Prism():
         c24 = openmc.Cell(cell_id=24, region= +s113 & -s114 & +s123 & -s124 & +s138 & -s139, fill=self.eurofer)
 
         if case == 'A':
+
             c13 = openmc.Cell(cell_id=13, region= +s111 & -s112 & +s121 & -s122 & +s131 & -s132, fill=self.blanket)
             c23 = openmc.Cell(cell_id=23, region= +s113 & -s114 & +s123 & -s124 & +s137 & -s138, fill=self.blanket)
             
 
-        elif case == 'B':
-
+        elif case in ['B', 'C']:
+            # Common setup for B and C: Define the BISO Universe
             c13 = openmc.Cell(cell_id=13, region= +s111 & -s112 & +s121 & -s122 & +s131 & -s132)
             c23 = openmc.Cell(cell_id=23, region= +s113 & -s114 & +s123 & -s124 & +s137 & -s138)
 
             c31 = openmc.Cell(cell_id=31, fill=self.kernel, region= -s150)
-            c32 = openmc.Cell(cell_id=32, fill=self.sic,    region= +s150) # -s151
-            u50 = openmc.Universe(cells=[c31, c32])
+            c32 = openmc.Cell(cell_id=32, fill=self.sic,    region= +s150 & -s151)
+            u50 = openmc.Universe(name='BISO Universe', cells=[c31, c32])
 
-            centers_in  = openmc.model.pack_spheres(radius=0.05, region= +s111 & -s112 & +s121 & -s122 & +s131 & -s132, num_spheres=self.geom['N1'])
-            centers_out = openmc.model.pack_spheres(radius=0.05, region= +s111 & -s112 & +s121 & -s122 & +s131 & -s132, num_spheres=self.geom['N2'])
-            # pack_spheres returns a list of coordinates, not cell instances
-
-            # openmc.model.TRISO(outer_radius, fill, center=(0.0, 0.0, 0.0)) -- each model.TRISO instance IS a cell
-            biso_in  = [openmc.model.TRISO(0.05, u50, center=c) for c in centers_in]
-            biso_out = [openmc.model.TRISO(0.05, u50, center=c) for c in centers_out]
-
+            # Lower left (ll), upper right (ur) of inboard, outboard bounding boxes
             ll_in, ur_in   = c13.region.bounding_box
             ll_out, ur_out = c23.region.bounding_box
 
-            shape_in  = (2,2,128)
-            shape_out = (2,2,375)
+            shape_in  = (2, 2, 128)
+            shape_out = (2, 2, 375)
 
             pitch_in  = (ur_in - ll_in) / shape_in
             pitch_out = (ur_out - ll_out) / shape_out
 
-            lattice_in = openmc.model.create_triso_lattice(biso_in, ll_in, pitch_in, shape_in, self.blanket)
-            lattice_out = openmc.model.create_triso_lattice(biso_in, ll_in, pitch_in, shape_in, self.blanket)
 
-            c13.fill = lattice_in
-            c23.fill = lattice_out
+            if case == 'B':
+                # Random Packing Logic
+                centers_in  = openmc.model.pack_spheres(radius=0.05, region=c13.region, num_spheres=self.geom['N1'])
+                centers_out = openmc.model.pack_spheres(radius=0.05, region=c23.region, num_spheres=self.geom['N2'])
+                
+                biso_in  = [openmc.model.TRISO(0.05, u50, center=c) for c in centers_in]
+                biso_out = [openmc.model.TRISO(0.05, u50, center=c) for c in centers_out]
+
+                c13.fill = openmc.model.create_triso_lattice(biso_in, ll_in, pitch_in, shape_in, self.blanket)
+                c23.fill = openmc.model.create_triso_lattice(biso_out, ll_out, pitch_out, shape_out, self.blanket)
 
 
-        elif case == 'C':
+            elif case == 'C':
 
-            # to write
+                # Create inboard lattice with BISO universe at each lattice point
+                lattice_in = openmc.RectLattice(name='inboard_biso_lattice')
+                lattice_in.lower_left = ll_in
+                lattice_in.pitch = pitch_in
+                lattice_in.universes = np.full(shape_in, u50)
+                lattice_in.outer = openmc.Universe(cells=[openmc.Cell(fill=self.blanket)])
 
-            pass
+                # Create outboard lattice with BISO universe at each lattice point
+                lattice_out = openmc.RectLattice(name='outboard_biso_lattice')
+                lattice_out.lower_left = ll_out
+                lattice_out.pitch = pitch_out
+                lattice_out.universes = np.full(shape_out, u50)
+                lattice_out.outer = openmc.Universe(cells=[openmc.Cell(fill=self.blanket)])
+
+                c13.fill = lattice_in
+                c23.fill = lattice_out
+
+                if debug:
+                    print(f"Case C: Fixed lattice BISO placement")
+                    print(f"  Inboard lattice:")
+                    print(f"    Shape: {shape_in}")
+                    print(f"    Pitch: {pitch_in} cm")
+                    print(f"    Lower left: {ll_in}")
+                    print(f"    Upper right: {ur_in}")
+                    print(f"    Subtotal BISO particles: {np.prod(shape_in)}")
+                    print(f"  Outboard lattice:")
+                    print(f"    Shape: {shape_out}")
+                    print(f"    Pitch: {pitch_out} cm")
+                    print(f"    Lower left: {ll_out}")
+                    print(f"    Upper right: {ur_out}")
+                    print(f"    Subtotal BISO particles: {np.prod(shape_out)}")
+                    print(f"  Total BISO particles: {np.prod(shape_in) + np.prod(shape_out)}")
+
 
         self.cells = [c90, c91, c92, c10, c11, c12, c13, c14, c21, c22, c23, c24]
         self.geometry = openmc.Geometry(openmc.Universe(cells=self.cells))
 
 
-    def tallies(self):
+    def tallies(self, debug=False):
 
         self.tallies = openmc.Tallies() # initialize
         cell_filter = openmc.CellFilter([cell for cell in self.cells if cell.fill is not None])
-        energy_filter = openmc.EnergyFilter([0,1e-2,1e-1,1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7]) # './helpers/utilities.py'
+        energy_filter = openmc.EnergyFilter([0,1e-2,1e-1,1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8]) # './helpers/utilities.py'
 
         # Flux tally 
         flux_tally        = self.make_tally('flux', ['flux'], filters=[cell_filter])
@@ -296,14 +342,14 @@ class Prism():
         return tally
 
 
-    def settings(self):
+    def settings(self, debug=False):
 
         # 14-MeV point source at center of plasma chamber
         source = openmc.IndependentSource()
-        # source.space = openmc.stats.Point((0,0,247.7))                                                           
-        source.space = openmc.stats.CartesianIndependent(x=openmc.stats.Uniform(a =-self.geom['c1'], b= +self.geom['c1']),
-                                                         y=openmc.stats.Discrete([0], [1.0]),
-                                                         z=openmc.stats.Discrete([247.7], [1.0]) )
+        source.space = openmc.stats.Point((0,0,247.7))                                                           
+        # source.space = openmc.stats.CartesianIndependent(x=openmc.stats.Uniform(a =-self.geom['c1'], b= +self.geom['c1']),
+        #                                                  y=openmc.stats.Discrete([0], [1.0]),
+        #                                                  z=openmc.stats.Discrete([247.7], [1.0]) )
         source.particle = 'neutron'
         source.energy   = openmc.stats.Discrete([14.0e6], [1.0])  # 14 MeV
         source.angle    = openmc.stats.Isotropic()
@@ -402,45 +448,47 @@ class Prism():
         V1, V2 = A1*h1, A2*h2
 
 
-        print(40*f"=")
-        print(f"Case: {fertile_kgm3} kg/cm³")
-        print(f"")
-        print(f"Dimensions (inboard, outboard):")
-        print(f" XY face half-lengths c1, c2: {c1:.6f}, {c2:.6f} [cm]")
-        print(f" XY face lengths      b1, b2: {b1:.6f}, {b2:.6f} [cm]")
-        print(f" XY face areas        A1, A2: {A1:.6f}, {A2:.6f} [cm²]")
-        print(f" Breeding region vols V1, V2: {V1:.6f}, {V2:.6f} [cm³]")
-        print(f" Fraction of fluence  f1, f2: {f1:.6f}, {f2:.6f} ")
-        print(f"")
-        print(f"'breeder' = Li4SiO4, Be ")
-        print(f"'breeding region' (br) = the physical blanket layer that contains the breeder ")
-        print(f"                         this layer usually contains breeder + structure + coolant ")
-        print(f"'breeding volume' (bv) = volume nominally occupied in breeding region by breeder ")
-        print(f"")
-        print(f"With respect to the BREEDER material, i.e., per 1 m³ of breeder volume, we have these new volume fractions:")
-        print(f"  vf_biso_breeder_new =  {(vf_biso_bv*100):.6f} vol%")
-        print(f"  vf_li_breeder_new   =  {(vf_li_bv*100):.6f} vol%")
-        print(f"  vf_be_breeder_new   =  {(vf_be_bv*100):.6f} vol%")
-        print(f"  check they add up   = {(vf_checksum1*100):.6f} vol%")
-        print(f"")
-        print(f"With respect to the whole BREEDING REGION, we have these new volume fractions:")
-        print(f"  vf_biso_br =  {(vf_biso_br*100):.6f} vol%")
-        print(f"  vf_li_br   =  {(vf_li_br*100):.6f} vol%")
-        print(f"  vf_be_br   =  {(vf_be_br*100):.6f} vol%")
-        print(f"  VF_EU_NOM  =  {(VF_EU_NOM*100):.6f} vol%")
-        print(f"  VF_HE_NOM  =  {(VF_HE_NOM*100):.6f} vol%")
-        print(f"  check they add up   = {(vf_checksum2*100):.6f} vol%")
-        print(f"  check that BISO + Li4SiO4 + Be adds up to the nominal Li4SiO4 + Be fraction")
-        print(f"  vf_biso_br + vf_li_br + vf_be_br = {((vf_biso_br+vf_li_br+vf_be_br))*100:.6f} : VF_LI_NOM + VF_BE_NOM = {((VF_LI_NOM+VF_BE_NOM))*100:.6f}")
-        print(f"")
-        print(f"Check BISO volume fraction wrt breeding region is correct:")
-        print(f"  Inboard : N1 * BISO_VOLUME / (b1**2 * h1) = {(N1 * BISO_VOLUME / (b1**2 * h1) * 100):.6f} vol%")
-        print(f"  Outboard: N2 * BISO_VOLUME / (b2**2 * h2) = {(N2 * BISO_VOLUME / (b2**2 * h2) * 100):.6f} vol%")
-        print(f"  Total   : (N1+N2) * BISO_VOLUME / (b1**2 * h1 + b2**2 * h2) = {((N1+N2) * BISO_VOLUME / (b1**2 * h1 + b2**2 * h2) * 100):.6f} vol%")
-        print(f"  ...should match                                  vf_biso_br = {(vf_biso_br*100):.6f} vol%")
-        print(f"")
-        print(f"BISO spheres per cc of breeding volume: {biso_per_cc_bv:.6f} spheres/cm³ : per cc of breeding region : {biso_per_cc_br:.6f} spheres/cm³")
-        print(f"")
+        if debug:
+            print(40*f"=")
+            print(f"Case: {fertile_kgm3} kg/cm³")
+            print(f"")
+            print(f"Dimensions (inboard, outboard):")
+            print(f" XY face half-lengths c1, c2: {c1:.6f}, {c2:.6f} [cm]")
+            print(f" XY face lengths      b1, b2: {b1:.6f}, {b2:.6f} [cm]")
+            print(f" XY face areas        A1, A2: {A1:.6f}, {A2:.6f} [cm²]")
+            print(f" Breeding region vols V1, V2: {V1:.6f}, {V2:.6f} [cm³]")
+            print(f" Fraction of fluence  f1, f2: {f1:.6f}, {f2:.6f} ")
+            print(f"")
+            print(f"'breeder' = Li4SiO4, Be ")
+            print(f"'breeding region' (br) = the physical blanket layer that contains the breeder ")
+            print(f"                         this layer usually contains breeder + structure + coolant ")
+            print(f"'breeding volume' (bv) = volume nominally occupied in breeding region by breeder ")
+            print(f"")
+            print(f"With respect to the BREEDER material, i.e., per 1 m³ of breeder volume, we have these new volume fractions:")
+            print(f"  vf_biso_breeder_new =  {(vf_biso_bv*100):.6f} vol%")
+            print(f"  vf_li_breeder_new   =  {(vf_li_bv*100):.6f} vol%")
+            print(f"  vf_be_breeder_new   =  {(vf_be_bv*100):.6f} vol%")
+            print(f"  check they add up   = {(vf_checksum1*100):.6f} vol%")
+            print(f"")
+            print(f"With respect to the whole BREEDING REGION, we have these new volume fractions:")
+            print(f"  vf_biso_br =  {(vf_biso_br*100):.6f} vol%")
+            print(f"  vf_li_br   =  {(vf_li_br*100):.6f} vol%")
+            print(f"  vf_be_br   =  {(vf_be_br*100):.6f} vol%")
+            print(f"  VF_EU_NOM  =  {(VF_EU_NOM*100):.6f} vol%")
+            print(f"  VF_HE_NOM  =  {(VF_HE_NOM*100):.6f} vol%")
+            print(f"  check they add up   = {(vf_checksum2*100):.6f} vol%")
+            print(f"  check that BISO + Li4SiO4 + Be adds up to the nominal Li4SiO4 + Be fraction")
+            print(f"  vf_biso_br + vf_li_br + vf_be_br = {((vf_biso_br+vf_li_br+vf_be_br))*100:.6f} : VF_LI_NOM + VF_BE_NOM = {((VF_LI_NOM+VF_BE_NOM))*100:.6f}")
+            print(f"")
+            print(f"Check BISO volume fraction wrt breeding region is correct:")
+            print(f"  Inboard : N1 * BISO_VOLUME / (b1**2 * h1) = {(N1 * BISO_VOLUME / (b1**2 * h1) * 100):.6f} vol%")
+            print(f"  Outboard: N2 * BISO_VOLUME / (b2**2 * h2) = {(N2 * BISO_VOLUME / (b2**2 * h2) * 100):.6f} vol%")
+            print(f"  Total   : (N1+N2) * BISO_VOLUME / (b1**2 * h1 + b2**2 * h2) = {((N1+N2) * BISO_VOLUME / (b1**2 * h1 + b2**2 * h2) * 100):.6f} vol%")
+            print(f"  ...should match                                  vf_biso_br = {(vf_biso_br*100):.6f} vol%")
+            print(f"")
+            print(f"BISO spheres per cc of breeding volume: {biso_per_cc_bv:.6f} spheres/cm³")
+            print(f"             per cc of breeding region: {biso_per_cc_br:.6f} spheres/cm³")
+            print(f"")
 
 
         # Calculate surfaces for trapezoidal plasma chamber
@@ -467,33 +515,32 @@ class Prism():
         self.geom = {'N1':N1, 'N2':N2, 'b1':b1, 'b2':b2, 'c1':c1, 'c2':c2, 'h1':h1, 'h2':h2, 'pC':plane_C, 'pD':plane_D}
 
 
-    def openmc(self):
-        
-        self.prism_helpers(debug=False)
-        self.materials()
-        self.geometry()
-        self.settings()
-        self.tallies()
+    def openmc(self, debug=False, write=True, run=False):
 
-        self.model = openmc.model.Model(self.geometry, self.materials, self.settings, self.tallies)
-        self.model.export_to_model_xml(self.path)
-        self.model.run(cwd=self.path)
+        if write:
+
+            self.prism_helpers(debug=debug)
+            self.materials(debug=debug)
+            self.geometry(debug=debug)
+            self.settings(debug=debug)
+            self.tallies(debug=debug)
+
+            self.model = openmc.model.Model(self.geometry, self.materials, self.settings, self.tallies)
+            self.model.export_to_model_xml(self.path)
+
+        if run:
+            if has_statepoint(self.path):
+                print(f"Warning. File {self.path}/statepoint.h5 already exists, so this OpenMC run will be aborted...")
+            else:
+                self.model.run(cwd=self.path)
 
 
 if __name__ == '__main__':
 
     os.makedirs(f"./OpenMC/", exist_ok=True)
 
-    for case in ['A', 'B']:
-        for fertile_kgm3 in [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]: #  999.999]:
-            
+    for case in ['C',]:
+        for fertile_kgm3 in [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]: #  [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]
+
             current_run = Prism(case, fertile_kgm3,)
-
-            # current_run.prism_helpers(debug=True)
-            current_run.run_openmc = True
-
-            if current_run.run_openmc:
-                if has_statepoint(current_run.path):
-                    print(f"Warning. File {current_run.path}/statepoint.h5 already exists, so this OpenMC run will be skipped...")
-                else:
-                    current_run.openmc()
+            current_run.openmc(debug=True, write=True, run=False)

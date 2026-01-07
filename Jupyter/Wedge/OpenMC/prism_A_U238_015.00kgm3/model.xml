@@ -87,7 +87,7 @@
     <surface boundary="reflective" coeffs="0.9710115" id="122" type="y-plane"/>
     <surface boundary="reflective" coeffs="-1.214387" id="123" type="y-plane"/>
     <surface boundary="reflective" coeffs="1.214387" id="124" type="y-plane"/>
-    <surface boundary="reflective" coeffs="-2.5" id="130" type="z-plane"/>
+    <surface boundary="vacuum" coeffs="-2.5" id="130" type="z-plane"/>
     <surface coeffs="0.0" id="131" type="z-plane"/>
     <surface coeffs="45.0" id="132" type="z-plane"/>
     <surface coeffs="47.5" id="133" type="z-plane"/>
@@ -96,7 +96,7 @@
     <surface coeffs="447.9" id="136" type="z-plane"/>
     <surface coeffs="450.4" id="137" type="z-plane"/>
     <surface coeffs="532.4" id="138" type="z-plane"/>
-    <surface boundary="reflective" coeffs="534.9" id="139" type="z-plane"/>
+    <surface boundary="vacuum" coeffs="534.9" id="139" type="z-plane"/>
     <surface boundary="reflective" coeffs="1.0 0.0 -0.0006084387500000002 0.9419889716250001" id="141" type="plane"/>
     <surface boundary="reflective" coeffs="-1.0 0.0 -0.0006084387500000002 0.9419889716250001" id="142" type="plane"/>
     <surface boundary="reflective" coeffs="0.0 1.0 -0.0006084387500000002 0.9419889716250001" id="143" type="plane"/>
@@ -107,14 +107,8 @@
     <particles>100000</particles>
     <batches>10</batches>
     <source particle="neutron" strength="1.0" type="independent">
-      <space type="cartesian">
-        <x parameters="-0.9710115 0.9710115" type="uniform"/>
-        <y type="discrete">
-          <parameters>0.0 1.0</parameters>
-        </y>
-        <z type="discrete">
-          <parameters>247.7 1.0</parameters>
-        </z>
+      <space type="point">
+        <parameters>0 0 247.7</parameters>
       </space>
       <angle type="isotropic"/>
       <energy type="discrete">
@@ -129,27 +123,41 @@
     <filter id="8" type="energy">
       <bins>0.0 0.01 0.1 1.0 10.0 100.0 1000.0 10000.0 100000.0 1000000.0 10000000.0</bins>
     </filter>
-    <tally id="24" name="Total U rxn rate">
-      <nuclides>U238 U235</nuclides>
+    <tally id="27" name="Total fertile rxn rate">
+      <nuclides>U238 U235 Th232</nuclides>
       <scores>(n,gamma) fission elastic</scores>
     </tally>
-    <tally id="25" name="U rxn rates">
+    <tally id="30" name="Total Li rxn rate">
+      <nuclides>Li6 Li7</nuclides>
+      <scores>(n,gamma) (n,Xt) elastic</scores>
+    </tally>
+    <tally id="28" name="Fertile rxn rates">
       <filters>7</filters>
-      <nuclides>U238 U235</nuclides>
+      <nuclides>U238 U235 Th232</nuclides>
       <scores>(n,gamma) fission elastic</scores>
     </tally>
-    <tally id="26" name="U rxn rates spectrum">
-      <filters>7 8</filters>
-      <nuclides>U238 U235</nuclides>
-      <scores>(n,gamma) fission elastic</scores>
+    <tally id="31" name="Li rxn rates">
+      <filters>7</filters>
+      <nuclides>Li6 Li7</nuclides>
+      <scores>(n,gamma) (n,Xt) elastic</scores>
     </tally>
-    <tally id="22" name="flux">
+    <tally id="25" name="flux">
       <filters>7</filters>
       <scores>flux</scores>
     </tally>
-    <tally id="23" name="flux spectrum">
+    <tally id="29" name="Fertile rxn rates spectrum">
+      <filters>7 8</filters>
+      <nuclides>U238 U235 Th232</nuclides>
+      <scores>(n,gamma) fission elastic</scores>
+    </tally>
+    <tally id="26" name="flux spectrum">
       <filters>7 8</filters>
       <scores>flux</scores>
+    </tally>
+    <tally id="32" name="Li rxn rates spectrum">
+      <filters>7 8</filters>
+      <nuclides>Li6 Li7</nuclides>
+      <scores>(n,gamma) (n,Xt) elastic</scores>
     </tally>
   </tallies>
 </model>
