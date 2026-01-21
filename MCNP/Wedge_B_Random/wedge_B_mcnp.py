@@ -80,8 +80,8 @@ def main(fertile_kgm3, go_pack=False, go_print=False):
     # Number of particles for MCNP run
     nps = '5e6' 
 
-    target_total_biso = 2012
-    N1, N2 =  512, 1500
+    target_total_biso = 2011
+    N1, N2 =  522, 1489
 
     # HCPB tokamak dimensions (along z in model)
     h1, h2 = 45.0, 82.0     # inboard, outboard thicknesses
@@ -328,4 +328,4 @@ def main(fertile_kgm3, go_pack=False, go_print=False):
 
 if __name__ == "__main__":
     for fertile_kgm3 in [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]:
-        main(fertile_kgm3, go_pack=False, go_print=True)
+        main(fertile_kgm3, go_pack=True, go_print=True)

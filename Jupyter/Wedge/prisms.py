@@ -166,7 +166,7 @@ class Prism():
             self.materials = openmc.Materials([self.tungsten, self.eurofer, self.blanket, self.kernel, self.sic]) 
 
 
-    def geometry(self, target_total_biso=2012, debug=False):
+    def geometry(self, debug=False):
 
         # -----------------------------------
         # SURFACES
@@ -185,16 +185,16 @@ class Prism():
         s124 = openmc.YPlane(surface_id=124, y0= +self.geom['c2'], boundary_type="reflective")
 
         # Z-planes
-        s130 = openmc.ZPlane(surface_id=130, z0=  -2.5)  # 
-        s131 = openmc.ZPlane(surface_id=131, z0=   0.0)  #   2.5 cm - inboard outer eurofer
-        s132 = openmc.ZPlane(surface_id=132, z0=  45.0)  #  45.0 cm - inboard breeding region
-        s133 = openmc.ZPlane(surface_id=133, z0=  47.5)  #   2.5 cm - inboard inner eurofer
-        s134 = openmc.ZPlane(surface_id=134, z0=  47.7)  #   0.2 cm - inboard W first wall
-        s135 = openmc.ZPlane(surface_id=135, z0= 447.7)  # 400.0 cm - plasma chamber
-        s136 = openmc.ZPlane(surface_id=136, z0= 447.9)  #   0.2 cm - outboard W first wall 
-        s137 = openmc.ZPlane(surface_id=137, z0= 450.4)  #   2.5 cm - outboard inner eurofer
-        s138 = openmc.ZPlane(surface_id=138, z0= 532.4)  #  82.0 cm - outboard breeding region 
-        s139 = openmc.ZPlane(surface_id=139, z0= 534.9)  #   2.5 cm - outboard outer eurofer
+        s130 = openmc.ZPlane(surface_id=130, z0=  -2.50, boundary_type="vacuum")  # 
+        s131 = openmc.ZPlane(surface_id=131, z0=   0.00)  #   2.5 cm - inboard outer eurofer 
+        s132 = openmc.ZPlane(surface_id=132, z0=  45.00)  #  45.0 cm - inboard breeding region
+        s133 = openmc.ZPlane(surface_id=133, z0=  47.50)  #   2.5 cm - inboard inner eurofer
+        s134 = openmc.ZPlane(surface_id=134, z0=  47.70)  #   0.2 cm - inboard W first wall
+        s135 = openmc.ZPlane(surface_id=135, z0= 447.70)  # 400.0 cm - plasma chamber
+        s136 = openmc.ZPlane(surface_id=136, z0= 447.90)  #   0.2 cm - outboard W first wall 
+        s137 = openmc.ZPlane(surface_id=137, z0= 450.40)  #   2.5 cm - outboard inner eurofer
+        s138 = openmc.ZPlane(surface_id=138, z0= 532.40)  #  82.0 cm - outboard breeding region 
+        s139 = openmc.ZPlane(surface_id=139, z0= 534.90, boundary_type="vacuum")  #   2.5 cm - outboard outer eurofer
 
         # Plasma chamber boundaries
         # Plane normal card entries: Ax + By + Cz - D = 0
@@ -206,6 +206,7 @@ class Prism():
         # BISO universe
         s150 = openmc.Sphere(surface_id=150, r=0.040) # Kernel
         s151 = openmc.Sphere(surface_id=151, r=0.050) # Outer Coating
+        # s152 = openmc.Sphere(surface_id=152, r=0.0501) # Outer universe boundary
 
 
         # -----------------------------------
@@ -219,12 +220,12 @@ class Prism():
         c91.importance = {'neutron': 0}
         c92.importance = {'neutron': 0}
 
-        c10 = openmc.Cell(cell_id=10, region= -s142 & -s141 & -s144 & -s143 & +s134 & -s135)
+        c10 = openmc.Cell(cell_id=10, region= -s142 & -s141 & -s144 & -s143 & +s134 & -s135)  # plasma chamber void
         c10.importance = {'neutron':1}
 
-        c11 = openmc.Cell(cell_id=11, region= +s111 & -s112 & +s121 & -s122 & +s133 & -s134, fill=self.tungsten)
-        c12 = openmc.Cell(cell_id=12, region= +s111 & -s112 & +s121 & -s122 & +s132 & -s133, fill=self.eurofer)
-        c14 = openmc.Cell(cell_id=14, region= +s111 & -s112 & +s121 & -s122 & +s130 & -s131, fill=self.eurofer)
+        c11 = openmc.Cell(cell_id=11, region= +s111 & -s112 & +s121 & -s122 & +s133 & -s134, fill=self.tungsten) # first wall 
+        c12 = openmc.Cell(cell_id=12, region= +s111 & -s112 & +s121 & -s122 & +s132 & -s133, fill=self.eurofer)  # after first wall
+        c14 = openmc.Cell(cell_id=14, region= +s111 & -s112 & +s121 & -s122 & +s130 & -s131, fill=self.eurofer)  # manifold
 
         c21 = openmc.Cell(cell_id=21, region= +s113 & -s114 & +s123 & -s124 & +s135 & -s136, fill=self.tungsten)
         c22 = openmc.Cell(cell_id=22, region= +s113 & -s114 & +s123 & -s124 & +s136 & -s137, fill=self.eurofer)
@@ -241,15 +242,23 @@ class Prism():
             c13 = openmc.Cell(cell_id=13, region= +s111 & -s112 & +s121 & -s122 & +s131 & -s132)
             c23 = openmc.Cell(cell_id=23, region= +s113 & -s114 & +s123 & -s124 & +s137 & -s138)
 
-            c31 = openmc.Cell(cell_id=31, fill=self.kernel, region= -s150)
-            c32 = openmc.Cell(cell_id=32, fill=self.sic,    region= +s150 & -s151)
-            u50 = openmc.Universe(name='BISO Universe', cells=[c31, c32])
+            c31 = openmc.Cell(cell_id=31, fill=self.kernel,  region= -s150)
+            c32 = openmc.Cell(cell_id=32, fill=self.sic,     region= +s150) # 
+            # c33 = openmc.Cell(cell_id=33, fill=self.blanket, region= +s151)
+            u50 = openmc.Universe(name='BISO Universe', cells=[c31, c32]) # c33
 
             # Lower left (ll), upper right (ur) of inboard, outboard bounding boxes
+            # Example values:
+            #   Lower left : [-12.01134016 -12.01134016   0.01    ]
+            #   Upper right: [ 12.01134016  12.01134016  45.45    ]
+            
             ll_in, ur_in   = c13.region.bounding_box
             ll_out, ur_out = c23.region.bounding_box
 
-            shape_in  = (2, 2, 128)
+            ll_in, ur_in   = ll_in*np.array([1.01, 1.01, 0.99]), ur_in*np.array([1.01, 1.01, 1.01])
+            ll_out, ur_out = ll_out*np.array([1.01, 1.01, 0.99]), ur_out*np.array([1.01, 1.01, 1.01])
+
+            shape_in  = (2, 2, 128)  # (Nx, Ny, Nz)
             shape_out = (2, 2, 375)
 
             pitch_in  = (ur_in - ll_in) / shape_in
@@ -258,9 +267,11 @@ class Prism():
 
             if case == 'B':
                 # Random Packing Logic
-                centers_in  = openmc.model.pack_spheres(radius=0.05, region=c13.region, num_spheres=self.geom['N1'])
-                centers_out = openmc.model.pack_spheres(radius=0.05, region=c23.region, num_spheres=self.geom['N2'])
+                # pack_spheres returns a list of coordinates, not cell instances
+                centers_in  = openmc.model.pack_spheres(radius=0.05, region= +s111 & -s112 & +s121 & -s122 & +s131 & -s132, num_spheres=self.geom['N1'])
+                centers_out = openmc.model.pack_spheres(radius=0.05, region= +s113 & -s114 & +s123 & -s124 & +s137 & -s138, num_spheres=self.geom['N2'])
                 
+                # openmc.model.TRISO(outer_radius, fill, center=(0.0, 0.0, 0.0)) -- each model.TRISO instance IS a cell
                 biso_in  = [openmc.model.TRISO(0.05, u50, center=c) for c in centers_in]
                 biso_out = [openmc.model.TRISO(0.05, u50, center=c) for c in centers_out]
 
@@ -269,23 +280,29 @@ class Prism():
 
 
             elif case == 'C':
+                
+                biso_in  = [openmc.model.TRISO(0.05, u50) for _ in range(self.geom['N1'])]
+                biso_out = [openmc.model.TRISO(0.05, u50) for _ in range(self.geom['N2'])]
+
+                c13.fill = openmc.model.create_triso_lattice(biso_in, ll_in, pitch_in, shape_in, self.blanket)
+                c23.fill = openmc.model.create_triso_lattice(biso_out, ll_out, pitch_out, shape_out, self.blanket)
 
                 # Create inboard lattice with BISO universe at each lattice point
-                lattice_in = openmc.RectLattice(name='inboard_biso_lattice')
-                lattice_in.lower_left = ll_in
-                lattice_in.pitch = pitch_in
-                lattice_in.universes = np.full(shape_in, u50)
-                lattice_in.outer = openmc.Universe(cells=[openmc.Cell(fill=self.blanket)])
+                # lattice_in = openmc.RectLattice(name='inboard lattice')
+                # lattice_in.lower_left = ll_in
+                # lattice_in.pitch = pitch_in
+                # lattice_in.universes = np.full(shape_in[::-1], u50)
+                # lattice_in.outer = openmc.Universe(cells=[openmc.Cell(fill=self.blanket)])
 
                 # Create outboard lattice with BISO universe at each lattice point
-                lattice_out = openmc.RectLattice(name='outboard_biso_lattice')
-                lattice_out.lower_left = ll_out
-                lattice_out.pitch = pitch_out
-                lattice_out.universes = np.full(shape_out, u50)
-                lattice_out.outer = openmc.Universe(cells=[openmc.Cell(fill=self.blanket)])
+                # lattice_out = openmc.RectLattice(name='outboard lattice')
+                # lattice_out.lower_left = ll_out
+                # lattice_out.pitch = pitch_out
+                # lattice_out.universes = np.full(shape_out[::-1], u50)
+                # lattice_out.outer = openmc.Universe(cells=[openmc.Cell(fill=self.blanket)])
 
-                c13.fill = lattice_in
-                c23.fill = lattice_out
+                # c13.fill = lattice_in
+                # c23.fill = lattice_out
 
                 if debug:
                     print(f"Case C: Fixed lattice BISO placement")
@@ -348,11 +365,17 @@ class Prism():
         source = openmc.IndependentSource()
         source.space = openmc.stats.Point((0,0,247.7))                                                           
         # source.space = openmc.stats.CartesianIndependent(x=openmc.stats.Uniform(a =-self.geom['c1'], b= +self.geom['c1']),
-        #                                                  y=openmc.stats.Discrete([0], [1.0]),
+        #                                                  y=openmc.stats.Uniform(a =-self.geom['c1'], b= +self.geom['c1']),
         #                                                  z=openmc.stats.Discrete([247.7], [1.0]) )
         source.particle = 'neutron'
         source.energy   = openmc.stats.Discrete([14.0e6], [1.0])  # 14 MeV
-        source.angle    = openmc.stats.Isotropic()
+        
+        # Define the angular distribution -- mu=1 is straight up (+z), mu=-1 is straight down (-z)
+        # We give each a 50% (0.5) probability.
+        # source.angle = openmc.stats.PolarAzimuthal(
+        #     mu=openmc.stats.Discrete([1.0, -1.0], [0.5, 0.5]),)
+        #     phi=openmc.stats.Uniform(0, 2*np.pi) # Azimuthal angle doesn't matter for mu=+/-1
+        source.angle = openmc.stats.Isotropic()
 
         # Create settings and assign source
         self.settings = openmc.Settings()
@@ -363,12 +386,15 @@ class Prism():
         self.settings.particles = int(1e5)
         self.settings.batches   = int(10)
 
+        self.settings.trace = (1,1,1)
+        self.settings.max_tracks = 40
+
 
     def prism_helpers(self, debug=False):
         fertile_kgm3 = self.fertile_kgm3
 
-        target_total_biso = 2012
-        N1, N2 =  512, 1500
+        target_total_biso = 2012 
+        N1, N2 = 512, 1500
 
         # HCPB tokamak dimensions (along z in model)
         h1, h2 = 45.0, 82.0     # inboard, outboard thicknesses
@@ -532,7 +558,7 @@ class Prism():
             if has_statepoint(self.path):
                 print(f"Warning. File {self.path}/statepoint.h5 already exists, so this OpenMC run will be aborted...")
             else:
-                self.model.run(cwd=self.path)
+                self.model.run(cwd=self.path, tracks=True)
 
 
 if __name__ == '__main__':
@@ -543,4 +569,4 @@ if __name__ == '__main__':
         for fertile_kgm3 in [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]: #  [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]
 
             current_run = Prism(case, fertile_kgm3,)
-            current_run.openmc(debug=True, write=True, run=False)
+            current_run.openmc(debug=True, write=True, run=True)

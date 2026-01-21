@@ -304,7 +304,7 @@ c
 c       ***********************************************************************
 c
   MODE  N 
-  NPS   5e6  $ 1e6 gives you c.10% error in a few min
+  NPS   1e7  $ 1e6 gives you c.10% error in a few min
 c
 c
 c PRDMP 5e5 5e5 0  1  5e5

@@ -74,7 +74,7 @@ def main(fertile_kgm3):
     density_str = f"{fertile_kgm3:06.2f}"
     
     # Number of particles for MCNP run
-    nps = '5e6' 
+    nps = '1e7' 
 
     target_total_biso = 2012
     N1, N2 =  512, 1500
