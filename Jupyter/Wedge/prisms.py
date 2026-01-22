@@ -82,6 +82,28 @@ def lattice_coords(lower_left, shape, pitch):
     return coords
 
 
+def logspace_per_decade(start, stop, pts_per_decade):
+    """
+    Returns values from 'start' to 'stop' so that each factor-of-10
+    interval contains 'pts_per_decade' points (including its first endpoint).
+    Might be a little off if 'stop' isn't precisely at a decade, ex. 20e6 eV
+
+    example: 10 points per decade from 1e-5 → 2e7
+    grid = logspace_per_decade(1e-5, 20e6, pts_per_decade=10)
+    for i in grid:
+        print(np.log10(i))
+    # print(np.log10(i) for i in grid)
+    """
+    log_start = np.log10(start)
+    log_stop  = np.log10(stop)
+    total_decades = log_stop - log_start
+    # how many intervals of size 1 decade we need, as a float
+    total_steps = total_decades * pts_per_decade
+    # +1 so that we include the very last point at `stop`
+    npts = int(np.ceil(total_steps)) + 1
+    return np.logspace(log_start, log_stop, num=npts)
+
+
 class Prism():
 
     def __init__(self, case, fertile_kgm3, isotope='U238', write_openmc=True, run_openmc=False,):
@@ -359,7 +381,7 @@ class Prism():
 
         self.tallies = openmc.Tallies() # initialize
         cell_filter = openmc.CellFilter([cell for cell in self.cells if cell.fill is not None])
-        energy_filter = openmc.EnergyFilter([0,1e-2,1e-1,1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8]) # './helpers/utilities.py'
+        energy_filter = openmc.EnergyFilter(logspace_per_decade(1e-5, 20e6, 100)) # './helpers/utilities.py'
 
         # Flux tally 
         flux_tally        = self.make_tally('flux', ['flux'], filters=[cell_filter])
@@ -415,9 +437,9 @@ class Prism():
         # Run type
         self.settings.run_mode  = 'fixed source'
         self.settings.particles = self.nps
-        self.settings.batches   = self.cycles
+        self.settings.batches   = int(100)
 
-        self.settings.trace = (1,1,1)
+        # self.settings.trace = (1,1,1)
         self.settings.max_tracks = 4
 
 
@@ -426,9 +448,9 @@ class Prism():
         fertile_kgm3 = self.fertile_kgm3
 
         if fertile_kgm3 < 10:
-            self.nps, self.cycles = int(1e7), int(10)
+            self.nps = int(1e7)
         else:
-            self.nps, self.cycles = int(1e5), int(10)
+            self.nps = int(1e5)
 
         target_total_biso = 2012 
         N1, N2 = 512, 1500
