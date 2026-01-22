@@ -56,19 +56,13 @@ def lattice_coords(lower_left, shape, pitch):
     Calculates the center coordinates of all cells in a rectangular lattice
     and returns them as a list of tuples.
     
-    Parameters
-    ----------
-    lower_left : Iterable of float
-        The (x, y, z) coordinates of the lower-left corner.
-    shape : Iterable of int
-        The number of cells (Nx, Ny, Nz).
-    pitch : Iterable of float
-        The width, height, and depth of each cell (Dx, Dy, Dz).
+    Args:
+        lower_left (iterable of float): (x, y, z) coordinates of the lower-left corner.
+        shape (iterable of int): number of cells (Nx, Ny, Nz).
+        pitch (iterable of float): width, height, and depth of each cell (Dx, Dy, Dz).
         
-    Returns
-    -------
-    coords : list of tuple
-        A flat list containing (x, y, z) center coordinates.
+    Returns: 
+        coords (list of tuple): flat list containing (x, y, z) center coordinates.
     """
     nx, ny, nz = shape
     dx, dy, dz = pitch
@@ -399,19 +393,20 @@ class Prism():
 
         # 14-MeV point source at center of plasma chamber
         source = openmc.IndependentSource()
-        source.space = openmc.stats.Point((0,0,247.7))                                                           
-        # source.space = openmc.stats.CartesianIndependent(x=openmc.stats.Uniform(a =-self.geom['c1'], b= +self.geom['c1']),
-        #                                                  y=openmc.stats.Uniform(a =-self.geom['c1'], b= +self.geom['c1']),
-        #                                                  z=openmc.stats.Discrete([247.7], [1.0]) )
+        # source.space = openmc.stats.Point((0,0,247.7))                                                           
+        source.space = openmc.stats.CartesianIndependent(x=openmc.stats.Uniform(a= -self.geom['c1'], b= +self.geom['c1']),
+                                                         y=openmc.stats.Uniform(a= -self.geom['c1'], b= +self.geom['c1']),
+                                                         z=openmc.stats.Discrete([247.7], [1.0]) )
         source.particle = 'neutron'
         source.energy   = openmc.stats.Discrete([14.0e6], [1.0])  # 14 MeV
         
         # Define the angular distribution -- mu=1 is straight up (+z), mu=-1 is straight down (-z)
         # We give each a 50% (0.5) probability.
-        # source.angle = openmc.stats.PolarAzimuthal(
-        #     mu=openmc.stats.Discrete([1.0, -1.0], [0.5, 0.5]),)
-        #     phi=openmc.stats.Uniform(0, 2*np.pi) # Azimuthal angle doesn't matter for mu=+/-1
-        source.angle = openmc.stats.Isotropic()
+        source.angle = openmc.stats.PolarAzimuthal(
+                           mu=openmc.stats.Discrete([1.0, -1.0], [0.5, 0.5]),
+                           phi=openmc.stats.Uniform(0, 2*np.pi) # azimuthal angle doesn't matter for mu=+/-1
+                           )
+        # source.angle = openmc.stats.Isotropic()
 
         # Create settings and assign source
         self.settings = openmc.Settings()
@@ -419,8 +414,8 @@ class Prism():
 
         # Run type
         self.settings.run_mode  = 'fixed source'
-        self.settings.particles = int(1e5)
-        self.settings.batches   = int(10)
+        self.settings.particles = self.nps
+        self.settings.batches   = self.cycles
 
         self.settings.trace = (1,1,1)
         self.settings.max_tracks = 4
@@ -429,6 +424,11 @@ class Prism():
     def prism_helpers(self, debug=False):
 
         fertile_kgm3 = self.fertile_kgm3
+
+        if fertile_kgm3 < 10:
+            self.nps, self.cycles = int(1e7), int(10)
+        else:
+            self.nps, self.cycles = int(1e5), int(10)
 
         target_total_biso = 2012 
         N1, N2 = 512, 1500
@@ -604,6 +604,5 @@ if __name__ == '__main__':
 
     for case in ['C',]:
         for fertile_kgm3 in [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99] : #  [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]   # [0.10,60,150]
-
             current_run = Prism(case, fertile_kgm3,)
             current_run.openmc(debug=True, write=True, run=True)
