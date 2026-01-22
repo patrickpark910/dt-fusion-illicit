@@ -51,6 +51,43 @@ def has_statepoint(directory_path):
     return found
 
 
+def lattice_coords(lower_left, shape, pitch):
+    """
+    Calculates the center coordinates of all cells in a rectangular lattice
+    and returns them as a list of tuples.
+    
+    Parameters
+    ----------
+    lower_left : Iterable of float
+        The (x, y, z) coordinates of the lower-left corner.
+    shape : Iterable of int
+        The number of cells (Nx, Ny, Nz).
+    pitch : Iterable of float
+        The width, height, and depth of each cell (Dx, Dy, Dz).
+        
+    Returns
+    -------
+    coords : list of tuple
+        A flat list containing (x, y, z) center coordinates.
+    """
+    nx, ny, nz = shape
+    dx, dy, dz = pitch
+    lx, ly, lz = lower_left
+
+    coords = []
+    
+    # Iterate through each dimension to calculate the center of each voxel
+    for i in range(nx):
+        x = lx + (i + 0.5) * dx
+        for j in range(ny):
+            y = ly + (j + 0.5) * dy
+            for k in range(nz):
+                z = lz + (k + 0.5) * dz
+                coords.append((x, y, z))
+                
+    return coords
+
+
 class Prism():
 
     def __init__(self, case, fertile_kgm3, isotope='U238', write_openmc=True, run_openmc=False,):
@@ -198,10 +235,10 @@ class Prism():
 
         # Plasma chamber boundaries
         # Plane normal card entries: Ax + By + Cz - D = 0
-        s141 = openmc.Plane(surface_id=141, a= +1.0, b=  0.0, c=self.geom['pC'], d=self.geom['pD'], boundary_type="reflective")
-        s142 = openmc.Plane(surface_id=142, a= -1.0, b=  0.0, c=self.geom['pC'], d=self.geom['pD'], boundary_type="reflective")
-        s143 = openmc.Plane(surface_id=143, a=  0.0, b= +1.0, c=self.geom['pC'], d=self.geom['pD'], boundary_type="reflective")
-        s144 = openmc.Plane(surface_id=144, a=  0.0, b= -1.0, c=self.geom['pC'], d=self.geom['pD'], boundary_type="reflective")
+        s141 = openmc.Plane(surface_id=141, a= +1.0, b=  0.0, c=self.geom['pC'], d=self.geom['pD'], boundary_type="white")
+        s142 = openmc.Plane(surface_id=142, a= -1.0, b=  0.0, c=self.geom['pC'], d=self.geom['pD'], boundary_type="white")
+        s143 = openmc.Plane(surface_id=143, a=  0.0, b= +1.0, c=self.geom['pC'], d=self.geom['pD'], boundary_type="white")
+        s144 = openmc.Plane(surface_id=144, a=  0.0, b= -1.0, c=self.geom['pC'], d=self.geom['pD'], boundary_type="white")
 
         # BISO universe
         s150 = openmc.Sphere(surface_id=150, r=0.040) # Kernel
@@ -212,13 +249,6 @@ class Prism():
         # -----------------------------------
         # CELLS
         # -----------------------------------
-
-        c90 = openmc.Cell(cell_id=90, region= -s134 & (-s130 | -s111 | +s112 | -s121 | +s122) )
-        c91 = openmc.Cell(cell_id=91, region= +s134 & -s135 & (+s141 | +s142 | +s143 | +s144) )
-        c92 = openmc.Cell(cell_id=92, region= +s135 & (+s139 | -s113 | +s114 | -s123 | +s124) )
-        c90.importance = {'neutron': 0}
-        c91.importance = {'neutron': 0}
-        c92.importance = {'neutron': 0}
 
         c10 = openmc.Cell(cell_id=10, region= -s142 & -s141 & -s144 & -s143 & +s134 & -s135)  # plasma chamber void
         c10.importance = {'neutron':1}
@@ -243,7 +273,7 @@ class Prism():
             c23 = openmc.Cell(cell_id=23, region= +s113 & -s114 & +s123 & -s124 & +s137 & -s138)
 
             c31 = openmc.Cell(cell_id=31, fill=self.kernel,  region= -s150)
-            c32 = openmc.Cell(cell_id=32, fill=self.sic,     region= +s150) # 
+            c32 = openmc.Cell(cell_id=32, fill=self.sic,     region= +s150 & -s151) # 
             # c33 = openmc.Cell(cell_id=33, fill=self.blanket, region= +s151)
             u50 = openmc.Universe(name='BISO Universe', cells=[c31, c32]) # c33
 
@@ -255,8 +285,8 @@ class Prism():
             ll_in, ur_in   = c13.region.bounding_box
             ll_out, ur_out = c23.region.bounding_box
 
-            ll_in, ur_in   = ll_in*np.array([1.01, 1.01, 0.99]), ur_in*np.array([1.01, 1.01, 1.01])
-            ll_out, ur_out = ll_out*np.array([1.01, 1.01, 0.99]), ur_out*np.array([1.01, 1.01, 1.01])
+            # ll_in, ur_in   = ll_in*np.array([1.01, 1.01, 0.99]), ur_in*np.array([1.01, 1.01, 1.01])
+            # ll_out, ur_out = ll_out*np.array([1.01, 1.01, 0.99]), ur_out*np.array([1.01, 1.01, 1.01])
 
             shape_in  = (2, 2, 128)  # (Nx, Ny, Nz)
             shape_out = (2, 2, 375)
@@ -266,8 +296,8 @@ class Prism():
 
 
             if case == 'B':
-                # Random Packing Logic
-                # pack_spheres returns a list of coordinates, not cell instances
+
+                # Random packing -- NB. 'pack_spheres' returns a list of coordinates, not cell instances
                 centers_in  = openmc.model.pack_spheres(radius=0.05, region= +s111 & -s112 & +s121 & -s122 & +s131 & -s132, num_spheres=self.geom['N1'])
                 centers_out = openmc.model.pack_spheres(radius=0.05, region= +s113 & -s114 & +s123 & -s124 & +s137 & -s138, num_spheres=self.geom['N2'])
                 
@@ -281,26 +311,32 @@ class Prism():
 
             elif case == 'C':
                 
-                biso_in  = [openmc.model.TRISO(0.05, u50) for _ in range(self.geom['N1'])]
-                biso_out = [openmc.model.TRISO(0.05, u50) for _ in range(self.geom['N2'])]
+                # Rectangular lattice
+                centers_in  = lattice_coords(ll_in, shape_in, pitch_in)
+                centers_out = lattice_coords(ll_out, shape_out, pitch_out)
+                
+                # openmc.model.TRISO(outer_radius, fill, center=(0.0, 0.0, 0.0)) -- each model.TRISO instance IS a cell
+                biso_in  = [openmc.model.TRISO(0.05, u50, center=c) for c in centers_in]
+                biso_out = [openmc.model.TRISO(0.05, u50, center=c) for c in centers_out]
 
                 c13.fill = openmc.model.create_triso_lattice(biso_in, ll_in, pitch_in, shape_in, self.blanket)
                 c23.fill = openmc.model.create_triso_lattice(biso_out, ll_out, pitch_out, shape_out, self.blanket)
 
-                # Create inboard lattice with BISO universe at each lattice point
-                # lattice_in = openmc.RectLattice(name='inboard lattice')
+
+                # # Inboard lattice
+                # lattice_in = openmc.RectLattice()
                 # lattice_in.lower_left = ll_in
                 # lattice_in.pitch = pitch_in
-                # lattice_in.universes = np.full(shape_in[::-1], u50)
+                # lattice_in.universes = np.full(shape_in[::-1], u50) # NB. lattices indices are [z, y, x]
                 # lattice_in.outer = openmc.Universe(cells=[openmc.Cell(fill=self.blanket)])
 
-                # Create outboard lattice with BISO universe at each lattice point
-                # lattice_out = openmc.RectLattice(name='outboard lattice')
+                # # Outboard lattice
+                # lattice_out = openmc.RectLattice()
                 # lattice_out.lower_left = ll_out
                 # lattice_out.pitch = pitch_out
                 # lattice_out.universes = np.full(shape_out[::-1], u50)
                 # lattice_out.outer = openmc.Universe(cells=[openmc.Cell(fill=self.blanket)])
-
+                
                 # c13.fill = lattice_in
                 # c23.fill = lattice_out
 
@@ -321,7 +357,7 @@ class Prism():
                     print(f"  Total BISO particles: {np.prod(shape_in) + np.prod(shape_out)}")
 
 
-        self.cells = [c90, c91, c92, c10, c11, c12, c13, c14, c21, c22, c23, c24]
+        self.cells = [c10, c11, c12, c13, c14, c21, c22, c23, c24]
         self.geometry = openmc.Geometry(openmc.Universe(cells=self.cells))
 
 
@@ -387,10 +423,11 @@ class Prism():
         self.settings.batches   = int(10)
 
         self.settings.trace = (1,1,1)
-        self.settings.max_tracks = 40
+        self.settings.max_tracks = 4
 
 
     def prism_helpers(self, debug=False):
+
         fertile_kgm3 = self.fertile_kgm3
 
         target_total_biso = 2012 
@@ -545,11 +582,11 @@ class Prism():
 
         if write:
 
-            self.prism_helpers(debug=debug)
-            self.materials(debug=debug)
+            self.prism_helpers()
+            self.materials()
             self.geometry(debug=debug)
-            self.settings(debug=debug)
-            self.tallies(debug=debug)
+            self.settings()
+            self.tallies()
 
             self.model = openmc.model.Model(self.geometry, self.materials, self.settings, self.tallies)
             self.model.export_to_model_xml(self.path)
@@ -566,7 +603,7 @@ if __name__ == '__main__':
     os.makedirs(f"./OpenMC/", exist_ok=True)
 
     for case in ['C',]:
-        for fertile_kgm3 in [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]: #  [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]
+        for fertile_kgm3 in [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99] : #  [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]   # [0.10,60,150]
 
             current_run = Prism(case, fertile_kgm3,)
             current_run.openmc(debug=True, write=True, run=True)
