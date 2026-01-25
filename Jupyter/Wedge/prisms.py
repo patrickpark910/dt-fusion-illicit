@@ -437,7 +437,9 @@ class Prism():
         # Run type
         self.settings.run_mode  = 'fixed source'
         self.settings.particles = self.nps
-        self.settings.batches   = int(100)
+        self.settings.batches   = self.batches
+
+        # note to self 2026-01-22: change to 20 or 50 batches
 
         # self.settings.trace = (1,1,1)
         self.settings.max_tracks = 4
@@ -447,10 +449,12 @@ class Prism():
 
         fertile_kgm3 = self.fertile_kgm3
 
-        if fertile_kgm3 < 10:
+        if fertile_kgm3 < 10.0:
             self.nps = int(1e7)
+            self.batches = int(10)
         else:
             self.nps = int(1e5)
+            self.batches = int(10)
 
         target_total_biso = 2012 
         N1, N2 = 512, 1500
