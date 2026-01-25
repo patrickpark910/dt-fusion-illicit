@@ -12,29 +12,29 @@ from Python.utilities import *
 
 class Reactor(ABC):
 
-    def __init__(self, breeder_name, fertile_kgm3=0.0, fertile_isotope='U238', run_type='tallies', run_openmc=False):
+    def __init__(self, blanket_name, fertile_kgm3=0.0, fertile_isotope='U238', run_type='tallies', run_openmc=True, run_debug=True):
 
         self.fertile_kgm3 = fertile_kgm3
-        self.fertile_str  = f"{fertile_kgm3:06.2f}"
-
         self.fertile_isotope = fertile_isotope
-        if fertile_isotope == 'U238': 
+        
+        if self.fertile_isotope == 'U238': 
             self.fissile_isotope = 'Pu239'
-        elif fertile_isotope == 'Th232': 
+        elif self.fertile_isotope == 'Th232': 
             self.fissile_isotope = 'U233'
 
         self.run_type    = run_type
         self.run_openmc  = run_openmc
+        self.run_debug   = run_debug
         self.n_particles = N_PARTICLES # int(1e6)
-        self.n_cycles    = N_CYCLES    # 10
+        self.n_cycles    = N_CYCLES    # 20
 
         # All class templates must define these variables:
         self.temp_k          = None # TEMP_K
-        self.breeder_name    = None # 'ARC'
+        self.blanket_name    = None # 'ARC'
+        self.blanket_volume  = None # ARC_BL_VOL    # m³
         self.breeder_density = None # DENSITY_FLIBE # g/cm³
         self.breeder_enrich  = None # ENRICH_FLIBE  # wt%
-        self.breeder_volume  = None # ARC_BR_VOL    # m³
-        self.name = None # f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}{self.fertile_kgm3:06.2f}kgm3"
+        self.name = None # f"{self.run_type}_{self.blanket_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}{self.fertile_kgm3:06.2f}kgm3"
         self.path = None # f"./OpenMC/{self.name}"
 
 
@@ -78,8 +78,7 @@ class Reactor(ABC):
 
         heat_tally        = self.make_tally('volumetric heating',          ['heating-local'], filters=[cell_filter])
         heat_energy_tally = self.make_tally('volumetric heating spectrum', ['heating-local'], filters=[cell_filter, energy_filter])
-        self.tallies.extend([heat_tally, heat_energy_tally])
-
+        
 
         # ---------------------------------------------------------------
         # Flux and current tallies 
@@ -98,8 +97,6 @@ class Reactor(ABC):
         # Flux tally 
         flux_tally        = self.make_tally('flux', ['flux'], filters=[cell_filter])
         flux_energy_tally = self.make_tally('flux spectrum', ['flux'], filters=[cell_filter, energy_filter])
-
-        self.tallies.extend([current_tally, flux_tally, flux_energy_tally]) # current_energy_tally
 
 
         # ---------------------------------------------------------------
@@ -124,9 +121,12 @@ class Reactor(ABC):
         Be_tally        = self.make_tally('Be rxn rates', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter], nuclides=['Be9'])
         Be_energy_tally = self.make_tally('Be rxn rates spectrum', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Be9'])
 
+
         self.tallies.extend([fertile_tally_tot, Li_tally_tot])
         self.tallies.extend([fertile_tally, Li_tally, F_tally, Be_tally])
         self.tallies.extend([fertile_energy_tally, Li_energy_tally, F_energy_tally, Be_energy_tally])
+        self.tallies.extend([current_tally, flux_tally, flux_energy_tally]) # current_energy_tally
+        self.tallies.extend([heat_tally, heat_energy_tally])
 
 
     def make_tally(self, name, scores, filters:list=None, nuclides:list=None):
@@ -162,7 +162,7 @@ class Reactor(ABC):
         self.settings.batches   = self.n_cycles
 
 
-    def openmc(self):
+    def compile(self):
         
         self.materials()
         self.geometry()
@@ -172,6 +172,10 @@ class Reactor(ABC):
         self.materials.cross_sections = set_xs_path()
         self.model = openmc.model.Model(self.geometry, self.materials, self.settings, self.tallies)
         self.model.export_to_model_xml(self.path)
+
+
+    def openmc(self):
+
         self.model.run(cwd=self.path)
 
 
@@ -196,7 +200,7 @@ class Reactor(ABC):
         settings_vol_calc = openmc.Settings()
         settings_vol_calc.volume_calculations = [vol_calc]
         
-        print(f"{Colors.GREEN}Running stochastic volume calculation with {samples} samples...{Colors.END}")
+        print(f"{C.GREEN}Running stochastic volume calculation with {samples} samples...{C.END}")
 
         self.materials.cross_sections = set_xs_path()
         self.model_vol_calc = openmc.model.Model(self.geometry, self.materials, settings_vol_calc)
@@ -208,7 +212,7 @@ class Reactor(ABC):
         # ---------------------------
         vol_results = openmc.VolumeCalculation.from_hdf5(f"{self.path}/volume_1.h5")
         
-        #print(f"{Colors.GREEN}Stochastic Volume Calculation Results:{Colors.END}")
+        #print(f"{C.GREEN}Stochastic Volume Calculation Results:{C.END}")
 
         vol_dict = {}
         for k, v in vol_results.volumes.items():
@@ -221,7 +225,7 @@ class Reactor(ABC):
         df.rename(columns={'index': 'cells'}, inplace=True)
         df.to_csv(f'{self.path}/volume_1.csv',index=False)
 
-        print(f"{Colors.YELLOW}Comment.{Colors.END} CSV file 'volume_1.csv' printed to {self.path}")
+        print(f"{C.YELLOW}Comment.{C.END} CSV file 'volume_1.csv' printed to {self.path}")
         # print(df)
 
         """
@@ -252,15 +256,15 @@ class Reactor(ABC):
         settings_plot = openmc.Settings()
         settings_plot.run_mode = 'plot'
 
-        if self.breeder_name in ['ARC', 'ARCBall', 'FLiBe']:
-            colors = {self.firstwall: (30, 27, 41),    # very dark gray
+        if self.blanket_name in ['ARC', 'ARCBall', 'FLiBe']:
+            C = {self.firstwall: (30, 27, 41),    # very dark gray
                       self.structure: (109, 110, 113), # gray
                       self.blanket: (129, 204, 185),   # teal
                       # Void regions will be white by default
                       }
 
-        elif self.breeder_name in ['DCLL']:
-            colors = {self.firstwall: (30, 27, 41),           # very dark gray
+        elif self.blanket_name in ['DCLL']:
+            C = {self.firstwall: (30, 27, 41),           # very dark gray
                       self.structure: (109, 110, 113),        # gray
                       self.coolant: (37, 150, 190), # cobalt blue 
                       self.blanket: (129, 204, 185),          # teal
@@ -269,8 +273,8 @@ class Reactor(ABC):
                       # Void regions will be white by default
                       }
 
-        elif self.breeder_name in ['HCPB']:
-            colors = {self.firstwall: (30, 27, 41),           # very dark gray
+        elif self.blanket_name in ['HCPB']:
+            C = {self.firstwall: (30, 27, 41),           # very dark gray
                       self.structure: (109, 110, 113),        # gray
                       self.blanket: (129, 204, 185),          # teal
                       # Void regions will be white by default
@@ -281,36 +285,36 @@ class Reactor(ABC):
         
         # XY toroidal slice
         xy = openmc.Plot()
-        xy.filename = f"{self.breeder_name}_xy" # {self.path}/
+        xy.filename = f"{self.blanket_name}_xy" # {self.path}/
         xy.basis = "xy"
         xy.width  = (x_width, x_width)
         xy.pixels = (10*x_width, 10*x_width)
         xy.color_by = "material"
-        xy.colors = colors
+        xy.C = C
 
         # XZ poloidal slice
         xz = openmc.Plot()
-        xz.filename = f"{self.breeder_name}_xz" # {self.path}/
+        xz.filename = f"{self.blanket_name}_xz" # {self.path}/
         xz.basis = "xz"
         xz.width  = (x_width, z_width)
         xz.pixels = (10*x_width, 10*z_width)
         xz.color_by = "material"
-        xz.colors = colors
+        xz.C = C
 
         plots = openmc.Plots([xy, xz])
         model_plot = openmc.model.Model(self.geometry, self.materials, settings_plot)
         model_plot.plots = plots 
         model_plot.plot_geometry(cwd=f"{self.path}")  # writes tokamak_rz.ppm and tokamak_xz.ppm
 
-        for basename in [f"{self.breeder_name}_xy", f"{self.breeder_name}_xz"]:
+        for basename in [f"{self.blanket_name}_xy", f"{self.blanket_name}_xz"]:
             ppm_file = os.path.join(self.path, f"{basename}.ppm")
             png_file = os.path.join(self.path, f"{basename}.png")
             if os.path.exists(ppm_file):
                 with Image.open(ppm_file) as im:
                     im.save(png_file)
-                print(f"{Colors.YELLOW}Comment.{Colors.END} Plots '{self.breeder_name}_xy.png', '{self.breeder_name}_xz.png' printed to {self.path}")
+                print(f"{C.YELLOW}Comment.{C.END} Plots '{self.blanket_name}_xy.png', '{self.blanket_name}_xz.png' printed to {self.path}")
             else:
-                print(f"{Colors.YELLOW}Error.{Colors.END} OpenMC did not print '{self.breeder_name}_xy.ppm', '{self.breeder_name}_xz.ppm' to {self.path}!")
+                print(f"{C.YELLOW}Error.{C.END} OpenMC did not print '{self.blanket_name}_xy.ppm', '{self.blanket_name}_xz.ppm' to {self.path}!")
 
 
     def extract_tallies(self):

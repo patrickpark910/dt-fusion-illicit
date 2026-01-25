@@ -38,7 +38,7 @@ NPS_FUS  = P_FUS_MW * N_PER_MJ # n/s
 
 
 
-class Colors:
+class C:
     RED = '\033[91m'
     GREEN = '\033[92m'
     YELLOW = '\033[93m'
@@ -92,46 +92,18 @@ def log_midpoints(points):
     return [float(np.sqrt(points[i] * points[i + 1])) for i in range(len(points) - 1)]
 
 
-def calc_blanket_mass_fracs(fertile_kgm3, breeder_volume_m3, fertile_element='U', fertile_enrich=0.71, breeder_density_kgm3=1.94e3):
+def fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope='U238'):
     """
-    Calculate the mass fractions of FLiBe and (UF4 or ThF4). 
-    Assumes UF4/ThF4 dissolution does NOT change FLiBe volume
-      after conversaion with J.L. Ball --ppark 2025-07-03
+    Converts given kg/m³ of fertile material to the number of BISO particles per cm³
 
     Args:
-        fertile_kgm3 : float : desired bulk density kg/m³ of U-238 or Th-232 in blanket
-        breeder_volume_m3    : float : total volume m³ of breeding regions in tokamak
-        fertile_element      : 'U' or 'Th' : identifies U-238 or Th-232 as the fertile isotope
-        fertile_enrich       : float : wt% enrichment of the fertile material
-        breeder_density_kgm3 : float : density of FLiBe in kg/m³
+        fertile_kgm3  (float): kg of fertile isotope per m³ of breeder
+        fertile_isotope (str): one of ['U238', 'Th232']
 
     Returns:
-        (breeder_mass_frac, uf4_mass_frac) : 2-ple of floats : mass fractions
+        biso_per_cc (float): number of biso particles per m³ of breeder
+
     """
-
-    fertile_enrich = fertile_enrich*0.01 # OpenMC uses this in % but we want fraction
-
-    if fertile_element == 'U':
-        uf4_bulk_density_kgm3 = fertile_kgm3 / (1-fertile_enrich) * AMU_UF4 / AMU_U
-        uf4_mass_kg           = uf4_bulk_density_kgm3 * breeder_volume_m3
-        breeder_mass_kg       =  breeder_density_kgm3 * breeder_volume_m3
-        blanket_mass_kg       = uf4_mass_kg + breeder_mass_kg
-        uf4_mass_frac         = uf4_mass_kg / blanket_mass_kg
-        breeder_mass_frac     = breeder_mass_kg / blanket_mass_kg
-        return breeder_mass_frac, uf4_mass_frac
-
-    elif fertile_element == 'Th':
-        thf4_bulk_density_kgm3 = fertile_kgm3 * AMU_ThF4 / AMU_Th232
-        thf4_mass_kg           = thf4_bulk_density_kgm3 * breeder_volume_m3
-        breeder_mass_kg        =  breeder_density_kgm3 * breeder_volume_m3
-        blanket_mass_kg        = thf4_mass_kg + breeder_mass_kg
-        thf4_mass_frac         = thf4_mass_kg / blanket_mass_kg
-        breeder_mass_frac      = breeder_mass_kg / blanket_mass_kg
-        return breeder_mass_frac, thf4_mass_frac
-
-
-def fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope='U238'):
-    # vol_kernel = V_KERNEL # 4/3 * np.pi * 0.04**3
     if fertile_isotope == 'U238':
         biso_per_cc = fertile_kgm3 * AMU_UO2 / AMU_U238 / KERNEL_VOLUME / DENSITY_UO2 / 100**3 * 1000
     elif fertile_isotope == 'Th232':
@@ -141,29 +113,33 @@ def fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope='U238'):
 
 def calc_biso_breeder_vol_fracs(fertile_kgm3, fertile_isotope='U238'):
     """
-    Calculate volume fractions of breeding material and BISO particles.
+    Calculate volume fractions of BISO particles and breeder material.
     Per Glaser & Goldston (2012), we assume the BISO/TRISO particles are homogenized 
     throughout the blanket. The kernel/coating geometry is used only to set the 
     relative mass or volume fractions of fertile vs. coating material.
     
     Args:
-        fertile_kgm3     : desired bulk density of fertile isotope in blanket [kg/m³]
-        vf_breeder_br    : volume fraction of breeder (Li4SiO4-Be or Pb-Li) in breeding region
-        fertile_element  : 'U238' or 'Th232'
-    """
-    # Number of BISO spheres per cc of breeding volume
-    biso_per_cc_bv = fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope=fertile_isotope)
-    vf_biso_bv     = biso_per_cc_bv * BISO_VOLUME
+        fertile_kgm3  (float): kg of fertile isotope per m³ of breeder
+        fertile_isotope (str): one of ['U238', 'Th232']
 
-    if vf_biso_bv > 1.0:
-        print(f"Fatal. Your fertile kg/m³ exceeds what can physically fit in the breeding volume!")
-        print(f"Fatal. That is, your volume of BISO per cm³ of breeding volume exceeds 1.")
+    Returns:
+        vf_biso_br (float): vol frac of BISO relative to nominal breeder volume
+        vf_breeder_br (float): new vol frac of breeder relative to nominal breeder volume
+        biso_per_cc_br (float): number of BISO spheres per cm³ of breeder
+    """
+    # Number of BISO spheres per cc of breeder
+    biso_per_cc_br = fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope=fertile_isotope)
+    vf_biso_br     = biso_per_cc_br * BISO_VOLUME
+
+    if vf_biso_br > 1.0:
+        print(f"Fatal. Your fertile kg/m³ exceeds what can physically fit in the breeder volume!")
+        print(f"Fatal. That is, your volume of BISO per cm³ of breeder volume exceeds 1.")
         sys.exit()
 
-    # New volume ratios of everything w.r.t. breeders in the breeder volume
-    vf_breeder_bv = 1 - vf_biso_bv
+    # New volume ratio of breeder relative to nominal breeder volume
+    vf_breeder_br = 1 - vf_biso_br
 
-    return vf_biso_bv, vf_breeder_bv, biso_per_cc_bv
+    return vf_biso_br, vf_breeder_br, biso_per_cc_br
 
 
 def set_xs_path():
@@ -177,21 +153,21 @@ def set_xs_path():
     
 
     if xs_path is None:
-        print(f"{Colors.YELLOW}Warning.{Colors.END} 'OPENMC_CROSS_SECTIONS' is NOT set in PATH.")
+        print(f"{C.YELLOW}Warning.{C.END} 'OPENMC_CROSS_SECTIONS' is NOT set in PATH.")
         
         if os.path.isfile(xs_path_zotac):
-            print(f"{Colors.YELLOW}Warning.{Colors.END} 'OPENMC_CROSS_SECTIONS' is now set to {xs_path_ubuntu}.")
+            print(f"{C.YELLOW}Warning.{C.END} 'OPENMC_CROSS_SECTIONS' is now set to {xs_path_ubuntu}.")
             return xs_path_zotac # use this on Zotacs --ppark
 
         elif os.path.isfile(xs_path_wsl):
-            print(f"{Colors.YELLOW}Warning.{Colors.END} 'OPENMC_CROSS_SECTIONS' is now set to {xs_path_wsl}.")
+            print(f"{C.YELLOW}Warning.{C.END} 'OPENMC_CROSS_SECTIONS' is now set to {xs_path_wsl}.")
             return xs_path_wsl
         
         else:
-            sys.exit(f"{Colors.RED}Fatal. Cannot find cross section XML!{Colors.END}")
+            sys.exit(f"{C.RED}Fatal. Cannot find cross section XML!{C.END}")
     
     else:
-        print(f"{Colors.GREEN}'OPENMC_CROSS_SECTIONS' found!{Colors.END}")
+        print(f"{C.GREEN}'OPENMC_CROSS_SECTIONS' found!{C.END}")
         return xs_path
 
 
@@ -288,7 +264,6 @@ def has_statepoint(directory_path):
         if filename.startswith("statepoint"):
             found = True
     return found
-            
 
 
 if __name__ == "__main__":

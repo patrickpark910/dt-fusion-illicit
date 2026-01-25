@@ -21,129 +21,144 @@ def main():
     os.makedirs(f"./Figures/Data/", exist_ok=True)
     os.makedirs(f"./OpenMC/", exist_ok=True)
 
-    parser = argparse.ArgumentParser(description="Choose run type with -r flag: ['tallies', 'volume', 'plot']")
+    parser = argparse.ArgumentParser(description=f"Choose ONE run type with -r flag: ['tallies', 'volume', 'plot']. Choose blankets with -b flag, multiple separated by spaces: {BLANKETS}. Choose fertile isotopes with -i flag, multiple separated by spaces: {ISOTOPES}")
+    
     parser.add_argument("-r", "--run_type", 
                         type=str, default='tallies', 
                         help="Specify run type: ['tallies', 'volume', 'plot']" )
+
+    parser.add_argument("-b", "--blankets", 
+                        type=str, nargs="+", default=BLANKETS,
+                        help=f"Specify blankets, separated by space, among this list: {BLANKETS}" )
+
+    parser.add_argument("-i", "--isotopes", 
+                        type=str, nargs="+", default=ISOTOPES,
+                        help=f"Specify fertile isotopes, separated by space, among this list: {ISOTOPES}" )
+
     args = parser.parse_args()
     run_type = args.run_type
+    blankets = args.blankets # [b.upper() if isinstance(b, str) else b for b in args.blankets]  # too extra to make exception for FLiBe, just type it right yourself :D --ppark
+    isotopes = args.isotopes
 
 
     if run_type == 'plot':
-        for breeder in ['FLiBe',]: # 'ARC','ARCB','DCLL', 'HCPB']: # make this match class name
+        for blanket in blankets:  # make this match class name
             
-            current_run = build_reactor(breeder, breeder_name=breeder, run_type='plot', run_openmc=True)
+            current_run = build_reactor(blanket, blanket_name=blanket, run_type='plot')
 
-            if os.path.exists(f"{current_run.path}/{current_run.breeder_name}_xz.ppm"):
-                print(f"{Colors.YELLOW}Warning.{Colors.END} File {current_run.path}/{current_run.breeder_name}_xz.ppm already exists, so this OpenMC volume calculation will be skipped...")
+            if os.path.exists(f"{current_run.path}/{current_run.blanket_name}_xz.ppm"):
+                print(f"{C.YELLOW}Warning.{C.END} File {current_run.path}/{current_run.blanket_name}_xz.ppm already exists, so this OpenMC volume calculation will be skipped...")
             elif current_run.run_openmc:
                 current_run.plot()
 
 
     elif run_type == 'volume':
-        for breeder in ['ARC','ARCB','FLiBe','DCLL', 'HCPB']: # make this match class name
+        for blanket in blankets:  # make this match class name
 
-            current_run = build_reactor(breeder, breeder_name=breeder, run_type='volume', run_openmc=True)
+            current_run = build_reactor(blanket, blanket_name=blanket, run_type='volume')
             
             if os.path.exists(f"{current_run.path}/volume_1.h5"):
-                print(f"{Colors.YELLOW}Warning.{Colors.END} File {current_run.path}/volume_1.h5 already exists, so this OpenMC volume calculation will be skipped...")
+                print(f"{C.YELLOW}Warning.{C.END} File {current_run.path}/volume_1.h5 already exists, so this OpenMC volume calculation will be skipped...")
             elif current_run.run_openmc:
                 current_run.volumes()
 
 
     elif run_type == 'tallies':
 
-        for breeder in ['HCPB',]: # 'ARC','ARCB','DCLL','FLiBe','HCPB' make this match class name
-            for fertile_isotope in ['U238',]:  # 
-                for f_kgm3 in FERTILE_KGM3: # [FERTILE_KGM3[0]]: # 
+        for blanket in blankets:  # ['FLiBe', 'DCLL', 'HCPB', 'ARC', 'ARCB']  # make each blanket str match class name
+            for fertile_isotope in isotopes:
+                for fertile_kgm3 in FERTILE_KGM3: 
                     
-                    current_run = build_reactor(breeder, breeder_name=breeder,
+                    current_run = build_reactor(blanket,
+                                                blanket_name=blanket,
                                                 fertile_isotope=fertile_isotope,
-                                                fertile_kgm3=f_kgm3, 
+                                                fertile_kgm3=fertile_kgm3, 
                                                 run_type='tallies',
-                                                run_openmc=True)
+                                                run_openmc=True,
+                                                run_debug=True)
 
                     print(f"Check if '{current_run.path}' exists: {os.path.isdir(current_run.path)}")
 
                     if current_run.run_openmc:
                         if has_statepoint(current_run.path):
-                            print(f"{Colors.YELLOW}Warning.{Colors.END} File {current_run.path}/statepoint.h5 already exists, so this OpenMC run will be skipped...")
+                            print(f"{C.YELLOW}Warning.{C.END} File {current_run.path}/statepoint.h5 already exists, so this OpenMC run will be skipped...")
                         else:
+                            current_run.compile()
                             current_run.openmc()
                             current_run.extract_tallies()
 
-                    # if os.path.exists(f"{current_run.path}/tallies_summary.csv"): 
-                    #     print(f"{Colors.YELLOW}Warning.{Colors.END} File {current_run.path}/tallies_summary.csv already exists, so tally extraction will be skipped...")
-                    #     current_run.extract_tallies()
-                    # elif current_run.run_openmc:
-                    #     pass
-                    #     # current_run.extract_tallies()
-
-                print(f"Collating tallies for {breeder} {fertile_isotope} at {current_run.temp_k} and breeder vol {current_run.breeder_volume} m3")
-                collate_tallies(breeder, fertile_isotope, current_run.temp_k, current_run.breeder_volume)
+                print(f"Collating tallies for {blanket} {fertile_isotope} at {current_run.temp_k}")
+                collate_tallies(blanket, fertile_isotope, current_run.temp_k, current_run.breeder_volume)
 
 
-
-
-def build_reactor(breeder:str, **kwargs):
+def build_reactor(blanket:str, **kwargs):
     """
     Create reactor model from mapping into abstract base class (ABC)
     """
     try:
-        cls = eval(breeder) 
+        cls = eval(blanket) 
         reactor = cls(**kwargs)
         reactor.initialize()
     except KeyError:
-        raise ValueError(f"Unknown breeder '{breeder}'.")
+        raise ValueError(f"Unknown blanket '{blanket}'.")
     return reactor
 
 
-def collate_tallies(breeder,fertile_isotope,temp_k,vol_m3):
+def collate_tallies(blanket, fertile_isotope, temp_k, vol_m3):
+    """
+    Collates all the tallies for given [blanket, fertile isotope, temperature] across multiple fertile kg/m³
 
-    if fertile_isotope == 'U238':
-        df_all   = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'Li6(n,t)', 'Li7(n,Xt)','U238(n,g)','tbr','Pu239_kg/yr'])
+    Args:
+        blanket (str): one of ['FLiBe', 'DCLL', 'HCPB', 'ARC', 'ARCB']
+        fertile_isotope (str): one of ['U238', 'Th232']
+        temp_k (float): temperature of the system for which you want to collate data 
+        breeder_volume (float): [m³] volume of breeder
+    """
+
+    if fertile_isotope == 'U238':        
         fissile_isotope = 'Pu239'
 
     elif fertile_isotope == 'Th232':
-        df_all = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 'Li6(n,t)', 'Li7(n,Xt)','Th232(n,g)','tbr','Pu239_kg/yr'])
         fissile_isotope =  'U233'
 
-    # df_flux_collated  = pd.DataFrame(columns=['filename','br_vol_m3','fertile_kg/m3', 'fertile_mt', 'energy mid [eV]', 'mean'])
-    # df_ng_collated    = pd.DataFrame(columns=['filename','br_vol_m3','fertile_kg/m3', 'fertile_mt', 'energy mid [eV]', 'mean'])
-    tally_folders = [x for x in os.listdir("./OpenMC/") if (x.startswith(f"tallies_{breeder}_{temp_k}K")) and x.split("_")[-1].startswith(fertile_isotope)]
+    df_all = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 
+                                   'Li6(n,t)', 'Li7(n,Xt)', f'{fertile_isotope}(n,g)',
+                                   'tbr', f'{fissile_isotope}_kg/yr'])
 
-    # Use lists instead of empty DataFrames
-    flux_list = []
-    ng_list = []
+    tally_folders = [x for x in os.listdir("./OpenMC/") if (x.startswith(f"tallies_{blanket}_{temp_k}K")) and x.split("_")[-2].startswith(fertile_isotope)]
+
+    flux_list, ng_list = [], []  # Use lists instead of empty DataFrames
 
     for folder in tally_folders:
 
         # Extract the fertile loading
         part = folder.split("_")[-1]
-        fertile = float(part.replace("kgm3", "").lstrip(fertile_isotope))
+        fertile = float(part.replace("kgm3", ""))
         mt = fertile*vol_m3/1e3 # metric tons of fertile isotope
 
         tally_summary = f"./OpenMC/{folder}/tallies_summary.csv"
         tally_ng      = f"./OpenMC/{folder}/{fertile_isotope}_n-gamma_Ebins.csv"
         tally_flux    = f"./OpenMC/{folder}/{fertile_isotope}_flux_Ebins.csv"
 
+
         try:
             df = pd.read_csv(tally_summary)
-        except:
-            print(f"{Colors.YELLOW}Warning.{Colors.END} File 'tallies_summary.csv' not found in {folder}, skipping...")
+        except FileNotFoundError:
+            print(f"{C.YELLOW}Warning.{C.END} File 'tallies_summary.csv' not found in {folder}, skipping...")
             continue
 
         try:
             df_ng = pd.read_csv(tally_ng)
-        except:
-            print(f"{Colors.YELLOW}Warning.{Colors.END} File '{fertile_isotope}_n-gamma_Ebins.csv' not found in {folder}, skipping...")
+        except FileNotFoundError:
+            print(f"{C.YELLOW}Warning.{C.END} File '{fertile_isotope}_n-gamma_Ebins.csv' not found in {folder}, skipping...")
             continue
 
         try:
             df_flux = pd.read_csv(tally_flux)
-        except:
-            print(f"{Colors.YELLOW}Warning.{Colors.END} File '{fertile_isotope}_flux_Ebins.csv' not found in {folder}, skipping...")
+        except FileNotFoundError:
+            print(f"{C.YELLOW}Warning.{C.END} File '{fertile_isotope}_flux_Ebins.csv' not found in {folder}, skipping...")
             continue
+
 
         li6  = df[ df['cell']=='total' ]['Li6(n,t)'].values[0]
         li7  = df[ df['cell']=='total' ]['Li7(n,t)'].values[0]
@@ -175,7 +190,7 @@ def collate_tallies(breeder,fertile_isotope,temp_k,vol_m3):
         ng['fertile_mt'],    flux['fertile_mt']    = mt, mt
         ng['br_vol_m3'],     flux['br_vol_m3']     = vol_m3, vol_m3
 
-        # avoid deprecation warning smh this change by pd feels unnecessary
+        # avoid deprecation warning smh this change by pandas feels unnecessary
         ng_list.append(ng)
         flux_list.append(flux)
 
@@ -190,8 +205,8 @@ def collate_tallies(breeder,fertile_isotope,temp_k,vol_m3):
         df_flux_collated = df_flux_collated[['filename', 'fertile_kg/m3', 'fertile_mt', 'br_vol_m3', 
                                              'energy mid [eV]', 'mean', 'energy low [eV]', 'energy high [eV]']]
 
-        df_ng_collated.to_csv(f"./Figures/Data/{breeder}_{fertile_isotope}_n-gamma_{temp_k}K.csv",index=False)
-        df_flux_collated.to_csv(f"./Figures/Data/{breeder}_{fertile_isotope}_flux_{temp_k}K.csv",index=False)
+        df_ng_collated.to_csv(f"./Figures/Data/{blanket}_{fertile_isotope}_n-gamma_{temp_k}K.csv",index=False)
+        df_flux_collated.to_csv(f"./Figures/Data/{blanket}_{fertile_isotope}_flux_{temp_k}K.csv",index=False)
 
         df_all.loc[len(df_all)] = {'filename': folder,
                               'fertile_kg/m3': fertile,
@@ -202,14 +217,10 @@ def collate_tallies(breeder,fertile_isotope,temp_k,vol_m3):
                                         'tbr': tbr,
                    f'{fissile_isotope}_kg/yr': pu }
 
-        dst = f"./Figures/Data/{breeder}_{fertile_isotope}_rxns_{temp_k}K.csv"
-        df_all.to_csv(dst, index=False)
-
-    print(f"{Colors.GREEN}Comment.{Colors.END} Collated tallies for {breeder} at {temp_k} K to: {dst}")
-                          
-
+    dst = f"./Figures/Data/{blanket}_{fertile_isotope}_rxns_{temp_k}K.csv"
+    df_all.to_csv(dst, index=False)
+    print(f"{C.GREEN}Comment.{C.END} Collated tallies for {blanket} at {temp_k} K to: {dst}")
 
 
 if __name__ == '__main__':
-
     main()

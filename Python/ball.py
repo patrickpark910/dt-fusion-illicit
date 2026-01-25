@@ -11,20 +11,20 @@ class ARCB(Reactor):
     def initialize(self):
 
         self.temp_k          = TEMP_K
-        self.breeder_name    = 'ARC-B'
+        self.blanket_name    = 'ARC-B'
+        self.blanket_volume  = BALL_BL_VOL    # m³
         self.breeder_density = DENSITY_FLIBE  # g/cm³
         self.breeder_enrich  = ENRICH_FLIBE   # wt%
-        self.breeder_volume  = BALL_BR_VOL    # m³
         self.R0, self.a, self.kappa, self.delta = BALL_R0, BALL_A, BALL_KAPPA, BALL_DELTA 
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
-        self.name = f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_kgm3:06.2f}kgm3"         
+        self.name = f"{self.run_type}_{self.blanket_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_kgm3:06.2f}kgm3"         
         self.path = f"./OpenMC/{self.name}"
         
         os.makedirs(self.path, exist_ok=True)
 
-        start_msg = f"\n======== {self.breeder_name} reactor - {self.fertile_isotope} {self.fertile_kgm3:6.2f} kg/m3 - {self.breeder_enrich:4.1f}%-enriched Li - {self.temp_k} K ========"
-        print(f"{Colors.GREEN}{start_msg}{Colors.END}")
+        start_msg = f"\n======== {self.blanket_name} reactor - {self.fertile_isotope} {self.fertile_kgm3:6.2f} kg/m3 - {self.breeder_enrich:4.1f}%-enriched Li - {self.temp_k} K ========"
+        print(f"{C.GREEN}{start_msg}{C.END}")
 
 
     def materials(self):
@@ -118,7 +118,7 @@ class ARCB(Reactor):
             self.fertile.set_density('g/cm3', DENSITY_UF4) 
 
             breeder_mass_frac, fertile_compound_mass_frac = calc_blanket_mass_fracs(self.fertile_kgm3, 
-                                                                                    self.breeder_volume,
+                                                                                    self.blanket_volume,
                                                                                     fertile_isotope=self.fertile_isotope, 
                                                                                     fertile_enrich=ENRICH_U, 
                                                                                     breeder_density_kgm3=DENSITY_FLIBE*1e3)
@@ -132,7 +132,7 @@ class ARCB(Reactor):
             self.fertile.set_density('g/cm3', DENSITY_ThF4) 
 
             breeder_mass_frac, fertile_compound_mass_frac = calc_blanket_mass_fracs(self.fertile_kgm3, 
-                                                                                    self.breeder_volume,
+                                                                                    self.blanket_volume,
                                                                                     fertile_isotope=self.fertile_isotope, 
                                                                                     fertile_enrich=100, 
                                                                                     breeder_density_kgm3=DENSITY_FLIBE*1e3)

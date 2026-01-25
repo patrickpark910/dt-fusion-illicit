@@ -486,7 +486,7 @@ class Prism():
         13.04:37.90 ratio.
 
         We use the fact that 13.04 vol% Li4SiO4 = 0.1304 m³ of Li4SiO4 per m³ of blanket to do our work 
-        below in terms of volume fractions.
+        below in terms of volume fractions.  --ppark
         '''
 
         # Nominal fraction the breeding volume is in the breeding region
