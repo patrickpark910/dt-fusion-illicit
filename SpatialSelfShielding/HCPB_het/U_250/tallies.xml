@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<tallies>
+  <filter id="1" type="material">
+    <bins>6</bins>
+  </filter>
+  <tally id="1" name="U238_n_gamma">
+    <filters>1</filters>
+    <nuclides>U238</nuclides>
+    <scores>(n,gamma)</scores>
+  </tally>
+</tallies>

@@ -11,35 +11,24 @@ class FLiBe(Reactor):
     def initialize(self):
 
         self.temp_k          = TEMP_K
-        self.breeder_name    = 'FLiBe'
+        self.blanket_name    = 'FLiBe'
+        self.blanket_volume  = FLIBE_BL_VOL  # m³
         self.breeder_density = DENSITY_FLIBE # g/cm³
         self.breeder_enrich  = ENRICH_FLIBE  # wt% 
-        self.breeder_volume  = FLIBE_BR_VOL  # m³
-        self.R0, self.a, self.kappa, self.delta = FLIBE_R0, FLIBE_A, FLIBE_KAPPA, FLIBE_DELTA 
+        self.breeder_volume  = self.blanket_volume  # m³
+
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
-        self.name = f"{self.run_type}_{self.breeder_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_element}{self.fertile_bulk_density_kgm3:06.2f}kgm3"         
+        self.name = f"{self.run_type}_{self.blanket_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_kgm3:06.2f}kgm3"         
         self.path = f"./OpenMC/{self.name}"
         
         os.makedirs(self.path, exist_ok=True)
 
-        start_msg = f"\n======== {self.breeder_name} reactor - {self.fertile_element} {self.fertile_bulk_density_kgm3:6.2f} kg/m3 - {self.breeder_enrich:4.1f}%-enriched Li - {self.temp_k} K ========"
-        print(f"{Colors.CYAN}{start_msg}{Colors.END}")
+        start_msg = f"\n======== {self.blanket_name} blanket - {self.fertile_isotope} {self.fertile_kgm3:6.2f} kg/m3 - {self.breeder_enrich:4.1f}%-enriched Li - {self.temp_k} K ========"
+        print(f"{C.CYAN}{start_msg}{C.END}")
 
 
     def materials(self):
-
-        # ------------------------------------------------------------------
-        # Air
-        # ------------------------------------------------------------------
-        # self.air = openmc.Material(name='air')
-        # self.air.set_density('g/cm3', 0.001225)
-
-        # # Atom fractions for dry air
-        # self.air.add_element('N', 0.78084, percent_type='ao')   # Nitrogen
-        # self.air.add_element('O', 0.20946, percent_type='ao')   # Oxygen
-        # self.air.add_element('Ar', 0.00934, percent_type='ao')  # Argon
-        # self.air.add_element('C', 0.00036, percent_type='ao')   # Carbon from CO2
 
         # ------------------------------------------------------------------
         # First wall 
@@ -103,7 +92,7 @@ class FLiBe(Reactor):
         self.breeder.set_density('g/cm3', self.breeder_density)
         self.breeder.add_elements_from_formula('F4Li2Be', 'ao', 
                                                enrichment_target='Li6', 
-                                               enrichment_type='wo', 
+                                               enrichment_type='ao',  # I don't know why Alex says this should be wt%. I'm deferring to the MIT papers that say 7.5 at% here. --ppark
                                                enrichment=self.breeder_enrich)
 
         
@@ -111,33 +100,29 @@ class FLiBe(Reactor):
         # Breeder and fertile material mixed in the blanket breeding regions 
         # ------------------------------------------------------------------        
 
-        if self.fertile_element == 'U':
+        if self.fertile_isotope == 'U238':
 
             self.fertile = openmc.Material(name='fertile', temperature=self.temp_k)
             self.fertile.add_elements_from_formula('UF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
             self.fertile.set_density('g/cm3', DENSITY_UF4) 
+            fertile_density = DENSITY_UF4
 
-            breeder_mass_frac, fertile_compound_mass_frac = calc_blanket_mass_fracs(self.fertile_bulk_density_kgm3, 
-                                                                                    self.breeder_volume,
-                                                                                    fertile_element=self.fertile_element, 
-                                                                                    fertile_enrich=ENRICH_U, 
-                                                                                    breeder_density_kgm3=DENSITY_FLIBE*1e3)
-            self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [breeder_mass_frac, fertile_compound_mass_frac], 'wo') # fractions in 'mix_materials' MUST add up to 1
-            self.blanket.name, self.blanket.temperature = self.name, self.temp_k
-
-        elif self.fertile_element == 'Th':
+        elif self.fertile_isotope == 'Th232':
 
             self.fertile = openmc.Material(name='fertile', temperature=self.temp_k)
-            self.fertile.add_elements_from_formula('ThF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
+            self.fertile.add_elements_from_formula('ThF4','ao') # 'ao' here refers to 1:4 atomic ratio of Th:F in ThF4
             self.fertile.set_density('g/cm3', DENSITY_ThF4) 
+            fertile_density = DENSITY_ThF4
 
-            breeder_mass_frac, fertile_compound_mass_frac = calc_blanket_mass_fracs(self.fertile_bulk_density_kgm3, 
-                                                                                    self.breeder_volume,
-                                                                                    fertile_element=self.fertile_element, 
-                                                                                    fertile_enrich=100, 
-                                                                                    breeder_density_kgm3=DENSITY_FLIBE*1e3)
-            self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [breeder_mass_frac, fertile_compound_mass_frac], 'wo') # fractions in 'mix_materials' MUST add up to 1
-            self.blanket.name, self.blanket.temperature = self.name, self.temp_k
+
+        # Per 1 m³ of FLiBe breeder, you have 1 m³ FLiBe into which you are dissolving X kg of U-238 or Th-232
+        vf_fertile = self.fertile_kgm3 / (self.fertile.density*1000)  # 1 g/cm³ = 1000 kg/m³
+
+        vf_flibe_new   = 1 / (1 + vf_fertile)
+        vf_fertile_new = vf_fertile / (1 + vf_fertile)
+
+        self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [vf_flibe_new, vf_fertile_new], 'vo') # fractions in 'mix_materials' MUST add up to 1
+        self.blanket.name, self.blanket.temperature = self.name, self.temp_k
 
 
         # ------------------------------------------------------------------
@@ -154,6 +139,8 @@ class FLiBe(Reactor):
         # Tokamak geometry parameters 
         # ------------------------------------------------------------------
 
+        self.R0, self.a, self.kappa, self.delta = FLIBE_R0, FLIBE_A, FLIBE_KAPPA, FLIBE_DELTA 
+
         d_fw  = FLIBE_FW_CM 
         d_st0 = d_fw  + FLIBE_ST1_CM
         d_br0 = d_st0 + FLIBE_BR1_CM
@@ -161,8 +148,8 @@ class FLiBe(Reactor):
         d_br1 = d_st1 + FLIBE_BR2_CM
         d_st2 = d_br1 + FLIBE_ST3_CM
 
-        self.extent_r = (self.R0 + self.a + d_st2)*1.2 # 110%
-        self.extent_z = (self.kappa*self.a + d_st2)*1.2
+        self.extent_r = (self.R0 + self.a + d_st2)*1.05 # 105%
+        self.extent_z = (self.kappa*self.a + d_st2)*1.05
 
 
         # ------------------------------------------------------------------

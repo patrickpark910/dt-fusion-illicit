@@ -1,0 +1,68 @@
+<?xml version='1.0' encoding='utf-8'?>
+<materials>
+  <material id="1" name="firstwall" temperature="900">
+    <density value="19.0" units="g/cm3"/>
+    <nuclide name="W180" ao="0.0012"/>
+    <nuclide name="W182" ao="0.265"/>
+    <nuclide name="W183" ao="0.1431"/>
+    <nuclide name="W184" ao="0.3064"/>
+    <nuclide name="W186" ao="0.2843"/>
+  </material>
+  <material id="2" name="euroferwall" temperature="900">
+    <density value="7.8" units="g/cm3"/>
+    <nuclide name="Fe54" wo="5.044870827810846"/>
+    <nuclide name="Fe56" wo="82.12320611741701"/>
+    <nuclide name="Fe57" wo="1.9305053931796552"/>
+    <nuclide name="Fe58" wo="0.2614176615924942"/>
+    <nuclide name="C12" wo="0.10868075295942553"/>
+    <nuclide name="C13" wo="0.0013192470405744823"/>
+    <nuclide name="Cr50" wo="0.3756317960446482"/>
+    <nuclide name="Cr52" wo="7.532942611621131"/>
+    <nuclide name="Cr53" wo="0.8706228136807665"/>
+    <nuclide name="Cr54" wo="0.22080277865345527"/>
+    <nuclide name="W180" wo="0.0012920330845320965"/>
+    <nuclide name="W182" wo="0.2884975442391606"/>
+    <nuclide name="W183" wo="0.15664662781291616"/>
+    <nuclide name="W184" wo="0.33724011296121414"/>
+    <nuclide name="W186" wo="0.3163236819021772"/>
+    <nuclide name="Mn55" wo="0.4"/>
+    <nuclide name="N14" wo="0.029882316399278866"/>
+    <nuclide name="N15" wo="0.00011768360072113027"/>
+  </material>
+  <material id="10" name="Li4SiO4(0.20197462102517502)-Beryllium(0.587027464482679)-UO2(0.512)-SiC(0.488)(0.21099791449214597)(0.5094)-euroferwall(0.1176)-Helium(0.373)" depletable="true">
+    <density value="2.426065097492659" units="g/cm3"/>
+    <nuclide name="Li6" ao="0.04195346519633742"/>
+    <nuclide name="Li7" ao="0.027968976797558286"/>
+    <nuclide name="Si28" ao="0.05171435355488949"/>
+    <nuclide name="Si29" ao="0.0026259073217441095"/>
+    <nuclide name="Si30" ao="0.0017310098410892526"/>
+    <nuclide name="O16" ao="0.10911702160111844"/>
+    <nuclide name="O17" ao="4.145398680302301e-05"/>
+    <nuclide name="O18" ao="0.0002187982986827631"/>
+    <nuclide name="Be9" ao="0.5506068608690732"/>
+    <nuclide name="U234" ao="1.2678161814232172e-06"/>
+    <nuclide name="U235" ao="0.00014184338932594697"/>
+    <nuclide name="U238" ao="0.01958365502999414"/>
+    <nuclide name="U236" ao="6.497108527626203e-07"/>
+    <nuclide name="C12" ao="0.03892902291396141"/>
+    <nuclide name="C13" ao="0.00043608668412763044"/>
+    <nuclide name="Fe54" ao="0.007909079573071865"/>
+    <nuclide name="Fe56" ao="0.12415563509797024"/>
+    <nuclide name="Fe57" ao="0.002867295058227422"/>
+    <nuclide name="Fe58" ao="0.00038158433526197874"/>
+    <nuclide name="Cr50" ao="0.0006359821823669421"/>
+    <nuclide name="Cr52" ao="0.012264283332184973"/>
+    <nuclide name="Cr53" ao="0.0013906712807061719"/>
+    <nuclide name="Cr54" ao="0.0003461675169845381"/>
+    <nuclide name="W180" ao="6.071743234139273e-07"/>
+    <nuclide name="W182" ao="0.00013408432975390896"/>
+    <nuclide name="W183" ao="7.240553806711083e-05"/>
+    <nuclide name="W184" ao="0.00015503184391168944"/>
+    <nuclide name="W186" ao="0.00014384971678881627"/>
+    <nuclide name="Mn55" ao="0.0006157018914650774"/>
+    <nuclide name="N14" ao="0.00018045734252875758"/>
+    <nuclide name="N15" ao="6.634454463528292e-07"/>
+    <nuclide name="He3" ao="7.352254658402815e-09"/>
+    <nuclide name="He4" ao="0.0036761199769467495"/>
+  </material>
+</materials>
