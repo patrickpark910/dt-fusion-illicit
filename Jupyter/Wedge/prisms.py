@@ -630,5 +630,5 @@ if __name__ == '__main__':
 
     for case in ['C',]:
         for fertile_kgm3 in [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99] : #  [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]   # [0.10,60,150]
-            current_run = Prism(case, fertile_kgm3,)
+            current_run = Prism(case, fertile_kgm3, isotope='Th232')
             current_run.openmc(debug=True, write=True, run=True)
