@@ -148,9 +148,14 @@ def plot_cum_norm_histogram():
     label = sub['fertile_kg/m3'].iloc[0]
     _, _, col500 = ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='deeppink', label=fr'{label} kg$/$m$^3$',lw=lw)
 
+    sub   = df[df['fertile_kg/m3'] == 750.0]
+    label = sub['fertile_kg/m3'].iloc[0]
+    _, _, col750 = ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='lightpink', label=fr'{label} kg$/$m$^3$',lw=lw)
+
+
     sub   = df[df['fertile_kg/m3'] == 999.99]
     label = 1000 # sub['fertile_kg/m3'].iloc[0]
-    _, _, col1000 = ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='lightpink', label=fr'{label} kg$/$m$^3$',lw=lw)
+    _, _, col1000 = ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='aqua', label=fr'{label} kg$/$m$^3$',lw=lw)
 
 
     ax.xaxis.set_ticks_position('both')
@@ -165,7 +170,7 @@ def plot_cum_norm_histogram():
     fig.tight_layout()
 
     # black red orange green blue purple pink
-    leg = ax.legend(handles=[col15[0],col30[0], col60[0], col90[0], col120[0], col150[0], col250[0], col500[0], col1000[0]], 
+    leg = ax.legend(handles=[col15[0],col30[0], col60[0], col90[0], col120[0], col150[0], col250[0], col500[0], col750[0], col1000[0]], 
                     title=title, fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1, loc="lower right")
     leg.get_frame().set_linewidth(0.5) 
 
