@@ -5,10 +5,10 @@
 FERTILE_KGM3 = [0, 0.1, 0.5, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99] #  250, 500, 750, 1000]
 BLANKETS = ['ARC','ARCB','FLiBe','DCLL','HCPB']
 ISOTOPES = ['U238', 'Th232']
-BLANKET_COVERAGE = 0.8 # Assume blanket covers 80% of plasma surface, rest for divertor
+BLANKET_COVERAGE = 0.88 # Assume blanket covers 80% of plasma surface, rest for divertor
 TEMP_K = 900 # [K] ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
 
-N_PARTICLES, N_CYCLES = int(1e5), 20
+N_PARTICLES, N_CYCLES = int(5e5), 20
 
 """ Material parameters of breeders """
 

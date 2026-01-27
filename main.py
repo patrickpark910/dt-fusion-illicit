@@ -85,7 +85,8 @@ def main():
                         else:
                             current_run.compile()
                             current_run.openmc()
-                            current_run.extract_tallies()
+                        
+                        current_run.extract_tallies()
 
                 print(f"Collating tallies for {blanket} {fertile_isotope} at {current_run.temp_k}")
                 collate_tallies(blanket, fertile_isotope, current_run.temp_k, current_run.breeder_volume)
@@ -166,6 +167,30 @@ def collate_tallies(blanket, fertile_isotope, temp_k, vol_m3):
         tbr  = df[ df['cell']=='total' ]['tbr'].values[0]
         pu   = df[ df['cell']=='total' ][f'{fissile_isotope}_kg/yr'].values[0]
 
+        li6_stdev  = df[ df['cell']=='total' ]['Li6(n,t)_stdev'].values[0]
+        li7_stdev  = df[ df['cell']=='total' ]['Li7(n,t)_stdev'].values[0]
+        u238_stdev = df[ df['cell']=='total' ][f'{fertile_isotope}(n,g)_stdev'].values[0]
+        tbr_stdev  = df[ df['cell']=='total' ]['tbr_stdev'].values[0]
+        pu_stdev   = df[ df['cell']=='total' ][f'{fissile_isotope}_kg/yr_stdev'].values[0]
+
+        df_all.loc[len(df_all)] = {'filename': folder,
+                              'fertile_kg/m3': fertile,
+                                 'fertile_mt': mt,
+                                   'Li6(n,t)': li6,
+                             'Li6(n,t)_stdev': li6_stdev,
+                                  'Li7(n,Xt)': li7,
+                            'Li7(n,Xt)_stdev': li7_stdev,
+                    f'{fertile_isotope}(n,g)': u238,
+              f'{fertile_isotope}(n,g)_stdev': u238_stdev,
+                                        'tbr': tbr,
+                                  'tbr_stdev': tbr_stdev,
+                   f'{fissile_isotope}_kg/yr': pu,
+             f'{fissile_isotope}_kg/yr_stdev': pu_stdev, }
+
+        dst = f"./Figures/Data/{blanket}_{fertile_isotope}_rxns_{temp_k}K.csv"
+        df_all.to_csv(dst, index=False)
+
+
         cols = ["energy low [eV]", "energy high [eV]", "energy mid [eV]", "mean"]     
 
         # Group by energy midpoint and sum mean values across all cells while preserving energy bin boundaries  
@@ -208,17 +233,8 @@ def collate_tallies(blanket, fertile_isotope, temp_k, vol_m3):
         df_ng_collated.to_csv(f"./Figures/Data/{blanket}_{fertile_isotope}_n-gamma_{temp_k}K.csv",index=False)
         df_flux_collated.to_csv(f"./Figures/Data/{blanket}_{fertile_isotope}_flux_{temp_k}K.csv",index=False)
 
-        df_all.loc[len(df_all)] = {'filename': folder,
-                              'fertile_kg/m3': fertile,
-                                 'fertile_mt': mt,
-                                   'Li6(n,t)': li6,
-                                  'Li7(n,Xt)': li7,
-                    f'{fertile_isotope}(n,g)': u238,
-                                        'tbr': tbr,
-                   f'{fissile_isotope}_kg/yr': pu }
 
-    dst = f"./Figures/Data/{blanket}_{fertile_isotope}_rxns_{temp_k}K.csv"
-    df_all.to_csv(dst, index=False)
+    
     print(f"{C.GREEN}Comment.{C.END} Collated tallies for {blanket} at {temp_k} K to: {dst}")
 
 

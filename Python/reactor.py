@@ -393,13 +393,15 @@ class Reactor(ABC):
         U238_ng_list      = U238[U238['score'] == '(n,gamma)'][['mean']]['mean'].tolist()
         U238_ng_err_list  = U238[U238['score'] == '(n,gamma)'][['std. dev.']]['std. dev.'].tolist()
 
-        # Plutonium kg per year
-        fissile_per_yr_list = []
-        for Pu_per_srcn in U238_ng_list:
-            if self.fertile_isotope == 'U238':
-                fissile_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_PU239 / AVO / 1e3) # kg/yr
-            elif self.fertile_isotope == 'Th232':
-                fissile_per_yr_list.append( Pu_per_srcn * NPS_FUS * SEC_PER_YR * AMU_U233 / AVO / 1e3) # kg/yr
+
+        # Determine the atomic mass based on the isotope
+        amu = AMU_PU239 if self.fertile_isotope == 'U238' else AMU_U233
+
+        # Scaling factor
+        scaling_factor = NPS_FUS * SEC_PER_YR * amu / AVO / 1e3  # kg/yr
+
+        fissile_per_yr_list = [Pu_per_srcn * scaling_factor for Pu_per_srcn  in U238_ng_list]
+        fissile_per_yr_err_list = [err * scaling_factor for err in U238_ng_err_list]
 
 
         """Create list of cell IDs randomly assigned by OpenMC to match mtu loading to cell ID"""
@@ -414,15 +416,18 @@ class Reactor(ABC):
                            'Li7(n,t)_stdev'    : Li7_nt_err_list,
                            'tbr'               : tbr_list,
                            'tbr_stdev'         : tbr_err_list,
-                           f'{self.fertile_isotope}(n,fis)'       : Li7_nt_list,
-                           f'{self.fertile_isotope}(n,fis)_stdev' : U238_fis_list,
+                           f'{self.fertile_isotope}(n,fis)'       : U238_fis_list,
+                           f'{self.fertile_isotope}(n,fis)_stdev' : U238_fis_err_list,
                            f'{self.fertile_isotope}(n,g)'         : U238_ng_list,
                            f'{self.fertile_isotope}(n,g)_stdev'   : U238_ng_err_list,
-                           f'{self.fissile_isotope}_kg/yr'        : fissile_per_yr_list,   })
+                           f'{self.fissile_isotope}_kg/yr'        : fissile_per_yr_list,
+                           f'{self.fissile_isotope}_kg/yr_stdev'  : fissile_per_yr_err_list,   })
 
         totals = df.sum(numeric_only=True)
         totals['cell'] = 'total'
         df = pd.concat([df, pd.DataFrame([totals])], ignore_index=True)
+
+        print(df)
         
         df.to_csv(f'./{self.path}/tallies_summary.csv', index=False)
         

@@ -19,10 +19,10 @@ def plot_all():
     combined_plot = Plot(save=True, show=True)
     
     """ Pick which one to plot by uncommenting """
-    # combined_plot.plot_tbr()
+    combined_plot.plot_tbr()
     # combined_plot.plot_pu_per_yr()
     # combined_plot.plot_cum_norm_histogram()
-    combined_plot.plot_flux()
+    # combined_plot.plot_flux()
 
     print("All plots completed and saved.")
 
@@ -170,88 +170,75 @@ class Plot:
     def plot_tbr(self):
         print(f"\nPlotting tritium breeding ratio vs. fertile density...")
 
-        # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
-        x6, y6 =   self.hcpb_u_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * (  self.hcpb_u_rr_df['Li6(n,t)'] +   self.hcpb_u_rr_df['Li7(n,Xt)'] )
-        x5, y5 =  self.hcpb_th_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * ( self.hcpb_th_rr_df['Li6(n,t)'] +  self.hcpb_th_rr_df['Li7(n,Xt)'] )
-        x4, y4 =   self.dcll_u_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * (  self.dcll_u_rr_df['Li6(n,t)'] +   self.dcll_u_rr_df['Li7(n,Xt)'] )
-        x3, y3 =  self.dcll_th_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * ( self.dcll_th_rr_df['Li6(n,t)'] +  self.dcll_th_rr_df['Li7(n,Xt)'] )
-        x2, y2 =  self.flibe_u_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * ( self.flibe_u_rr_df['Li6(n,t)'] +  self.flibe_u_rr_df['Li7(n,Xt)'] )
-        x1, y1 = self.flibe_th_rr_df['fertile_kg/m3'], BLANKET_COVERAGE * (self.flibe_th_rr_df['Li6(n,t)'] + self.flibe_th_rr_df['Li7(n,Xt)'] )
+        datasets = [ (self.flibe_th_rr_df, 'FLiBe-ThF$_4$', '#66b420', '+', '--', 4),
+                     (self.flibe_u_rr_df,  'FLiBe-UF$_4$',  '#66b420', 'o', '-',  4),
+                     (self.dcll_th_rr_df,  'DCLL-ThO$_2$',  '#0047ba', 'x', '--', 2),
+                     (self.dcll_u_rr_df,   'DCLL-UO$_2$',   '#0047ba', '^', '-',  2),
+                     (self.hcpb_th_rr_df,  'HCPB-ThO$_2$',  '#b41f24', '1', '--', 2),
+                     (self.hcpb_u_rr_df,   'HCPB-UO$_2$',   '#b41f24', 's', '-',  2)
+                   ]
 
-        # AkimaInterpolation ripped from my ELWR paper --ppark 2025-08-06
-        x_fine = np.linspace(x1.min(), x1.max(), 300) # Evaluate on a fine grid
-        y_akima1 = Akima1DInterpolator(x1, y1)(x_fine)
-        y_akima2 = Akima1DInterpolator(x2, y2)(x_fine)
-        y_akima3 = Akima1DInterpolator(x3, y3)(x_fine)
-        y_akima4 = Akima1DInterpolator(x4, y4)(x_fine)
-        y_akima5 = Akima1DInterpolator(x5, y5)(x_fine)
-        y_akima6 = Akima1DInterpolator(x6, y6)(x_fine)
+        view_limits = [
+            {'xlim': (-5, 155),   'xmax': 150, 'x_major': 15,  'x_minor': 5,  
+             'ylim': (0.94, 1.26), 'suffix': '0150kgm3'},
+            {'xlim': (-25, 1025), 'xmax':1000, 'x_major': 200, 'x_minor': 100, 
+             'ylim': (0.74, 1.31), 'suffix': '1000kgm3'}
+        ]
 
-        for y in [y_akima1,y_akima2,y_akima3,y_akima4,y_akima5,y_akima6]: # y_akima5,
-            for i in range(1, len(y)):
-                if y[i] > y[i-1]:
-                    y[i] = y[i-1] # adjust the current point to ensure it's not greater than the previous point
+        for v in view_limits:
 
+            plt.figure(figsize=(8, 6))
+            ax = plt.gca()
+            ax.axhspan(0, 1.00, color='#e0ded8')
 
-        plt.figure(figsize=(7.5,5))
+            # Re-evaluate x_fine based on the current view's x-limits to ensure smooth lines
+            x_fine = np.linspace(0, v['xmax'], 500)
 
-        # Tick grid
-        ax = plt.gca()
+            for df, label, color, marker, ls, degree in datasets:
+                x = df['fertile_kg/m3']
+                y = BLANKET_COVERAGE * (df['Li6(n,t)'] + df['Li7(n,Xt)'])
+                
+                coeffs = np.polyfit(x, y, degree)
+                poly_func = np.poly1d(coeffs)
+                y_fine = poly_func(x_fine)
+                
+                # Plot actual data
+                plt.scatter(x, y, marker=marker, s=50, color=color, zorder=3)
+                
+                # Plot interpolation
+                plt.plot(x_fine, y_fine, ls, linewidth=1, color=color, label=label)
 
-        # ax.axhspan(.9,1, color='#e0ded8') # color='#e0ded8', # alpha=0.3)
-        ax.axhspan(0,1.00, color='#e0ded8') # color='#f7f7f6' # , alpha=0.3)
+            # Labeling
+            plt.xlabel(r'Fertile isotope density in blanket [kg$/$m$^3$]')
+            plt.ylabel('Tritium breeding ratio')
 
-        plt.scatter(x6, y6, marker='s', s=40, color='#b41f24') #  PB-UO2
-        plt.scatter(x5, y5, marker='1', s=70, color='#b41f24') #  PB-ThO2
-        plt.scatter(x4, y4, marker='^', s=40, color='#0047ba') #  LL-UO2
-        plt.scatter(x3, y3, marker='x', s=50, color='#0047ba') #  LL-ThO2
-        plt.scatter(x2, y2, marker='o', s=30, color='#66b420')   #  FLiBe-UF4
-        plt.scatter(x1, y1, marker='+', s=60, color='#66b420')   #  FLiBe-ThF4 
+            # Set Dynamic Limits and Locators
+            plt.xlim(v['xlim'])
+            plt.ylim(v['ylim']) 
+            
+            ax.xaxis.set_ticks_position('both')
+            ax.xaxis.set_major_locator(MultipleLocator(v['x_major']))
+            ax.xaxis.set_minor_locator(MultipleLocator(v['x_minor']))
+            
+            ax.yaxis.set_ticks_position('both')
+            ax.yaxis.set_major_locator(MultipleLocator(0.05))
+            ax.yaxis.set_minor_locator(MultipleLocator(0.01))
+            
+            ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
+            ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
 
-        plt.plot(x_fine, y_akima6, '-',   linewidth=1, color='#b41f24',)   #  PB-UO2
-        plt.plot(x_fine, y_akima5, '--',  linewidth=1, color='#b41f24',)   #  PB-ThO2
-        plt.plot(x_fine, y_akima4, '-',   linewidth=1, color='#0047ba',)   #  LL-UO2
-        plt.plot(x_fine, y_akima3, '--',  linewidth=1, color='#0047ba',)   #  LL-ThO2
-        plt.plot(x_fine, y_akima2, '-',   linewidth=1, color='#66b420', )    #  FLiBe-UF4
-        plt.plot(x_fine, y_akima1, '--',  linewidth=1, color='#66b420', )    #  FLiBe-ThF4 
+            plt.tight_layout()
+            leg = plt.legend(fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=3)
+            leg.get_frame().set_linewidth(0.5) 
 
-        # Dummy plots for legend -- bit of a hack lmao -- ppark
-        plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'LL-UO$_2$')     #  blue: #0047ba
-        plt.plot([9e8,9e9], [9e8,9e9], 'x--', markersize=7, linewidth=1, color='#0047ba', label=r'LL-ThO$_2$')    #  
-        plt.plot([9e8,9e9], [9e8,9e9], 's-',  markersize=5, linewidth=1, color='#b41f24', label=r'PB-UO$_2$')     #  red: #b41f24
-        plt.plot([9e8,9e9], [9e8,9e9], '1--', markersize=9, linewidth=1, color='#b41f24', label=r'PB-ThO$_2$')    # 
-        plt.plot([9e8,9e9], [9e8,9e9], 'o-',  markersize=5, linewidth=1, color='#66b420',   label=r'FLiBe-UF$_4$')  #  green: #66b420
-        plt.plot([9e8,9e9], [9e8,9e9], '+--', markersize=8, linewidth=1, color='#66b420',   label=r'FLiBe-ThF$_4$') #  
-        
-        
-        plt.title(r'TBRs going up to 1000 kg$/$m$^3$ (2025-10-28)') # Exclude title for production figs --ppark 2025-08-06
-        plt.xlabel(r'Fertile isotope density in blanket [kg$/$m$^3$]')
-        plt.ylabel('Tritium breeding ratio')
+            if self.save:
+                plt.savefig(f'./Figures/pdf/fig_tbr_{v["suffix"]}.pdf', bbox_inches='tight', format='pdf')
+                plt.savefig(f'./Figures/png/fig_tbr_{v["suffix"]}.png', bbox_inches='tight', format='png')
+                print(f"Exported TBR plot: fig_tbr_{v['suffix']}")
+            
+            if self.show: 
+                plt.show()
 
-        plt.xlim(-25,1025)  # plt.xlim(-5,165)
-        plt.ylim(.89,1.16)  # plt.ylim(0.98,1.42)
-        ax.xaxis.set_ticks_position('both')
-        ax.xaxis.set_major_locator(MultipleLocator(100))
-        ax.xaxis.set_minor_locator(MultipleLocator(50))
-        ax.yaxis.set_ticks_position('both')
-        ax.yaxis.set_major_locator(MultipleLocator(0.05))
-        ax.yaxis.set_minor_locator(MultipleLocator(0.01))
-        ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
-        ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
-
-        plt.tight_layout()
-
-        leg = plt.legend(fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=3)
-        leg.get_frame().set_linewidth(0.5) 
-
-        if self.save:
-            plt.savefig(f'./Figures/pdf/fig_tbr_1000kgm3_ALX.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/png/fig_tbr_1000kgm3_ALX.png', bbox_inches='tight', format='png')
-            print(f"Exported tritium breeding ratio plots.")
-        else:
-            print(f"Did not export tritium breeding ratio plots.")
-
-        if self.show: plt.show()
         plt.close('all')
 
 
