@@ -79,7 +79,10 @@ class Plot:
         self.flibe_th_ng_df = pd.read_csv('./Figures/Data/FLiBe_Th232_n-gamma_900K.csv')
         self.dcll_u_ng_df   = pd.read_csv('./Figures/Data/DCLL_U238_n-gamma_900K.csv')
         self.dcll_th_ng_df  = pd.read_csv('./Figures/Data/DCLL_Th232_n-gamma_900K.csv')
-        self.hcpb_u_ng_df   = pd.read_csv('./Figures/data/HCPB_U238_n-gamma_900K.csv') 
+        # CHANGE TO PRISM
+        # self.hcpb_u_ng_df   = pd.read_csv('./Figures/data/HCPB_U238_n-gamma_900K.csv') 
+        self.hcpb_u_ng_df   = pd.read_csv('./Figures/data/prism_C_U238_n-gamma_900K.csv') 
+        # #####
         self.hcpb_th_ng_df  = pd.read_csv('./Figures/data/HCPB_Th232_n-gamma_900K.csv') 
 
         self.flibe_u_flux_df  = pd.read_csv('./Figures/Data/FLiBe_U238_flux_900K.csv')
@@ -399,8 +402,9 @@ class Plot:
         u238_mxs_shifted = (u238_mxs - np.min(u238_mxs)) * 0.8 / (np.max(u238_mxs) - np.min(u238_mxs)) + 0.1
         th232_mxs_shifted = (th232_mxs - np.min(th232_mxs)) * 0.8 / (np.max(th232_mxs) - np.min(th232_mxs)) + 0.1
 
-        titles = [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$", r"HCPB-UO$_2$", r"HCPB-ThO$_2$", r"DCLL-UO$_2$", r"DCLL-ThO$_2$",]
-        dfs    = [self.flibe_u_eb_df, self.flibe_th_eb_df, self.hcpb_u_eb_df, self.hcpb_th_eb_df, self.dcll_u_eb_df, self.dcll_th_eb_df,]
+        # CHANGE FOR HCPB WEDGE URANIUM 
+        titles = [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$", r"HCPB-UO$_2$ Prism C", r"HCPB-ThO$_2$", r"DCLL-UO$_2$", r"DCLL-ThO$_2$",]
+        dfs    = [self.flibe_u_ng_df, self.flibe_th_ng_df, self.hcpb_u_ng_df, self.hcpb_th_ng_df, self.dcll_u_ng_df, self.dcll_th_ng_df,]
 
         for i in range(3):
             for j in range(2):
@@ -416,13 +420,10 @@ class Plot:
                     thorium,  = ax.plot(th232_energy, th232_mxs_shifted, color='gray', linewidth=0.7, alpha=0.4, label=r'Th232 (n, $\gamma$)')
                     thorium_leg = ax.legend(handles=[thorium], loc='upper left', edgecolor='gray', frameon=True, framealpha=.75)
                     ax.add_artist(thorium_leg)
-        titles = [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$", r"PB-UO$_2$", r"PB-ThO$_2$", r"LL-UO$_2$", r"LL-ThO$_2$",]
-        dfs    = [self.flibe_u_ng_df, self.flibe_th_ng_df, self.hcpb_u_ng_df, self.hcpb_th_ng_df, self.dcll_u_ng_df, self.dcll_th_ng_df,]
 
         for ax, df, title in zip(axes.flatten(), dfs, titles):
-
             # Filter out MT_fertile loadings we want to plot 
-            df = df[df["fertile_kg/m3"].isin([30,60,90,120,150])]
+            df = df[df["fertile_kg/m3"].isin([1.5,15,30,60,90,120,150,])]
 
             # Compute sum of 'mean' for each MT_fertile. 
             df_mean = df.groupby("fertile_kg/m3")["mean"].sum().to_frame() # pd.DataFrame(, columns=["MT_fertile","sum"]) # 2-col df, colA = MT_fertile values, colB = sum of 'mean'
@@ -432,11 +433,14 @@ class Plot:
             df['norm_mean'] = df['mean'] / df['sum']
 
             # df.to_csv('test.csv',index=False)
-            
 
             # Create bin edges from low and high energy boundaries
             edges = np.unique(np.concatenate([df['energy low [eV]'].values, df['energy high [eV]'].values]))
             bins  = np.sort(df['energy mid [eV]'].unique())
+            
+            sub   = df[df['fertile_kg/m3'] == 15]
+            label = sub['fertile_kg/m3'].iloc[0]
+            _, _, black = ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='black', label=fr'{label} kg$/$m$^3$')
 
             sub   = df[df['fertile_kg/m3'] == 30]
             label = int(round(sub['fertile_kg/m3'].iloc[0], -1))
@@ -457,7 +461,7 @@ class Plot:
             sub = df[df['fertile_kg/m3'] == 150]
             label = int(round(sub['fertile_kg/m3'].iloc[0], -1))
             _, _, purple = ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#b367bd', label=fr'{label} kg$/$m$^3$')
-            
+
             ax.xaxis.set_ticks_position('both')
             ax.yaxis.set_ticks_position('both')
             ax.yaxis.set_minor_locator(MultipleLocator(0.05))
@@ -468,13 +472,13 @@ class Plot:
             ax.set_xlim(0.67*1e0, 1.5*1e7)
             ax.set_ylim(-0.03, 1.03)
             fig.tight_layout()
-
-            leg = ax.legend(handles=[red[0], orange[0], green[0], blue[0], purple[0]], title=title, fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1, loc="lower right")
+            # black red orange green blue purple pink
+            leg = ax.legend(handles=[black[0], red[0], orange[0], green[0], blue[0], purple[0]], title=title, fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1, loc="lower right")
             leg.get_frame().set_linewidth(0.5) 
 
         if self.save:
-            plt.savefig(f'./Figures/pdf/fig_cum_norm_histogram_new.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/png/fig_cum_norm_histogram_new.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/pdf/fig_cum_norm_histogram_prism.pdf', bbox_inches='tight', format='pdf')
+            plt.savefig(f'./Figures/png/fig_cum_norm_histogram_prism.png', bbox_inches='tight', format='png')
             print(f"Exported cumulative normalized histogram plots.")
         else:
             print(f"Did not export cumulative normalized histogram plot.")
