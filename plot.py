@@ -170,43 +170,82 @@ class Plot:
     def plot_tbr(self):
         print(f"\nPlotting tritium breeding ratio vs. fertile density...")
 
-        datasets = [ (self.flibe_th_rr_df, 'FLiBe-ThF$_4$', '#66b420', '+', '--', 4),
-                     (self.flibe_u_rr_df,  'FLiBe-UF$_4$',  '#66b420', 'o', '-',  4),
-                     (self.dcll_th_rr_df,  'DCLL-ThO$_2$',  '#0047ba', 'x', '--', 2),
-                     (self.dcll_u_rr_df,   'DCLL-UO$_2$',   '#0047ba', '^', '-',  2),
-                     (self.hcpb_th_rr_df,  'HCPB-ThO$_2$',  '#b41f24', '1', '--', 2),
-                     (self.hcpb_u_rr_df,   'HCPB-UO$_2$',   '#b41f24', 's', '-',  2)
+        # -------------------------------------------------------------
+        # Weigh HCPB TBR by correction factor derived from wedge models
+        # -------------------------------------------------------------
+
+        df_u    = pd.DataFrame(HCPB_CONV_U_TBR, columns=['fertile_kgm3', 'ratio'])
+        poly_u  = np.poly1d( np.polyfit( df_u['fertile_kgm3'], df_u['ratio'], 4 ) )
+        
+        df_th   = pd.DataFrame(HCPB_CONV_TH_TBR, columns=['fertile_kgm3', 'ratio'])
+        poly_th = np.poly1d( np.polyfit( df_th['fertile_kgm3'], df_th['ratio'], 4 ) )
+
+        x_fine  = np.linspace(df_u['fertile_kgm3'].min(), df_u['fertile_kgm3'].max(), 500)
+
+        # Apply interpolation to the Uranium DataFrame
+        hcpb_u_rr_df_corr = self.hcpb_u_rr_df
+        hcpb_u_rr_df_corr['tbr'] = hcpb_u_rr_df_corr['tbr'] * poly_u(hcpb_u_rr_df_corr['fertile_kg/m3'])
+
+        # Apply interpolation to the Thorium DataFrame (using the Thorium interpolator)
+        hcpb_th_rr_df_corr = self.hcpb_th_rr_df
+        hcpb_th_rr_df_corr['tbr'] = hcpb_th_rr_df_corr['tbr'] * poly_th(hcpb_th_rr_df_corr['fertile_kg/m3'])
+
+
+        # -------------------------------------------------------------
+        # Plot them!
+        # -------------------------------------------------------------
+
+        # Load the dataframes to plot, label, color, marker, markersize, linestyle, and polynomial fit
+        datasets = [ (self.flibe_th_rr_df, r'FLiBe-ThF$_4$', '#66b420', '+', 8, '--', 4),
+                     (self.flibe_u_rr_df,  r'FLiBe-UF$_4$',  '#66b420', 'o', 5, '-',  6),
+                     (hcpb_th_rr_df_corr,  r'HCPB-ThO$_2$',  '#b41f24', '1', 7, '--', 2),
+                     (hcpb_u_rr_df_corr,   r'HCPB-UO$_2$',   '#b41f24', 's', 6, '-',  2),
+                     (self.dcll_th_rr_df,  r'DCLL-ThO$_2$',  '#0047ba', 'x', 6, '--', 2),
+                     (self.dcll_u_rr_df,   r'DCLL-UO$_2$',   '#0047ba', '^', 8, '-',  2),
                    ]
 
-        view_limits = [
-            {'xlim': (-5, 155),   'xmax': 150, 'x_major': 15,  'x_minor': 5,  
-             'ylim': (0.94, 1.26), 'suffix': '0150kgm3'},
-            {'xlim': (-25, 1025), 'xmax':1000, 'x_major': 200, 'x_minor': 100, 
-             'ylim': (0.74, 1.31), 'suffix': '1000kgm3'}
-        ]
+        # Set view limits for each of the plots
+        view_limits = [ # Zoomed in on (0, 155) fertile kg/m3
+                        {'xlim': (-5, 155),   'xmax': 150, 'x_major': 15,  'x_minor': 5,  
+                         'ylim': (0.94, 1.26), 'suffix': '0150kgm3'},
+                        # Zoomed out to (0, 1000) fertile kg/m3
+                        {'xlim': (-25, 1025), 'xmax':1000, 'x_major': 200, 'x_minor': 100, 
+                         'ylim': (0.74, 1.26), 'suffix': '1000kgm3'} ]
+
 
         for v in view_limits:
 
             plt.figure(figsize=(8, 6))
             ax = plt.gca()
-            ax.axhspan(0, 1.00, color='#e0ded8')
+            ax.axhspan(0, 1.00, color='#e0ded8')            
 
-            # Re-evaluate x_fine based on the current view's x-limits to ensure smooth lines
-            x_fine = np.linspace(0, v['xmax'], 500)
+            for df, label, color, marker, markersize, ls, degree in datasets:
 
-            for df, label, color, marker, ls, degree in datasets:
-                x = df['fertile_kg/m3']
-                y = BLANKET_COVERAGE * (df['Li6(n,t)'] + df['Li7(n,Xt)'])
+                # Select a subset of fertile kg/m3 to SHOW to avoid cluttering the low end with markers
+                selected = [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99]
+                mask = df['fertile_kg/m3'].apply(lambda d: any(np.isclose(d, s) for s in selected))
+                df_filtered = df[mask]
+
+                x_filtered = df_filtered['fertile_kg/m3']
+                y_filtered = BLANKET_COVERAGE * df_filtered['tbr']
+
+                # But still fit the polynomial to all of the data you did compute
+                x_fit = df['fertile_kg/m3']
+                y_fit = BLANKET_COVERAGE * df['tbr']
                 
-                coeffs = np.polyfit(x, y, degree)
-                poly_func = np.poly1d(coeffs)
-                y_fine = poly_func(x_fine)
+                # coeffs    = np.polyfit(x_fit, y_fit, degree)
+                # poly_func = np.poly1d(coeffs)
+                x_fine = np.linspace(0, v['xmax'], 500)
+                y_fine    = Akima1DInterpolator(x_fit, y_fit, method='makima')(x_fine) # poly_func(x_fine)
                 
-                # Plot actual data
-                plt.scatter(x, y, marker=marker, s=50, color=color, zorder=3)
+                # Plot filtered data
+                plt.scatter(x_filtered, y_filtered, marker=marker, s=markersize*8, color=color, zorder=3)
                 
                 # Plot interpolation
-                plt.plot(x_fine, y_fine, ls, linewidth=1, color=color, label=label)
+                plt.plot(x_fine, y_fine, ls, linewidth=1, color=color)
+
+                # Dummy plots for legend -- bit of a hack lmao -- ppark
+                plt.plot([9e8,9e9], [9e8,9e9], marker+ls, markersize=markersize, linewidth=1, color=color, label=label)
 
             # Labeling
             plt.xlabel(r'Fertile isotope density in blanket [kg$/$m$^3$]')

@@ -48,7 +48,6 @@ class DCLL(Reactor):
         # ------------------------------------------------------------------
 
         self.firstwall = openmc.Material(name='firstwall', temperature=self.temp_k)
-        # self.firstwall.set_density('g/cm3',19.0)
         # self.firstwall.add_element('O',5/1e6,percent_type='wo')
         # self.firstwall.add_element('N',5/1e6,percent_type='wo')
         # self.firstwall.add_element('C',5/1e6,percent_type='wo')
@@ -60,7 +59,8 @@ class DCLL(Reactor):
         # self.firstwall.add_element('Cu',0.5/1e6,percent_type='wo')
         # self.firstwall.add_element('Fe',5/1e6,percent_type='wo')
         # self.firstwall.add_element('W',1-(5+5+5+4+2.5+3+0.5+0.5+0.5+5)/1e6,percent_type='wo')
-        self.firstwall.set_density('atom/b-cm', 0.06322200000)  # from Glaser et al. (2025) MCNP = 19.3 g/cm3
+        self.firstwall.set_density('g/cm3',19.3)
+        # self.firstwall.set_density('atom/b-cm', 0.06322200000)  # from Glaser et al. (2025) MCNP = 19.3 g/cm3
         self.firstwall.add_element('W',1)
         
 
@@ -79,7 +79,8 @@ class DCLL(Reactor):
         self.f82h.add_element('W' ,  1.9400, percent_type='wo')
         self.f82h.add_element('V' ,  0.2000, percent_type='wo')
         self.f82h.add_element('N' ,  0.0014, percent_type='wo')
-        self.f82h.set_density('atom/b-cm', 0.08365243600)  # from Glaser et al. (2025) MCNP -- 7.887 g/cm3 @ 293 K
+        self.f82h.set_density('g/cm3', 7.78)
+        # self.f82h.set_density('atom/b-cm', 0.08365243600)  # from Glaser et al. (2025) MCNP -- 7.887 g/cm3 @ 293 K
 
 
         # ------------------------------------------------------------------
@@ -88,7 +89,8 @@ class DCLL(Reactor):
 
         # Helium-4 gas 
         he = openmc.Material(name='helium') 
-        he.set_density('atom/b-cm', 0.00049800000)  # from Glaser et al. (2025) MCNP -- 0.0033 g/cm3 @ 293 K
+        he.set_density('g/cm3', 0.004)
+        # he.set_density('atom/b-cm', 0.00049800000)  # from Glaser et al. (2025) MCNP -- 0.0033 g/cm3 @ 293 K
         he.add_element('He', 1) 
 
         self.coolant = openmc.Material.mix_materials([self.f82h, he], [0.170, 0.830], 'vo')
@@ -102,7 +104,7 @@ class DCLL(Reactor):
         # ------------------------------------------------------------------
         
         self.divider = openmc.Material.mix_materials([self.f82h, he], [0.512, 0.488], 'vo')
-        self.divider.set_density('atom/b-cm', 0.04312289441)
+        # self.divider.set_density('atom/b-cm', 0.04312289441)
         self.divider.temperature = self.temp_k
         self.divider.name        = "divider (51.2 vol% F82H, 48.8 vol% He-4)"
 
@@ -112,7 +114,7 @@ class DCLL(Reactor):
         # ------------------------------------------------------------------
 
         self.manifold = openmc.Material.mix_materials([self.f82h, he], [0.453, 0.547], 'vo')
-        self.manifold.set_density('atom/b-cm', 0.03822271948)
+        # self.manifold.set_density('atom/b-cm', 0.03822271948)
         self.manifold.temperature = self.temp_k
         self.manifold.name        = "inner manifold (45.3 vol% F82H, 54.7 vol% He-4)"
 
@@ -122,7 +124,7 @@ class DCLL(Reactor):
         # ------------------------------------------------------------------
 
         self.shield = openmc.Material.mix_materials([self.f82h, he], [0.80, 0.20], 'vo')
-        self.shield.set_density('atom/b-cm', 0.06704198900)  # from Glaser et al. (2025) MCNP
+        # self.shield.set_density('atom/b-cm', 0.06704198900)  # from Glaser et al. (2025) MCNP
         self.shield.temperature = self.temp_k
         self.shield.name = "steel shield (80 vol% F82H, 20 vol% He-4)"
 
