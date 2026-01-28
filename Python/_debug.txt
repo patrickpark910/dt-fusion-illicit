@@ -1,0 +1,317 @@
+(venv) patri@Delta-PC:/mnt/c/MCNP/emma-openmc$ python main.py -r tallies
+
+======== HCPB reactor - U238   0.00 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_000.00kgm3' exists: True
+========================================
+Case: 0 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  0.000000 vol%
+  vf_li_breeder_new   =  25.598744 vol%
+  vf_be_breeder_new   =  74.401256 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 0.000000 spheres/cm³ : in blanket : 0.000000 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238   0.10 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_000.10kgm3' exists: True
+========================================
+Case: 0.1 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  0.002125 vol%
+  vf_li_breeder_new   =  25.598200 vol%
+  vf_be_breeder_new   =  74.399675 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 0.040298 spheres/cm³ : in blanket : 0.040589 spheres/cm³
+
+/mnt/c/OpenMC/openmc/mixin.py:70: IDWarning: Another Cell instance already exists with id=10.
+  warn(msg, IDWarning)
+/mnt/c/OpenMC/openmc/mixin.py:70: IDWarning: Another Cell instance already exists with id=11.
+  warn(msg, IDWarning)
+/mnt/c/OpenMC/openmc/mixin.py:70: IDWarning: Another Cell instance already exists with id=21.
+  warn(msg, IDWarning)
+/mnt/c/OpenMC/openmc/mixin.py:70: IDWarning: Another Cell instance already exists with id=31.
+  warn(msg, IDWarning)
+/mnt/c/OpenMC/openmc/mixin.py:70: IDWarning: Another Cell instance already exists with id=22.
+  warn(msg, IDWarning)
+/mnt/c/OpenMC/openmc/mixin.py:70: IDWarning: Another Cell instance already exists with id=32.
+  warn(msg, IDWarning)
+/mnt/c/OpenMC/openmc/mixin.py:70: IDWarning: Another Cell instance already exists with id=23.
+  warn(msg, IDWarning)
+/mnt/c/OpenMC/openmc/mixin.py:70: IDWarning: Another Cell instance already exists with id=98.
+  warn(msg, IDWarning)
+/mnt/c/OpenMC/openmc/mixin.py:70: IDWarning: Another Cell instance already exists with id=97.
+  warn(msg, IDWarning)
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238   0.50 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_000.50kgm3' exists: True
+========================================
+Case: 0.5 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  0.010626 vol%
+  vf_li_breeder_new   =  25.596023 vol%
+  vf_be_breeder_new   =  74.393350 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 0.201488 spheres/cm³ : in blanket : 0.202947 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238   1.50 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_001.50kgm3' exists: True
+========================================
+Case: 1.5 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  0.031879 vol%
+  vf_li_breeder_new   =  25.590583 vol%
+  vf_be_breeder_new   =  74.377538 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 0.604463 spheres/cm³ : in blanket : 0.608841 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238   3.00 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_003.00kgm3' exists: True
+========================================
+Case: 3 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  0.063758 vol%
+  vf_li_breeder_new   =  25.582422 vol%
+  vf_be_breeder_new   =  74.353820 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 1.208926 spheres/cm³ : in blanket : 1.217683 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238   7.50 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_007.50kgm3' exists: True
+========================================
+Case: 7.5 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  0.159395 vol%
+  vf_li_breeder_new   =  25.557941 vol%
+  vf_be_breeder_new   =  74.282665 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 3.022315 spheres/cm³ : in blanket : 3.044206 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238  15.00 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_015.00kgm3' exists: True
+========================================
+Case: 15 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  0.318789 vol%
+  vf_li_breeder_new   =  25.517138 vol%
+  vf_be_breeder_new   =  74.164073 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 6.044631 spheres/cm³ : in blanket : 6.088413 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238  30.00 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_030.00kgm3' exists: True
+========================================
+Case: 30 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  0.637579 vol%
+  vf_li_breeder_new   =  25.435532 vol%
+  vf_be_breeder_new   =  73.926890 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 12.089262 spheres/cm³ : in blanket : 12.176825 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238  45.00 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_045.00kgm3' exists: True
+========================================
+Case: 45 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  0.956368 vol%
+  vf_li_breeder_new   =  25.353925 vol%
+  vf_be_breeder_new   =  73.689707 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 18.133893 spheres/cm³ : in blanket : 18.265238 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238  60.00 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_060.00kgm3' exists: True
+========================================
+Case: 60 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  1.275157 vol%
+  vf_li_breeder_new   =  25.272319 vol%
+  vf_be_breeder_new   =  73.452523 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 24.178523 spheres/cm³ : in blanket : 24.353650 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238  75.00 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_075.00kgm3' exists: True
+========================================
+Case: 75 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  1.593946 vol%
+  vf_li_breeder_new   =  25.190713 vol%
+  vf_be_breeder_new   =  73.215340 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 30.223154 spheres/cm³ : in blanket : 30.442063 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238  90.00 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_090.00kgm3' exists: True
+========================================
+Case: 90 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  1.912736 vol%
+  vf_li_breeder_new   =  25.109107 vol%
+  vf_be_breeder_new   =  72.978157 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 36.267785 spheres/cm³ : in blanket : 36.530475 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238 105.00 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_105.00kgm3' exists: True
+========================================
+Case: 105 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  2.231525 vol%
+  vf_li_breeder_new   =  25.027501 vol%
+  vf_be_breeder_new   =  72.740974 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 42.312416 spheres/cm³ : in blanket : 42.618888 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238 120.00 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_120.00kgm3' exists: True
+========================================
+Case: 120 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  2.550314 vol%
+  vf_li_breeder_new   =  24.945895 vol%
+  vf_be_breeder_new   =  72.503791 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 48.357047 spheres/cm³ : in blanket : 48.707301 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238 135.00 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_135.00kgm3' exists: True
+========================================
+Case: 135 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  2.869104 vol%
+  vf_li_breeder_new   =  24.864289 vol%
+  vf_be_breeder_new   =  72.266607 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 54.401678 spheres/cm³ : in blanket : 54.795713 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238 150.00 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_150.00kgm3' exists: True
+========================================
+Case: 150 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  3.187893 vol%
+  vf_li_breeder_new   =  24.782683 vol%
+  vf_be_breeder_new   =  72.029424 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 60.446309 spheres/cm³ : in blanket : 60.884126 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238 250.00 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_250.00kgm3' exists: True
+========================================
+Case: 250 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  5.313155 vol%
+  vf_li_breeder_new   =  24.238643 vol%
+  vf_be_breeder_new   =  70.448203 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 100.743848 spheres/cm³ : in blanket : 101.473543 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238 500.00 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_500.00kgm3' exists: True
+========================================
+Case: 500 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  10.626309 vol%
+  vf_li_breeder_new   =  22.878542 vol%
+  vf_be_breeder_new   =  66.495149 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 201.487695 spheres/cm³ : in blanket : 202.947086 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238 750.00 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_750.00kgm3' exists: True
+========================================
+Case: 750 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  15.939464 vol%
+  vf_li_breeder_new   =  21.518441 vol%
+  vf_be_breeder_new   =  62.542095 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 302.231543 spheres/cm³ : in blanket : 304.420629 spheres/cm³
+
+'OPENMC_CROSS_SECTIONS' found!
+
+======== HCPB reactor - U238 999.99 kg/m3 - 60.0%-enriched Li - 900 K ========
+Check if './OpenMC/tallies_HCPB_900K_Li60.0_U238_999.99kgm3' exists: True
+========================================
+Case: 999.99 kg/cm³
+
+With respect to the BREEDER material, we have these new volume fractions:
+  vf_biso_breeder_new =  21.252406 vol%
+  vf_li_breeder_new   =  20.158395 vol%
+  vf_be_breeder_new   =  58.589199 vol%
+  check they add up   = 100.000000 vol%
+
+BISO spheres per cc in breeder: 402.971361 spheres/cm³ : in blanket : 405.890113 spheres/cm³
