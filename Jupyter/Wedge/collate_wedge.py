@@ -66,8 +66,7 @@ loadings = [0.1, 0.5, 1.5, 15.0, 30.0, 60.0, 90.0, 120.0, 150.0, 250.0, 500.0, 7
 #    for L in loadings:
 #        extract_tallies(case='C', fertile_isotope=fertile_isotope, fertile_loading=L)
 #        print(f"Extracted tallies for {L} kg/m³")  
-# COLLATE TALLIES ###########################################
-# ... existing code ...
+
 
 # COLLATE TALLIES ###########################################
 def collate_ng_tallies(case='C'):
@@ -85,7 +84,7 @@ def collate_ng_tallies(case='C'):
             part = folder.split("_")[-1]
             fertile = float(part.replace("kgm3", ""))
             
-            tally_ng      = f"./Jupyter/Wedge/OpenMC/{folder}/{fertile_isotope}_n-gamma_Ebins.csv"
+            tally_ng  = f"./Jupyter/Wedge/OpenMC/{folder}/{fertile_isotope}_n-gamma_Ebins.csv"
 
             try:
                 df_ng = pd.read_csv(tally_ng)
@@ -189,7 +188,57 @@ def collate_fission_tallies(case='C'):
         df_fission_collated.to_csv(f"./Figures/Data/prism_{case}_{fertile_isotope}_fission_900K.csv",index=False)
 
 
-# PLOT ######################################################
+# COLLATE TBR TALLIES #######################################
+def collate_tbr_tallies(case='C'):
+    """
+    Extract TBR (Li6(n,Xt) + Li7(n,Xt) per source neutron) from each wedge run;
+    one row per loading (x value). Collate to Figures/Data/prism_{case}_{isotope}_tbr_900K.csv.
+    """
+    base = "./Jupyter/Wedge/OpenMC"
+    if not os.path.isdir(base):
+        print(f"Missing directory: {base}")
+        return
+    tally_folders_u238 = [x for x in os.listdir(base) if x.startswith(f"prism_{case}_U238_")]
+    tally_folders_th232 = [x for x in os.listdir(base) if x.startswith(f"prism_{case}_Th232_")]
+    os.makedirs("./Figures/Data", exist_ok=True)
+    for fertile_isotope, folders in [("U238", tally_folders_u238), ("Th232", tally_folders_th232)]:
+        tbr_list = []
+        for folder in sorted(folders):
+            path = os.path.join(base, folder)
+            try:
+                loading = float(folder.split("_")[-1].replace("kgm3", ""))
+            except Exception:
+                continue
+            sp_path = os.path.join(path, "statepoint.100.h5")
+            if not os.path.isfile(sp_path):
+                sp_path = os.path.join(path, "statepoint.10.h5")
+            if not os.path.isfile(sp_path):
+                print(f"No statepoint in {folder}, skipping TBR")
+                continue
+            try:
+                sp = openmc.StatePoint(sp_path)
+                li_tally = sp.get_tally(name="Total Li rxn rate")
+                df = li_tally.get_pandas_dataframe()
+            except Exception as e:
+                print(f"Could not load TBR from {folder}: {e}")
+                continue
+            if not all(c in df.columns for c in ["nuclide", "score", "mean"]):
+                print(f"Tally in {folder} missing required columns, skip")
+                continue
+            # TBR = sum of Li6 (n,Xt) + Li7 (n,Xt) per source neutron
+            mask = (df["nuclide"].isin(["Li6", "Li7"])) & (df["score"] == "(n,Xt)")
+            tbr = float(df.loc[mask, "mean"].sum())
+            tbr_list.append({"fertile_kg/m3": loading, "tbr": tbr})
+        if not tbr_list:
+            print(f"No TBR data for prism {case} {fertile_isotope}")
+            continue
+        df_tbr = pd.DataFrame(tbr_list).sort_values("fertile_kg/m3")
+        dst = f"./Figures/Data/prism_{case}_{fertile_isotope}_tbr_900K.csv"
+        df_tbr.to_csv(dst, index=False)
+        print(f"Collated wedge {case} TBR for {fertile_isotope} to {dst} ({len(df_tbr)} points)")
+
+
+# PLOTINGGGG ######################################################
 def readtxtFile(path): 
     energy, microxs = [], []
 
@@ -449,7 +498,7 @@ def plot_wedge_c_fission_vs_loading(case='C', fertile_isotope='U238'):
     order = np.argsort(xs)
     xs, ys = xs[order], ys[order]
 
-    # Simple interpolation (PCHIP is shape-preserving; Akima is fine too)
+    # Simple interpolation 
     x_fine = np.linspace(xs.min(), xs.max(), 300)
     y_smooth = PchipInterpolator(xs, ys)(x_fine)
 
@@ -506,145 +555,341 @@ def wedge_c_fissile_per_yr(fertile_isotope='U238'):
         raise ValueError("fertile_isotope must be U238 or Th232")
     return total_ng[["fertile_kg/m3", "fissile_kg/yr"]]
 
-def plot_fudge_factor(fertile_isotope='U238'):
+
+def _prep_xy(x, y):
+    d = pd.DataFrame({"x": x, "y": y}).dropna()
+    d["x"] = d["x"].astype(float)
+    d["y"] = d["y"].astype(float)
+    d = d.groupby("x", as_index=False)["y"].mean()
+    d = d.sort_values("x")
+    return d["x"].to_numpy(), d["y"].to_numpy()
+
+
+def _keep_not_outlier(series, z_thresh=6.0):
+    s = series.dropna().astype(float).to_numpy()
+    if s.size < 3:
+        return pd.Series(True, index=series.index)
+    v = np.log10(np.clip(series.astype(float).to_numpy(), 1e-30, None))
+    med = np.nanmedian(v)
+    mad = np.nanmedian(np.abs(v - med))
+    if mad == 0 or np.isnan(mad):
+        return pd.Series(True, index=series.index)
+    z = 0.6745 * (v - med) / mad
+    return pd.Series(np.abs(z) <= z_thresh, index=series.index)
+
+
+def plot_fissile_factor():
     """
-    Plot 3 subplots:
-    1. Wedge C fissile production [kg/yr] vs loading
-    2. HCPB fissile production [kg/yr] vs loading
-    3. Factor (HCPB / Wedge C) vs loading
+    Single plot: Fissile production [kg/yr] (left axis) for HCPB and Wedge, U238 and Th232;
+    Factor Wedge/HCPB (right axis). HCPB red, Wedge orange; solid U238, dashed Th232. PCHIP.
     """
-    print(f"\nPlotting fissile production and fudge factor for {fertile_isotope}...")
-    
-    # Wedge C: from collated n-gamma
-    wedge_df = wedge_c_fissile_per_yr(fertile_isotope=fertile_isotope)
-    x_w = wedge_df["fertile_kg/m3"].values
-    y_w = wedge_df["fissile_kg/yr"].values
-    
-    # HCPB: premade rxns CSV with fissile kg/yr column
-    if fertile_isotope == "U238":
-        hcpb_path = "./Figures/Data/HCPB_U238_rxns_900K.csv"
-        col_kg_yr = "Pu239_kg/yr"
-    else:
-        hcpb_path = "./Figures/Data/HCPB_Th232_rxns_900K.csv"
-        col_kg_yr = "U233_kg/yr"
-    
-    if not os.path.isfile(hcpb_path):
-        print(f"HCPB rxns not found: {hcpb_path}")
-        return
-    
-    hcpb_df = pd.read_csv(hcpb_path)
-    x_h = hcpb_df["fertile_kg/m3"].values
-    y_h = hcpb_df[col_kg_yr].values
-    
-    # Common x: union of loadings, interpolate both at common points for factor
-    x_common = np.unique(np.concatenate([x_w, x_h]))
-    x_common = x_common[(x_common >= min(x_w.min(), x_h.min())) & 
-                         (x_common <= max(x_w.max(), x_h.max()))]
-    x_common = np.sort(x_common)
-
-    def _prep_xy(x, y):
-        d = pd.DataFrame({"x": x, "y": y}).dropna()
-        d["x"] = d["x"].astype(float)
-        d["y"] = d["y"].astype(float)
-        # if duplicates exist, collapse them (mean is fine; can also use first)
-        d = d.groupby("x", as_index=False)["y"].mean()
-        d = d.sort_values("x")
-        return d["x"].to_numpy(), d["y"].to_numpy()
-
-    # after you define x_w, y_w, x_h, y_h:
-    x_w, y_w = _prep_xy(x_w, y_w)
-    x_h, y_h = _prep_xy(x_h, y_h)
-
-    # align by loading (x) so we can drop the same x from both
-    w = pd.DataFrame({"x": x_w, "y_w": y_w})
-    h = pd.DataFrame({"x": x_h, "y_h": y_h})
-    m = w.merge(h, on="x", how="outer")  # keep all x's from either set
-
-    def _keep_not_outlier(series, z_thresh=6.0):
-        s = series.dropna().astype(float).to_numpy()
-        if s.size < 3:
-            return pd.Series(True, index=series.index)  # not enough points to judge
-        v = np.log10(np.clip(series.astype(float).to_numpy(), 1e-30, None))
-        med = np.nanmedian(v)
-        mad = np.nanmedian(np.abs(v - med))
-        if mad == 0 or np.isnan(mad):
-            return pd.Series(True, index=series.index)
-        z = 0.6745 * (v - med) / mad
-        return pd.Series(np.abs(z) <= z_thresh, index=series.index)
-
-    # if wedge OR hcpb is an outlier at that x, drop that x from BOTH
-    keep = _keep_not_outlier(m["y_w"]) & _keep_not_outlier(m["y_h"])
-    m = m[keep].sort_values("x")
-
-    # back to arrays (and drop any x where a series is missing)
-    w_ok = m.dropna(subset=["y_w"])
-    h_ok = m.dropna(subset=["y_h"])
-    x_w, y_w = w_ok["x"].to_numpy(), w_ok["y_w"].to_numpy()
-    x_h, y_h = h_ok["x"].to_numpy(), h_ok["y_h"].to_numpy()
-
-    if len(x_w) < 2 or len(x_h) < 2:
-        print("Not enough points left after outlier removal.")
+    print("\nPlotting fissile production and Wedge/HCPB factor (U238 + Th232)...")
+    HCPB_RED = '#b41f24'
+    WEDGE_ORANGE = '#ff6600'
+    data = {}
+    for iso in ['U238', 'Th232']:
+        col_kg_yr = "Pu239_kg/yr" if iso == "U238" else "U233_kg/yr"
+        hcpb_path = f"./Figures/Data/HCPB_{iso}_rxns_900K.csv"
+        if not os.path.isfile(hcpb_path):
+            print(f"HCPB rxns not found: {hcpb_path}, skip {iso}")
+            continue
+        try:
+            wedge_df = wedge_c_fissile_per_yr(fertile_isotope=iso)
+        except FileNotFoundError:
+            print(f"Wedge n-gamma not found for {iso}, skip")
+            continue
+        x_w = wedge_df["fertile_kg/m3"].values
+        y_w = wedge_df["fissile_kg/yr"].values
+        hcpb_df = pd.read_csv(hcpb_path)
+        x_h = hcpb_df["fertile_kg/m3"].values
+        y_h = hcpb_df[col_kg_yr].values
+        x_w, y_w = _prep_xy(x_w, y_w)
+        x_h, y_h = _prep_xy(x_h, y_h)
+        w = pd.DataFrame({"x": x_w, "y_w": y_w})
+        h = pd.DataFrame({"x": x_h, "y_h": y_h})
+        m = w.merge(h, on="x", how="outer")
+        keep = _keep_not_outlier(m["y_w"]) & _keep_not_outlier(m["y_h"])
+        m = m[keep].sort_values("x")
+        w_ok = m.dropna(subset=["y_w"])
+        h_ok = m.dropna(subset=["y_h"])
+        x_w = w_ok["x"].to_numpy()
+        y_w = w_ok["y_w"].to_numpy()
+        x_h = h_ok["x"].to_numpy()
+        y_h = h_ok["y_h"].to_numpy()
+        if len(x_w) < 2 or len(x_h) < 2:
+            continue
+        for _x, _y in [(x_w, y_w), (x_h, y_h)]:
+            o = np.argsort(_x)
+            _x[:], _y[:] = _x[o], _y[o]
+        x_common = np.unique(np.concatenate([x_w, x_h]))
+        x_common = x_common[(x_common >= min(x_w.min(), x_h.min())) & (x_common <= max(x_w.max(), x_h.max()))]
+        x_common = np.sort(x_common)
+        interp_w = PchipInterpolator(x_w, y_w)
+        interp_h = PchipInterpolator(x_h, y_h)
+        y_w_c = interp_w(x_common)
+        y_h_c = interp_h(x_common)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            factor = np.where(y_h_c > 0, y_w_c / y_h_c, np.nan)
+        data[iso] = dict(x_w=x_w, y_w=y_w, x_h=x_h, y_h=y_h, interp_w=interp_w, interp_h=interp_h,
+                         x_common=x_common, factor=factor)
+                
+    if not data:
+        print("No fissile data to plot.")
         return
 
-    interp_w = PchipInterpolator(x_w, y_w)
-    interp_h = PchipInterpolator(x_h, y_h)
+    # Save factor to CSV (computed points)
+    rows = []
+    for iso in data:
+        d = data[iso]
+        v = ~np.isnan(d["factor"])
+        if np.any(v):
+            for x, f in zip(d["x_common"][v], d["factor"][v]):
+                rows.append({"fertile_kg/m3": float(x), "isotope": iso, "factor": float(f)})
+    if rows:
+        os.makedirs("./Figures/Data", exist_ok=True)
+        pd.DataFrame(rows).sort_values(["isotope", "fertile_kg/m3"]).to_csv(
+            "./Figures/Data/wedge_HCPB_fissile_factor_900K.csv", index=False
+        )
+    fig, ax = plt.subplots(figsize=(7.5, 5))
+    ax2 = ax.twinx()
+    x_min, x_max = np.inf, -np.inf
+    y_max = -np.inf
+    for iso, ls, mk_h, mk_w in [
+        ('U238', '-', 's', 'o'),
+        ('Th232', '--', '1', '+'),
+    ]:
+        if iso not in data:
+            continue
+        d = data[iso]
+        x_w, y_w, x_h, y_h = d['x_w'], d['y_w'], d['x_h'], d['y_h']
+        x_min = min(x_min, x_w.min(), x_h.min())
+        x_max = max(x_max, x_w.max(), x_h.max())
+        y_max = max(y_max, y_w.max(), y_h.max())
+        ax.scatter(x_h, y_h, marker=mk_h, s=30, color=HCPB_RED, zorder=3)
+        ax.scatter(x_w, y_w, marker=mk_w, s=30 if mk_w == 'o' else 60, color=WEDGE_ORANGE, zorder=3)
+        x_f = np.linspace(d['x_common'].min(), d['x_common'].max(), 200)
+        ax.plot(x_f, d['interp_h'](x_f), ls, linewidth=1, color=HCPB_RED)
+        ax.plot(x_f, d['interp_w'](x_f), ls, linewidth=1, color=WEDGE_ORANGE)
+    for iso, ls in [('U238', '-'), ('Th232', '--')]:
+        if iso not in data:
+            continue
+        d = data[iso]
+        v = ~np.isnan(d['factor'])
+        if not np.any(v):
+            continue
+        x_c = d['x_common'][v]
+        f = d['factor'][v]
+        ax2.scatter(x_c, f, s=20, color='black', zorder=3, alpha=0.7)
+        fi = PchipInterpolator(x_c, f)
+        x_f = np.linspace(x_c.min(), x_c.max(), 200)
+        ax2.plot(x_f, fi(x_f), ls, linewidth=0.5, color='black')
+    ax2.axhline(1.0, color='gray', linestyle=':', linewidth=0.8)
+    ax.set_xlabel(r'Fertile isotope density in blanket [kg/m$^3$]')
+    ax.set_ylabel('Initial fissile production rate [kg/yr]')
+    ax2.set_ylabel('Factor (Wedge / HCPB)')
+    ax2.yaxis.set_ticks_position('right')
+    ax2.yaxis.set_label_position('right')
+    ax2.set_ylim(0, 1.9)
+    ax.set_xlim(max(0, x_min - 25), x_max + 25)
+    ax.set_ylim(0, y_max * 1.05)
+    ax.xaxis.set_ticks_position('both')
+    ax.yaxis.set_ticks_position('both')
+    ax.xaxis.set_major_locator(MultipleLocator(100))
+    ax.xaxis.set_minor_locator(MultipleLocator(50))
+    ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
+    ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
 
-    # Interpolate both at common x points
+    # Legends: use ONLY dummy handles (do not label real curves; avoid axis autoscale to 1e9)
+    from matplotlib.lines import Line2D
 
-    y_w_common = interp_w(x_common)
-    y_h_common = interp_h(x_common)
-    
-    # Factor at each x (avoid div by zero)
-    with np.errstate(divide="ignore", invalid="ignore"):
-        factor = np.where(y_w_common > 0, y_h_common / y_w_common, np.nan)
-    
-    # Create 3 subplots
-    fig, axes = plt.subplots(3, 1, figsize=(8, 12), sharex=True)
-    ax1, ax2, ax3 = axes[0], axes[1], axes[2]
-    
-    # Subplot 1: Wedge C fissile per year
-    ax1.scatter(x_w, y_w, s=40, color="C0", label="Wedge Prism C", zorder=3)
-    x_fine_w = np.linspace(x_w.min(), x_w.max(), 200)
-    ax1.plot(x_fine_w, interp_w(x_fine_w), "-", color="C0", linewidth=1.5, alpha=0.7, label="PCHIP interp")
-    ax1.set_ylabel("Fissile production [kg/yr]", fontsize=12)
-    ax1.set_title(f"Wedge Prism C fissile production ({fertile_isotope})", fontsize=14)
-    ax1.legend(frameon=True, loc="best")
-    ax1.grid(True, alpha=0.3)
-    
-    # Subplot 2: HCPB fissile per year
-    ax2.scatter(x_h, y_h, s=40, color="C1", label="HCPB", zorder=3)
-    x_fine_h = np.linspace(x_h.min(), x_h.max(), 200)
-    ax2.plot(x_fine_h, interp_h(x_fine_h), "-", color="C1", linewidth=1.5, alpha=0.7, label="PCHIP interp")
-    ax2.set_ylabel("Fissile production [kg/yr]", fontsize=12)
-    ax2.set_title(f"HCPB fissile production ({fertile_isotope})", fontsize=14)
-    ax2.legend(frameon=True, loc="best")
-    ax2.grid(True, alpha=0.3)
-    
-    # Subplot 3: Factor (HCPB / Wedge C)
-    valid_mask = ~np.isnan(factor)
-    if np.any(valid_mask):
-        ax3.scatter(x_common[valid_mask], factor[valid_mask], s=40, color="black", 
-                   label="HCPB / Wedge C", zorder=3)
-        # Interpolate factor for smooth line
-        factor_interp = PchipInterpolator(x_common[valid_mask], factor[valid_mask])
-        x_fine_factor = np.linspace(x_common[valid_mask].min(), x_common[valid_mask].max(), 200)
-        ax3.plot(x_fine_factor, factor_interp(x_fine_factor), "-", color="red", 
-                linewidth=1.5, alpha=0.7, label="PCHIP interp")
-    ax3.axhline(1.0, color="gray", linestyle="--", linewidth=0.8, label="Factor = 1")
-    ax3.set_xlabel(r"Fertile isotope density [kg/m$^3$]", fontsize=12)
-    ax3.set_ylabel("Factor (HCPB / Wedge C)", fontsize=12)
-    ax3.set_title(f"Fudge factor: HCPB / Wedge C ({fertile_isotope})", fontsize=14)
-    ax3.legend(frameon=True, loc="best")
-    ax3.grid(True, alpha=0.3)
-    
+    left_handles = [
+        Line2D([], [], color=HCPB_RED, linestyle='-', marker='s', linewidth=1, markersize=5, label=r'HCPB-U$^{238}$'),
+        Line2D([], [], color=HCPB_RED, linestyle='--', marker='1', linewidth=1, markersize=9, label=r'HCPB-Th$^{232}$'),
+        Line2D([], [], color=WEDGE_ORANGE, linestyle='-', marker='o', linewidth=1, markersize=5, label=r'Wedge-U$^{238}$'),
+        Line2D([], [], color=WEDGE_ORANGE, linestyle='--', marker='+', linewidth=1, markersize=8, label=r'Wedge-Th$^{232}$'),
+    ]
+    right_handles = [
+        Line2D([], [], color='black', linestyle='-', linewidth=1, label=r'W/HCPB-U$^{238}$'),
+        Line2D([], [], color='black', linestyle='--', linewidth=1, label=r'W/HCPB-Th$^{232}$'),
+    ]
+
+    ax.legend(handles=left_handles, fancybox=False, edgecolor='black', frameon=True, framealpha=0.75, loc='lower right')
+    ax2.legend(handles=right_handles, fancybox=False, edgecolor='black', frameon=True, framealpha=0.75, loc='upper left')
+    for leg in [ax.get_legend(), ax2.get_legend()]:
+        if leg is not None:
+            leg.get_frame().set_linewidth(0.5)
     plt.tight_layout()
     os.makedirs("./Figures/pdf", exist_ok=True)
     os.makedirs("./Figures/png", exist_ok=True)
-    base = f"fig_fudge_factor_prismC_vs_HCPB_{fertile_isotope}"
+    base = "fig_fissile_factor_wedge_vs_HCPB"
     plt.savefig(f"./Figures/pdf/{base}.pdf", bbox_inches="tight", format="pdf")
     plt.savefig(f"./Figures/png/{base}.png", bbox_inches="tight", format="png")
     plt.close()
     print(f"Saved {base}.pdf/.png")
+
+
+def plot_tbr_factor():
+    """
+    Single plot: TBR (left axis) for HCPB and Wedge, U238 and Th232; Factor Wedge/HCPB (right axis).
+    HCPB red, Wedge orange; solid U238, dashed Th232. PCHIP interpolation.
+    Uses one point per x (via _prep_xy); drops at most one factor-outlier x per isotope, then plots the rest.
+    Legends use Line2D handles only (no labels on plot artists).
+    """
+    print("\nPlotting TBR and Wedge/HCPB factor (U238 + Th232)...")
+    case = 'C'
+    HCPB_RED = '#b41f24'
+    WEDGE_ORANGE = '#ff6600'
+    data = {}
+    for iso in ['U238', 'Th232']:
+        wp = f"./Figures/Data/prism_{case}_{iso}_tbr_900K.csv"
+        hp = f"./Figures/Data/HCPB_{iso}_rxns_900K.csv"
+        if not os.path.isfile(wp) or not os.path.isfile(hp):
+            print(f"Skip {iso}: missing {wp} or {hp}")
+            continue
+        df_w = pd.read_csv(wp)
+        df_h = pd.read_csv(hp)
+        if "tbr" not in df_w.columns or "tbr" not in df_h.columns:
+            print(f"Skip {iso}: missing 'tbr' column in wedge or HCPB CSV")
+            continue
+        # One point per x, sorted (proper tallies per loading)
+        x_w, y_w = _prep_xy(df_w["fertile_kg/m3"].values, df_w["tbr"].values)
+        x_h, y_h = _prep_xy(df_h["fertile_kg/m3"].values, df_h["tbr"].values)
+        w = pd.DataFrame({"x": x_w, "y_w": y_w})
+        h = pd.DataFrame({"x": x_h, "y_h": y_h})
+        m = w.merge(h, on="x", how="outer").sort_values("x")
+
+        # Drop AT MOST ONE big factor-outlier x (plot the rest; factor curve excludes this x)
+        m_both = m.dropna(subset=["y_w", "y_h"]).copy()
+        if len(m_both) >= 3:
+            f_raw = (m_both["y_w"].astype(float) / m_both["y_h"].astype(float)).to_numpy()
+            v = np.log10(np.clip(f_raw, 1e-30, None))
+            med = np.nanmedian(v)
+            mad = np.nanmedian(np.abs(v - med))
+            if mad != 0 and not np.isnan(mad):
+                z = 0.6745 * (v - med) / mad
+                j = int(np.nanargmax(np.abs(z)))
+                if np.abs(z[j]) > 8.0:
+                    x_drop = float(m_both["x"].to_numpy()[j])
+                    print(f"Drop single TBR factor outlier at x={x_drop:g} kg/m3 for {iso}; plot rest.")
+                    m = m[m["x"] != x_drop]
+        w_ok = m.dropna(subset=["y_w"])
+        h_ok = m.dropna(subset=["y_h"])
+        x_w = w_ok["x"].to_numpy().astype(float)
+        y_w = w_ok["y_w"].to_numpy().astype(float)
+        x_h = h_ok["x"].to_numpy().astype(float)
+        y_h = h_ok["y_h"].to_numpy().astype(float)
+        if len(x_w) < 2 or len(x_h) < 2:
+            continue
+        for _x, _y in [(x_w, y_w), (x_h, y_h)]:
+            o = np.argsort(_x)
+            _x[:], _y[:] = _x[o], _y[o]
+        x_common = np.unique(np.concatenate([x_w, x_h]))
+        x_common = x_common[(x_common >= min(x_w.min(), x_h.min())) & (x_common <= max(x_w.max(), x_h.max()))]
+        x_common = np.sort(x_common)
+        interp_w = PchipInterpolator(x_w, y_w)
+        interp_h = PchipInterpolator(x_h, y_h)
+        y_w_c = interp_w(x_common)
+        y_h_c = interp_h(x_common)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            factor = np.where(y_h_c > 0, y_w_c / y_h_c, np.nan)
+        data[iso] = dict(x_w=x_w, y_w=y_w, x_h=x_h, y_h=y_h, interp_w=interp_w, interp_h=interp_h,
+                         x_common=x_common, factor=factor)
+                
+    if not data:
+        print("No TBR data to plot.")
+        return
+
+    # Save factor to CSV (computed points)
+    rows = []
+    for iso in data:
+        d = data[iso]
+        v = ~np.isnan(d["factor"])
+        if np.any(v):
+            for x, f in zip(d["x_common"][v], d["factor"][v]):
+                rows.append({"fertile_kg/m3": float(x), "isotope": iso, "factor": float(f)})
+    if rows:
+        os.makedirs("./Figures/Data", exist_ok=True)
+        pd.DataFrame(rows).sort_values(["isotope", "fertile_kg/m3"]).to_csv(
+            "./Figures/Data/wedge_HCPB_TBR_factor_900K.csv", index=False
+        )
+    fig, ax = plt.subplots(figsize=(7.5, 5))
+    ax2 = ax.twinx()
+    x_min, x_max = np.inf, -np.inf
+    tbr_min, tbr_max = np.inf, -np.inf
+    # Left axis: HCPB (red), Wedge (orange); solid U238, dashed Th232
+    for iso, ls, mk_h, mk_w in [
+        ('U238', '-', 's', 'o'),
+        ('Th232', '--', '1', '+'),
+    ]:
+        if iso not in data:
+            continue
+        d = data[iso]
+        x_w, y_w, x_h, y_h = d['x_w'], d['y_w'], d['x_h'], d['y_h']
+        x_min, x_max = min(x_min, x_w.min(), x_h.min()), max(x_max, x_w.max(), x_h.max())
+        tbr_min = min(tbr_min, y_w.min(), y_h.min())
+        tbr_max = max(tbr_max, y_w.max(), y_h.max())
+        ax.scatter(x_h, y_h, marker=mk_h, s=30, color=HCPB_RED, zorder=3)
+        ax.scatter(x_w, y_w, marker=mk_w, s=30 if mk_w == 'o' else 60, color=WEDGE_ORANGE, zorder=3)
+        x_f = np.linspace(d['x_common'].min(), d['x_common'].max(), 200)
+        ax.plot(x_f, d['interp_h'](x_f), ls, linewidth=1, color=HCPB_RED)
+        ax.plot(x_f, d['interp_w'](x_f), ls, linewidth=1, color=WEDGE_ORANGE)
+    # Right axis: Factor (Wedge/HCPB) for U238 and Th232
+    for iso, ls in [('U238', '-'), ('Th232', '--')]:
+        if iso not in data:
+            continue
+        d = data[iso]
+        v = ~np.isnan(d['factor'])
+        if not np.any(v):
+            continue
+        x_c = d['x_common'][v]
+        f = d['factor'][v]
+        ax2.scatter(x_c, f, s=20, color='black', zorder=3, alpha=0.7) 
+        fi = PchipInterpolator(x_c, f)
+        x_f = np.linspace(x_c.min(), x_c.max(), 200)
+        ax2.plot(x_f, fi(x_f), ls, linewidth=0.6, color='black')
+    ax2.axhline(1.0, color='gray', linestyle=':', linewidth=0.8)
+    ax.set_xlabel(r'Fertile isotope density in blanket [kg/m$^3$]')
+    ax.set_ylabel('Tritium breeding ratio')
+    ax2.set_ylabel('Factor (Wedge / HCPB)')
+    ax2.yaxis.set_ticks_position('right')
+    ax2.yaxis.set_label_position('right')
+    ax.set_xlim(max(0, x_min - 25), x_max + 25)
+    ax.set_ylim(max(0, tbr_min - 0.02), tbr_max + 0.02)
+    ax.xaxis.set_ticks_position('both')
+    ax.yaxis.set_ticks_position('both')
+    ax.xaxis.set_major_locator(MultipleLocator(100))
+    ax.xaxis.set_minor_locator(MultipleLocator(50))
+    ax.yaxis.set_major_locator(MultipleLocator(0.05))
+    ax.yaxis.set_minor_locator(MultipleLocator(0.01))
+    ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
+    ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
+
+    # Legends: only Line2D handles (no label= on scatter/plot; same as fissile factor plot)
+    from matplotlib.lines import Line2D
+    left_handles = [
+        Line2D([], [], color=HCPB_RED, linestyle='-', marker='s', linewidth=1, markersize=5, label=r'HCPB-U$^{238}$'),
+        Line2D([], [], color=HCPB_RED, linestyle='--', marker='1', linewidth=1, markersize=9, label=r'HCPB-Th$^{232}$'),
+        Line2D([], [], color=WEDGE_ORANGE, linestyle='-', marker='o', linewidth=1, markersize=5, label=r'Wedge-U$^{238}$'),
+        Line2D([], [], color=WEDGE_ORANGE, linestyle='--', marker='+', linewidth=1, markersize=8, label=r'Wedge-Th$^{232}$'),
+    ]
+    right_handles = [
+        Line2D([], [], color='black', linestyle='-', linewidth=1, label=r'W/HCPB-U$^{238}$'),
+        Line2D([], [], color='black', linestyle='--', linewidth=1, label=r'W/HCPB-Th$^{232}$'),
+    ]
+    ax.legend(handles=left_handles, fancybox=False, edgecolor='black', frameon=True, framealpha=0.75, loc='upper right')
+    ax2.legend(handles=right_handles, fancybox=False, edgecolor='black', frameon=True, framealpha=0.75, loc='center right')
+    for leg in [ax.get_legend(), ax2.get_legend()]:
+        if leg is not None:
+            leg.get_frame().set_linewidth(0.5)
+    plt.tight_layout()
+    os.makedirs("./Figures/pdf", exist_ok=True)
+    os.makedirs("./Figures/png", exist_ok=True)
+    base = "fig_tbr_prismC_vs_HCPB"
+    plt.savefig(f"./Figures/pdf/{base}.pdf", bbox_inches="tight", format="pdf")
+    plt.savefig(f"./Figures/png/{base}.png", bbox_inches="tight", format="png")
+    plt.close()
+    print(f"Saved {base}.pdf/.png")
+
 
 for case in ['C']:
     collate_ng_tallies(case=case)
@@ -653,6 +898,8 @@ for case in ['C']:
     print(f"Collated flux tallies for {case}")
     collate_fission_tallies(case=case)
     print(f"Collated fission tallies for {case}")
+    collate_tbr_tallies(case=case)
+    print(f"Collated TBR tallies for {case}")
     for fertile_isotope in ['U238', 'Th232']:
         plot_wedge_c_fission_vs_loading(case=case, fertile_isotope=fertile_isotope)
         print("Plotted fission vs. loading")
@@ -664,8 +911,10 @@ for fertile_isotope in ['U238', 'Th232']:
     print("Plotted cumulative, normalized fissile production vs. energy")
     plot_flux_prism(fertile_isotope=fertile_isotope)
     print("Plotted flux spectrum")
-    plot_fudge_factor(fertile_isotope=fertile_isotope)
-    print("Plotted fudge factor")
+plot_fissile_factor()
+print("Plotted fissile factor (U238 + Th232)")
+plot_tbr_factor()
+print("Plotted TBR factor (U238 + Th232)")
 
 
 
