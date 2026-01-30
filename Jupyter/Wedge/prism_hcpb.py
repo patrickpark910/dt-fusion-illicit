@@ -418,8 +418,10 @@ class Wedge():
         self.settings.source = source
 
         # Run type
-        if self.case in ['B', 'C'] and self.fertile_kgm3 < 10.0:
-            nps, batches = int(1e7), int(10)
+        if self.fertile_kgm3 < 0.09:
+            nps, batches = int(1e5), int(10)
+        elif 0.09 < self.fertile_kgm3 < 10.0:
+            nps, batches = int(1e5), int(10)
         else:
             nps, batches = int(1e5), int(10)
 
@@ -431,7 +433,7 @@ class Wedge():
         self.settings.max_tracks = 4
 
 
-    def prism_helpers(self, debug=False):
+    def prism_helpers(self, debug=True):
 
         fertile_kgm3 = self.fertile_kgm3
 
@@ -607,8 +609,8 @@ if __name__ == '__main__':
 
     os.makedirs(f"./OpenMC/", exist_ok=True)
 
-    for case in ['A',]:
-        for isotope in ['U238', 'Th232']:
-            for fertile_kgm3 in [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99] : #  [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]   # [0.10,60,150]
+    for case in ['C','A']:
+        for isotope in ['U238', ]: # 'Th232'
+            for fertile_kgm3 in [0.001, 0.10] : #  [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]   # [0.10,60,150]
                 current_run = Wedge(case, fertile_kgm3, isotope=isotope)
                 current_run.openmc(debug=True, write=True, run=True)
