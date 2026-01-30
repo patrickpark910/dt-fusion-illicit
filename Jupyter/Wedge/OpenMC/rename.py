@@ -6,8 +6,8 @@ def rename_folders(directory="."):
 
     # Define the target pattern and the replacement
     # We look for "U000" and replace it with "U238_000"
-    search_str = "prism_C"
-    replace_str = "prism_hcpb"
+    search_str = "hcpbU"
+    replace_str = "hcpb_U"
     count = 0
 
     # List everything in the directory

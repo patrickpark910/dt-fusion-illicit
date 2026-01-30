@@ -104,7 +104,7 @@ def logspace_per_decade(start, stop, pts_per_decade):
     return np.logspace(log_start, log_stop, num=npts)
 
 
-class Prism():
+class Wedge():
 
     def __init__(self, case, fertile_kgm3, isotope='U238', write_openmc=True, run_openmc=False,):
 
@@ -112,7 +112,7 @@ class Prism():
         self.fertile_kgm3 = fertile_kgm3
         self.fertile_str = f"{fertile_kgm3:06.2f}"
         self.isotope = isotope 
-        self.name = f"prism_{self.case}_{self.isotope}_{self.fertile_str}kgm3"         
+        self.name = f"wedge{self.case}_hcpb_{self.isotope}_{self.fertile_str}kgm3"         
         self.path = f"./OpenMC/{self.name}"
 
         os.makedirs(self.path, exist_ok=True)
@@ -211,12 +211,13 @@ class Prism():
                 print(f"")
 
 
-        if case in ['B','C']:
+        elif case in ['B','C']:
 
             self.blanket = openmc.Material.mix_materials([li4sio4, be, self.eurofer, he], [VF_LI_NOM, VF_BE_NOM, VF_EU_NOM, VF_HE_NOM], 'vo') 
             self.blanket.temperature = TEMP_K
 
             self.materials = openmc.Materials([self.tungsten, self.eurofer, self.blanket, self.kernel, self.sic]) 
+
 
 
     def geometry(self, debug=False):
@@ -277,7 +278,7 @@ class Prism():
         c22 = openmc.Cell(cell_id=22, region= +s113 & -s114 & +s123 & -s124 & +s136 & -s137, fill=self.eurofer)
         c24 = openmc.Cell(cell_id=24, region= +s113 & -s114 & +s123 & -s124 & +s138 & -s139, fill=self.eurofer)
 
-        if case == 'A':
+        if case in ['A']:
 
             c13 = openmc.Cell(cell_id=13, region= +s111 & -s112 & +s121 & -s122 & +s131 & -s132, fill=self.blanket)
             c23 = openmc.Cell(cell_id=23, region= +s113 & -s114 & +s123 & -s124 & +s137 & -s138, fill=self.blanket)
@@ -338,24 +339,6 @@ class Prism():
                 c13.fill = openmc.model.create_triso_lattice(biso_in, ll_in, pitch_in, shape_in, self.blanket)
                 c23.fill = openmc.model.create_triso_lattice(biso_out, ll_out, pitch_out, shape_out, self.blanket)
 
-
-                # # Inboard lattice
-                # lattice_in = openmc.RectLattice()
-                # lattice_in.lower_left = ll_in
-                # lattice_in.pitch = pitch_in
-                # lattice_in.universes = np.full(shape_in[::-1], u50) # NB. lattices indices are [z, y, x]
-                # lattice_in.outer = openmc.Universe(cells=[openmc.Cell(fill=self.blanket)])
-
-                # # Outboard lattice
-                # lattice_out = openmc.RectLattice()
-                # lattice_out.lower_left = ll_out
-                # lattice_out.pitch = pitch_out
-                # lattice_out.universes = np.full(shape_out[::-1], u50)
-                # lattice_out.outer = openmc.Universe(cells=[openmc.Cell(fill=self.blanket)])
-                
-                # c13.fill = lattice_in
-                # c23.fill = lattice_out
-
                 if debug:
                     print(f"Case C: Fixed lattice BISO placement")
                     print(f"  Inboard lattice:")
@@ -388,14 +371,14 @@ class Prism():
         flux_energy_tally = self.make_tally('flux spectrum', ['flux'], filters=[cell_filter, energy_filter])
 
         # Fertile element reaction rates
-        fertile_tally_tot    = self.make_tally(f'Total fertile rxn rate',     ['(n,gamma)', 'fission', 'elastic'], nuclides=['U238', 'U235', 'Th232'])
-        fertile_tally        = self.make_tally(f'Fertile rxn rates',          ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter], nuclides=['U238', 'U235', 'Th232'])
-        fertile_energy_tally = self.make_tally(f'Fertile rxn rates spectrum', ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['U238', 'U235', 'Th232'])
+        fertile_tally_tot    = self.make_tally(f'Total fertile rxn rate',     ['(n,gamma)', 'fission', '(n,2n)', 'elastic'], nuclides=['U238', 'U235', 'Th232'])
+        fertile_tally        = self.make_tally(f'Fertile rxn rates',          ['(n,gamma)', 'fission', '(n,2n)', 'elastic'], filters=[cell_filter], nuclides=['U238', 'U235', 'Th232'])
+        fertile_energy_tally = self.make_tally(f'Fertile rxn rates spectrum', ['(n,gamma)', 'fission', '(n,2n)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['U238', 'U235', 'Th232'])
 
         # Lithium reaction rates
-        Li_tally_tot    = self.make_tally('Total Li rxn rate',     ['(n,gamma)', '(n,Xt)', 'elastic'], nuclides=['Li6', 'Li7'])
-        Li_tally        = self.make_tally('Li rxn rates',          ['(n,gamma)', '(n,Xt)', 'elastic'], filters=[cell_filter], nuclides=['Li6', 'Li7'])
-        Li_energy_tally = self.make_tally('Li rxn rates spectrum', ['(n,gamma)', '(n,Xt)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Li6', 'Li7'])
+        Li_tally_tot    = self.make_tally('Total (n,t) rxn rate',  ['(n,Xt)'])
+        Li_tally        = self.make_tally('Li rxn rates',          ['(n,Xt)', '(n,gamma)', 'elastic'], filters=[cell_filter], nuclides=['Li6', 'Li7'])
+        Li_energy_tally = self.make_tally('Li rxn rates spectrum', ['(n,Xt)', '(n,gamma)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Li6', 'Li7'])
 
         # Put in order you want it to print in... recommend fertile_tally's first
         self.tallies.extend([fertile_tally_tot, Li_tally_tot, fertile_tally, Li_tally, flux_tally, fertile_energy_tally, flux_energy_tally, Li_energy_tally]) 
@@ -428,18 +411,21 @@ class Prism():
                            mu=openmc.stats.Discrete([1.0, -1.0], [0.5, 0.5]),
                            phi=openmc.stats.Uniform(0, 2*np.pi) # azimuthal angle doesn't matter for mu=+/-1
                            )
-        # source.angle = openmc.stats.Isotropic()
+        source.angle = openmc.stats.Isotropic()
 
         # Create settings and assign source
         self.settings = openmc.Settings()
         self.settings.source = source
 
         # Run type
-        self.settings.run_mode  = 'fixed source'
-        self.settings.particles = self.nps
-        self.settings.batches   = self.batches
+        if self.case in ['B', 'C'] and self.fertile_kgm3 < 10.0:
+            nps, batches = int(1e7), int(10)
+        else:
+            nps, batches = int(1e5), int(10)
 
-        # note to self 2026-01-22: change to 20 or 50 batches
+        self.settings.run_mode  = 'fixed source'
+        self.settings.particles = nps
+        self.settings.batches   = batches
 
         # self.settings.trace = (1,1,1)
         self.settings.max_tracks = 4
@@ -448,13 +434,6 @@ class Prism():
     def prism_helpers(self, debug=False):
 
         fertile_kgm3 = self.fertile_kgm3
-
-        if fertile_kgm3 < 10.0:
-            self.nps = int(1e7)
-            self.batches = int(10)
-        else:
-            self.nps = int(1e5)
-            self.batches = int(10)
 
         target_total_biso = 2012 
         N1, N2 = 512, 1500
@@ -628,7 +607,8 @@ if __name__ == '__main__':
 
     os.makedirs(f"./OpenMC/", exist_ok=True)
 
-    for case in ['C',]:
-        for fertile_kgm3 in [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99] : #  [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]   # [0.10,60,150]
-            current_run = Prism(case, fertile_kgm3, isotope='Th232')
-            current_run.openmc(debug=True, write=True, run=True)
+    for case in ['A',]:
+        for isotope in ['U238', 'Th232']:
+            for fertile_kgm3 in [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99] : #  [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]   # [0.10,60,150]
+                current_run = Wedge(case, fertile_kgm3, isotope=isotope)
+                current_run.openmc(debug=True, write=True, run=True)
