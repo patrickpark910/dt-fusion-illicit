@@ -20,8 +20,8 @@ def plot_all():
     
     """ Pick which one to plot by uncommenting """
     # combined_plot.plot_tbr()
-    combined_plot.plot_pu_per_yr()
-    # combined_plot.plot_cum_norm_histogram()
+    # combined_plot.plot_pu_per_yr()
+    combined_plot.plot_cum_norm_histogram()
     # combined_plot.plot_flux()
 
     print("All plots completed and saved.")
@@ -175,20 +175,22 @@ class Plot:
         # -------------------------------------------------------------
 
         df_u    = pd.DataFrame(HCPB_CONV_U_TBR, columns=['fertile_kgm3', 'ratio'])
-        poly_u  = np.poly1d( np.polyfit( df_u['fertile_kgm3'], df_u['ratio'], 4 ) )
-        
         df_th   = pd.DataFrame(HCPB_CONV_TH_TBR, columns=['fertile_kgm3', 'ratio'])
-        poly_th = np.poly1d( np.polyfit( df_th['fertile_kgm3'], df_th['ratio'], 4 ) )
 
-        x_fine  = np.linspace(df_u['fertile_kgm3'].min(), df_u['fertile_kgm3'].max(), 500)
+        # NB. np.interp(x_values_to_calculate, original_x, original_y)
+        def get_u_ratio(x):
+            return np.interp(x, df_u['fertile_kgm3'], df_u['ratio'])
+
+        def get_th_ratio(x):
+            return np.interp(x, df_th['fertile_kgm3'], df_th['ratio'])
 
         # Apply interpolation to the Uranium dataframe
-        hcpb_u_rr_df_corr = self.hcpb_u_rr_df
-        hcpb_u_rr_df_corr['tbr'] = hcpb_u_rr_df_corr['tbr'] * poly_u(hcpb_u_rr_df_corr['fertile_kg/m3'])
+        hcpb_u_rr_df_corr = self.hcpb_u_rr_df.copy()
+        hcpb_u_rr_df_corr['tbr'] = hcpb_u_rr_df_corr['tbr'] * get_u_ratio(hcpb_u_rr_df_corr['fertile_kg/m3'])
 
         # Apply interpolation to the Thorium dataframe
-        hcpb_th_rr_df_corr = self.hcpb_th_rr_df
-        hcpb_th_rr_df_corr['tbr'] = hcpb_th_rr_df_corr['tbr'] * poly_th(hcpb_th_rr_df_corr['fertile_kg/m3'])
+        hcpb_th_rr_df_corr = self.hcpb_th_rr_df.copy()
+        hcpb_th_rr_df_corr['tbr'] = hcpb_th_rr_df_corr['tbr'] * get_th_ratio(hcpb_th_rr_df_corr['fertile_kg/m3'])
 
 
         # -------------------------------------------------------------
@@ -295,19 +297,23 @@ class Plot:
         # Weigh HCPB TBR by correction factor derived from wedge modelinestyle
         # -------------------------------------------------------------
 
-        df_u    = pd.DataFrame(HCPB_CONV_U_FISS, columns=['fertile_kgm3', 'ratio'])
-        poly_u  = np.poly1d( np.polyfit( df_u['fertile_kgm3'], df_u['ratio'], 4 ) )
-        
-        df_th   = pd.DataFrame(HCPB_CONV_TH_FISS, columns=['fertile_kgm3', 'ratio'])
-        poly_th = np.poly1d( np.polyfit( df_th['fertile_kgm3'], df_th['ratio'], 4 ) )
+        df_u    = pd.DataFrame(HCPB_CONV_U_FPR,  columns=['fertile_kgm3', 'ratio'])
+        df_th   = pd.DataFrame(HCPB_CONV_TH_FPR, columns=['fertile_kgm3', 'ratio'])
+
+        # NB. np.interp(x_values_to_calculate, original_x, original_y)
+        def get_u_ratio(x):
+            return np.interp(x, df_u['fertile_kgm3'], df_u['ratio'])
+
+        def get_th_ratio(x):
+            return np.interp(x, df_th['fertile_kgm3'], df_th['ratio'])
 
         # Apply interpolation to the Uranium dataframe
-        hcpb_u_rr_df_corr = self.hcpb_u_rr_df
-        hcpb_u_rr_df_corr['U238(n,g)'] = hcpb_u_rr_df_corr['U238(n,g)'] * poly_u(hcpb_u_rr_df_corr['fertile_kg/m3'])
+        hcpb_u_rr_df_corr = self.hcpb_u_rr_df.copy()
+        hcpb_u_rr_df_corr['U238(n,g)'] = hcpb_u_rr_df_corr['U238(n,g)'] * get_u_ratio(hcpb_u_rr_df_corr['fertile_kg/m3'])
 
         # Apply interpolation to the Thorium dataframe
-        hcpb_th_rr_df_corr = self.hcpb_th_rr_df
-        hcpb_th_rr_df_corr['Th232(n,g)'] = hcpb_th_rr_df_corr['Th232(n,g)'] * poly_th(hcpb_th_rr_df_corr['fertile_kg/m3'])
+        hcpb_th_rr_df_corr = self.hcpb_th_rr_df.copy()
+        hcpb_th_rr_df_corr['Th232(n,g)'] = hcpb_th_rr_df_corr['Th232(n,g)'] * get_th_ratio(hcpb_th_rr_df_corr['fertile_kg/m3'])
 
         # Constants and conversion factors
         # <utilities.py> default NPS_FUS = 500 MJ/s * 3.546e17 n/MJ = 1.773e+20 n/s
@@ -322,8 +328,8 @@ class Plot:
         datasets = [
             (self.flibe_th_rr_df, r'FLiBe-ThF$_4$', '#66b420', '+', 12, '--', 'makima', 'Th232(n,g)', u233_conv),
             (self.flibe_u_rr_df,  r'FLiBe-UF$_4$',  '#66b420', 'o', 5,  '-',  'makima',  'U238(n,g)',  pu239_conv),
-            (self.hcpb_th_rr_df,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, '--', 'makima', 'Th232(n,g)', u233_conv),
-            (self.hcpb_u_rr_df,   r'HCPB-UO$_2$',   '#b41f24', 's', 6,  '-',  'makima',  'U238(n,g)',  pu239_conv),
+            (hcpb_th_rr_df_corr,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, '--', 'makima', 'Th232(n,g)', u233_conv),
+            (hcpb_u_rr_df_corr,   r'HCPB-UO$_2$',   '#b41f24', 's', 6,  '-',  'makima',  'U238(n,g)',  pu239_conv),
             (self.dcll_th_rr_df,  r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, '--', 'makima', 'Th232(n,g)', u233_conv),
             (self.dcll_u_rr_df,   r'DCLL-UO$_2$',   '#0047ba', '^', 8,  '-',  'makima',  'U238(n,g)',  pu239_conv),
         ]
@@ -402,8 +408,8 @@ class Plot:
             leg.get_frame().set_linewidth(0.5) 
 
             if self.save:
-                plt.savefig(f'./Figures/pdf/fig_fissile_per_yr_{v["suffix"]}.pdf', bbox_inches='tight', format='pdf')
-                plt.savefig(f'./Figures/png/fig_fissile_per_yr_{v["suffix"]}.png', bbox_inches='tight', format='png')
+                plt.savefig(f'./Figures/pdf/fig_fpr_{v["suffix"]}.pdf', bbox_inches='tight', format='pdf')
+                plt.savefig(f'./Figures/png/fig_fpr_{v["suffix"]}.png', bbox_inches='tight', format='png')
                 print("Exported fissile production per year plot for all blankets.")
             else:
                 print("Did not export fissile production per year plot due to user setting.")
