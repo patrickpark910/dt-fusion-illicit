@@ -19,9 +19,9 @@ def plot_all():
     combined_plot = Plot(save=True, show=True)
     
     """ Pick which one to plot by uncommenting """
-    # combined_plot.plot_tbr()
+    combined_plot.plot_tbr()
     # combined_plot.plot_pu_per_yr()
-    combined_plot.plot_cum_norm_histogram()
+    # combined_plot.plot_cum_norm_histogram()
     # combined_plot.plot_flux()
 
     print("All plots completed and saved.")
@@ -31,30 +31,34 @@ class Plot:
 
     def __init__(self, save=False, show=True):
 
+        def read_and_sort(path:str):
+            """
+            Reads a CSV file and sorts it by 'fertile_kg/m3' if the column exists.
+            """
+            df = pd.read_csv(path)
+            if 'fertile_kg/m3' in df.columns:
+                df = df.sort_values(by='fertile_kg/m3').reset_index(drop=True)
+            return df
+
         # Dataframes of reaction rates (rr)
-        self.flibe_u_rr_df  = pd.read_csv('./Figures/Data/FLiBe_U238_rxns_900K.csv')
-        self.flibe_th_rr_df = pd.read_csv('./Figures/Data/FLiBe_Th232_rxns_900K.csv')
-        self.dcll_u_rr_df   = pd.read_csv('./Figures/Data/DCLL_U238_rxns_900K.csv')
-        self.dcll_th_rr_df  = pd.read_csv('./Figures/Data/DCLL_Th232_rxns_900K.csv')
-        self.hcpb_u_rr_df   = pd.read_csv('./Figures/Data/HCPB_U238_rxns_900K.csv')
-        self.hcpb_th_rr_df  = pd.read_csv('./Figures/Data/HCPB_Th232_rxns_900K.csv')
+        self.flibe_u_rr_df  = read_and_sort('./Figures/Data/FLiBe_900K_Li07.5_U238_rxns.csv')
+        self.flibe_th_rr_df = read_and_sort('./Figures/Data/FLiBe_900K_Li07.5_Th232_rxns.csv')
+        self.dcll_u_rr_df   = read_and_sort('./Figures/Data/DCLL_900K_Li90.0_U238_rxns.csv')
+        self.dcll_th_rr_df  = read_and_sort('./Figures/Data/DCLL_900K_Li90.0_Th232_rxns.csv')
+        self.hcpb_u_rr_df   = read_and_sort('./Figures/Data/HCPB_900K_Li60.0_U238_rxns.csv')
+        self.hcpb_th_rr_df  = read_and_sort('./Figures/Data/HCPB_900K_Li60.0_Th232_rxns.csv')
 
-        self.flibe_u_ng_df  = pd.read_csv('./Figures/Data/FLiBe_U238_n-gamma_900K.csv')
-        self.flibe_th_ng_df = pd.read_csv('./Figures/Data/FLiBe_Th232_n-gamma_900K.csv')
-        self.dcll_u_ng_df   = pd.read_csv('./Figures/Data/DCLL_U238_n-gamma_900K.csv')
-        self.dcll_th_ng_df  = pd.read_csv('./Figures/Data/DCLL_Th232_n-gamma_900K.csv')
-        self.hcpb_u_ng_df   = pd.read_csv('./Figures/data/HCPB_U238_n-gamma_900K.csv') 
-        self.hcpb_th_ng_df  = pd.read_csv('./Figures/data/HCPB_Th232_n-gamma_900K.csv') 
-
-        self.flibe_u_flux_df  = pd.read_csv('./Figures/Data/FLiBe_U238_flux_900K.csv')
-        self.flibe_th_flux_df = pd.read_csv('./Figures/Data/FLiBe_Th232_flux_900K.csv')
-        self.dcll_u_flux_df   = pd.read_csv('./Figures/Data/DCLL_U238_flux_900K.csv')
-        self.dcll_th_flux_df  = pd.read_csv('./Figures/Data/DCLL_Th232_flux_900K.csv')
+        self.flibe_u_ng_df  = read_and_sort('./Figures/Data/FLiBe_900K_Li07.5_U238_n-gamma.csv')
+        self.flibe_th_ng_df = read_and_sort('./Figures/Data/FLiBe_900K_Li07.5_Th232_n-gamma.csv')
+        self.dcll_u_ng_df   = read_and_sort('./Figures/Data/DCLL_900K_Li90.0_U238_n-gamma.csv')
+        self.dcll_th_ng_df  = read_and_sort('./Figures/Data/DCLL_900K_Li90.0_Th232_n-gamma.csv')
+        self.hcpb_u_ng_df   = read_and_sort('./Figures/Data/HCPB_900K_Li60.0_U238_n-gamma.csv')
+        self.hcpb_th_ng_df  = read_and_sort('./Figures/Data/HCPB_900K_Li60.0_Th232_n-gamma.csv')
 
         self.save, self.show = save, show
         # self.name = 'All_Blankets'
 
-        for sd in ['PDF','PNG','Data']:
+        for sd in ['pdf','png','data']:
             sd_path = f'./Figures/{sd}/'
             print(f"Ensuring directory exists: {sd_path}")
             os.makedirs(sd_path, exist_ok=True)
@@ -168,6 +172,7 @@ class Plot:
 
 
     def plot_tbr(self):
+
         print(f"\nPlotting tritium breeding ratio vs. fertile density...")
 
         # -------------------------------------------------------------
@@ -178,19 +183,16 @@ class Plot:
         df_th   = pd.DataFrame(HCPB_CONV_TH_TBR, columns=['fertile_kgm3', 'ratio'])
 
         # NB. np.interp(x_values_to_calculate, original_x, original_y)
-        def get_u_ratio(x):
-            return np.interp(x, df_u['fertile_kgm3'], df_u['ratio'])
-
-        def get_th_ratio(x):
-            return np.interp(x, df_th['fertile_kgm3'], df_th['ratio'])
+        def get_ratio(x, df_fertile):
+            return np.interp(x, df_fertile['fertile_kgm3'], df_fertile['ratio'])
 
         # Apply interpolation to the Uranium dataframe
         hcpb_u_rr_df_corr = self.hcpb_u_rr_df.copy()
-        hcpb_u_rr_df_corr['tbr'] = hcpb_u_rr_df_corr['tbr'] * get_u_ratio(hcpb_u_rr_df_corr['fertile_kg/m3'])
+        hcpb_u_rr_df_corr['tbr'] = hcpb_u_rr_df_corr['tbr'] * get_ratio(hcpb_u_rr_df_corr['fertile_kg/m3'], df_u)
 
         # Apply interpolation to the Thorium dataframe
         hcpb_th_rr_df_corr = self.hcpb_th_rr_df.copy()
-        hcpb_th_rr_df_corr['tbr'] = hcpb_th_rr_df_corr['tbr'] * get_th_ratio(hcpb_th_rr_df_corr['fertile_kg/m3'])
+        hcpb_th_rr_df_corr['tbr'] = hcpb_th_rr_df_corr['tbr'] * get_ratio(hcpb_th_rr_df_corr['fertile_kg/m3'], df_th)
 
 
         # -------------------------------------------------------------
@@ -198,12 +200,12 @@ class Plot:
         # -------------------------------------------------------------
 
         # Load the dataframes to plot, label, color, marker, markersize, linestyle, and polynomial fit
-        datasets = [ (self.flibe_th_rr_df, r'FLiBe-ThF$_4$', '#66b420', '+', 12, '--', 'makima'),
-                     (self.flibe_u_rr_df,  r'FLiBe-UF$_4$',  '#66b420', 'o', 5, '-',  'makima'),
-                     (hcpb_th_rr_df_corr,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, '--', 2),
+        datasets = [ (self.flibe_u_rr_df,  r'FLiBe-UF$_4$',  '#66b420', 'o', 5, '-',  'makima'),
+                     (self.flibe_th_rr_df, r'FLiBe-ThF$_4$', '#66b420', '+', 12, '--', 'makima'),
                      (hcpb_u_rr_df_corr,   r'HCPB-UO$_2$',   '#b41f24', 's', 6, '-',  2),
-                     (self.dcll_th_rr_df,  r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, '--', 2),
+                     (hcpb_th_rr_df_corr,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, '--', 2),
                      (self.dcll_u_rr_df,   r'DCLL-UO$_2$',   '#0047ba', '^', 8, '-',  2),
+                     (self.dcll_th_rr_df,  r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, '--', 2),
                    ]
 
         # Select a subset of fertile kg/m3 to SHOW to avoid cluttering the low end with markers
@@ -213,10 +215,10 @@ class Plot:
         # Set view limits for each of the plots
         view_limits = [ # Zoomed in on (0, 155) fertile kg/m3
                         {'xlim': (-5, 155),   'xmax': 150, 'x_major': 15,  'x_minor': 5,  
-                         'ylim': (0.94, 1.26), 'suffix': '0150kgm3', 'fertile_kgm3': selected1},
+                         'ylim': (1.04, 1.46), 'suffix': '0150kgm3', 'fertile_kgm3': selected1},   # 'ylim': (0.94, 1.26)
                         # Zoomed out to (0, 1000) fertile kg/m3
                         {'xlim': (-25, 1025), 'xmax':1000, 'x_major': 200, 'x_minor': 100, 
-                         'ylim': (0.74, 1.26), 'suffix': '1000kgm3', 'fertile_kgm3': selected2} ]
+                         'ylim': (0.79, 1.46), 'suffix': '1000kgm3', 'fertile_kgm3': selected2} ]
 
 
         for v in view_limits:
@@ -240,6 +242,7 @@ class Plot:
                 # But still fit the polynomial to all of the data you did compute
                 x_fit = df['fertile_kg/m3']
                 y_fit = BLANKET_COVERAGE * df['tbr']
+                print(x_fit)
 
                 if degree == 'makima':
                     x_fine = np.linspace(0, v['xmax'], 500)

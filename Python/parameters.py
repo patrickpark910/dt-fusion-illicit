@@ -14,7 +14,7 @@ N_PARTICLES, N_CYCLES = int(1e6), 10
 
 # FLiBe (F4Li2Be)
 DENSITY_FLIBE   =  1.94  # [g/cm³]
-ENRICH_FLIBE    =  30.0  # [at%] enrich of Li-6
+ENRICH_FLIBE    =  7.50  # [at%] enrich of Li-6
 
 # Lead-lithium (DCLL, 83 at% Pb - 17 at% Li)
 DENSITY_DCLL    =  9.40  # [g/cm³]

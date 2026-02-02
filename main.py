@@ -89,7 +89,7 @@ def main():
                         current_run.extract_tallies()
 
                 print(f"Collating tallies for {blanket} {fertile_isotope} at {current_run.temp_k}")
-                collate_tallies(blanket, fertile_isotope, current_run.temp_k, current_run.breeder_volume)
+                collate_tallies(blanket, fertile_isotope, current_run.breeder_enrich, current_run.temp_k, current_run.breeder_volume)
 
 
 def build_reactor(blanket:str, **kwargs):
@@ -105,13 +105,14 @@ def build_reactor(blanket:str, **kwargs):
     return reactor
 
 
-def collate_tallies(blanket, fertile_isotope, temp_k, vol_m3):
+def collate_tallies(blanket, fertile_isotope, breeder_enrich,temp_k, vol_m3):
     """
     Collates all the tallies for given [blanket, fertile isotope, temperature] across multiple fertile kg/m³
 
     Args:
         blanket (str): one of ['FLiBe', 'DCLL', 'HCPB', 'ARC', 'ARCB']
         fertile_isotope (str): one of ['U238', 'Th232']
+        breeder_enrich (float): enrichment of lithium-6 in breeder
         temp_k (float): temperature of the system for which you want to collate data 
         breeder_volume (float): [m³] volume of breeder
     """
@@ -126,7 +127,7 @@ def collate_tallies(blanket, fertile_isotope, temp_k, vol_m3):
                                    'Li6(n,t)', 'Li7(n,Xt)', f'{fertile_isotope}(n,g)',
                                    'tbr', f'{fissile_isotope}_kg/yr'])
 
-    tally_folders = [x for x in os.listdir("./OpenMC/") if (x.startswith(f"tallies_{blanket}_{temp_k}K")) and x.split("_")[-2].startswith(fertile_isotope)]
+    tally_folders = [x for x in os.listdir("./OpenMC/") if (x.startswith(f"tallies_{blanket}_{temp_k}K_Li{breeder_enrich:04.1f}")) and x.split("_")[-2].startswith(fertile_isotope)]
 
     flux_list, ng_list = [], []  # Use lists instead of empty DataFrames
 
@@ -187,8 +188,8 @@ def collate_tallies(blanket, fertile_isotope, temp_k, vol_m3):
                    f'{fissile_isotope}_kg/yr': pu,
              f'{fissile_isotope}_kg/yr_stdev': pu_stdev, }
 
-        dst = f"./Figures/Data/{blanket}_{fertile_isotope}_rxns_{temp_k}K.csv"
-        df_all.to_csv(dst, index=False)
+        dst = f"./Figures/Data/{blanket}_{temp_k}K_Li{breeder_enrich:04.1f}_{fertile_isotope}"
+        df_all.to_csv(f"{dst}_rxns.csv", index=False)
 
 
         cols = ["energy low [eV]", "energy high [eV]", "energy mid [eV]", "mean"]     
@@ -230,11 +231,10 @@ def collate_tallies(blanket, fertile_isotope, temp_k, vol_m3):
         df_flux_collated = df_flux_collated[['filename', 'fertile_kg/m3', 'fertile_mt', 'br_vol_m3', 
                                              'energy mid [eV]', 'mean', 'energy low [eV]', 'energy high [eV]']]
 
-        df_ng_collated.to_csv(f"./Figures/Data/{blanket}_{fertile_isotope}_n-gamma_{temp_k}K.csv",index=False)
-        df_flux_collated.to_csv(f"./Figures/Data/{blanket}_{fertile_isotope}_flux_{temp_k}K.csv",index=False)
+        df_ng_collated.to_csv(f"{dst}_n-gamma.csv",index=False)
+        df_flux_collated.to_csv(f"{dst}_flux.csv",index=False)
 
 
-    
     print(f"{C.GREEN}Comment.{C.END} Collated tallies for {blanket} at {temp_k} K to: {dst}")
 
 

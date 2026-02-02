@@ -4,7 +4,8 @@ venv/
 .ipynb_checkpoints/
 __pycache__/
 test/
-**/scratch.py
+test*
+scratch*
 *.pyc
 *.ppm
 *.w
@@ -14,6 +15,4 @@ test/
 ~$*
 runtp*
 .gitattributes
-Jupyter/BISO_combined/statepoint.10.h5
-Jupyter/BISO_combined/summary.h5
-Jupyter/BISO_combined/tallies.out
+Jupyter/BISO_combined/*

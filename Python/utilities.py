@@ -3,6 +3,7 @@ Set of helper functions
 """
 import os, re, sys, time, functools
 import numpy as np
+import pandas as pd
 
 from Python.parameters import *
 # from parameters import *
@@ -102,7 +103,6 @@ def fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope='U238'):
 
     Returns:
         biso_per_cc (float): number of biso particles per m³ of breeder
-
     """
     if fertile_isotope == 'U238':
         biso_per_cc = fertile_kgm3 * AMU_UO2 / AMU_U238 / KERNEL_VOLUME / DENSITY_UO2 / 100**3 * 1000
