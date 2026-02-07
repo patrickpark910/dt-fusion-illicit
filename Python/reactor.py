@@ -26,9 +26,8 @@ class Reactor(ABC):
         self.run_openmc  = run_openmc
         self.run_debug   = run_debug
         self.n_particles = N_PARTICLES # int(1e6)
-        self.n_cycles    = N_CYCLES    # 10
-        if blanket_name in ['FLiBe', 'HCPB']:
-            self.n_cycles = 20
+        self.n_cycles    = N_CYCLES    # 100
+
 
         # All class templates must define these variables:
         self.temp_k          = None # TEMP_K
