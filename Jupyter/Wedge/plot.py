@@ -130,7 +130,6 @@ class Plot:
 
         plt.close('all')
 
-
 if __name__ == "__main__":
     current_plot = Plot(save=True, show=True)
     combined_plot.plot_flux()
