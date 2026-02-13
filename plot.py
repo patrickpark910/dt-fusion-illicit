@@ -4,12 +4,48 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, ScalarFormatter, FuncFormatter
 from scipy.interpolate import Akima1DInterpolator
-from scipy.interpolate import PchipInterpolator
+from scipy.optimize import curve_fit
 
 
 """ import helper functions """
 from Python.utilities import *
 from Python.parameters import *
+
+
+def readtxtFile(path): 
+    energy, microxs = [], []
+
+    with open(path, 'r') as file:
+        file.readline()
+        file.readline()
+
+        for line in file:
+            values = line.split()
+            energy.append(float(values[0]))
+            microxs.append(float(values[1]))
+
+    return np.array(energy), np.log(np.array(microxs))
+
+
+def fitquartic(x,y):
+    '''
+    Fits [a, b, c, d] for ax^4 + bx^3 + cx^2 + dx = y (force zero production at zero enrichment)
+    Return approximation expression, derivative of approximation
+    
+    x: array, enrichment amounts
+    y: array, Pu-239 production per year 
+    '''
+    def quartic(x,a,b,c,d):
+        return a*x**4 + b*x**3 + c*x**2 + d*x
+    
+    params, _ = curve_fit(quartic, x, y)
+    a_fit,b_fit,c_fit,d_fit = params
+
+    f = lambda x: a_fit*x**4 + b_fit*x**3 + c_fit*x**2 + d_fit*x
+    fprime = lambda x: 4*a_fit*x**3 + 3*b_fit*x**2 + 2*c_fit*x + d_fit
+
+    return f, fprime
+
 
 
 
@@ -19,10 +55,11 @@ def plot_all():
     combined_plot = Plot(save=True, show=True)
     
     """ Pick which one to plot by uncommenting """
-    combined_plot.plot_tbr()
+    # combined_plot.plot_tbr()
     # combined_plot.plot_pu_per_yr()
-    # combined_plot.plot_cum_norm_histogram()
-    # combined_plot.plot_flux()
+    combined_plot.plot_cum_norm_histogram()
+    # combined_plot.plot_dfisdfer()
+    # combined_plot.plot_fisovern()
 
     print("All plots completed and saved.")
 
@@ -503,6 +540,194 @@ class Plot:
             print(f"Exported cumulative normalized histogram plots.")
         else:
             print(f"Did not export cumulative normalized histogram plot.")
+
+        if self.show: plt.show()
+        plt.close('all')
+
+
+    def plot_dfisdfer(self):
+        print(f"\nPlotting rate of change of fissile material with respect to fertile density vs. fertile density...")
+
+        tot_n_per_yr = NPS_FUS * 3.156e+7
+
+        # Gotta then convert fissile atoms/yr to kg/yr
+        pu239_at_to_kg_per_yr = tot_n_per_yr / AVO * AMU_PU239 / 1e3
+        u233_at_to_kg_per_yr  = tot_n_per_yr / AVO * AMU_U233  / 1e3
+
+        # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
+        # pebble bed
+        x6, y6 =     self.hcpb_u_rr_df['fertile_kg/m3'], pu239_at_to_kg_per_yr * self.hcpb_u_rr_df['U238(n,g)']
+        x5, y5 =    self.hcpb_th_rr_df['fertile_kg/m3'], u233_at_to_kg_per_yr * self.hcpb_th_rr_df['Th232(n,g)']
+
+        # lead lithium     
+        x4, y4 =   self.dcll_u_rr_df['fertile_kg/m3'],  pu239_at_to_kg_per_yr *  self.dcll_u_rr_df['U238(n,g)']
+        x3, y3 =  self.dcll_th_rr_df['fertile_kg/m3'],  u233_at_to_kg_per_yr * self.dcll_th_rr_df['Th232(n,g)']
+
+        # flibe
+        x2, y2 =  self.flibe_u_rr_df['fertile_kg/m3'],  pu239_at_to_kg_per_yr *  self.flibe_u_rr_df['U238(n,g)']
+        x1, y1 = self.flibe_th_rr_df['fertile_kg/m3'],  u233_at_to_kg_per_yr * self.flibe_th_rr_df['Th232(n,g)']
+
+        # find derivatives 
+        quartic_deriv1 = fitquartic(x1[:17], y1[:17])[1] # fit quartic up until 250 kg enrichment
+        quartic_deriv2 = fitquartic(x2[:17], y2[:17])[1]
+        quartic_deriv3 = fitquartic(x3[:17], y3[:17])[1]
+        quartic_deriv4 = fitquartic(x4[:17], y4[:17])[1]
+        quartic_deriv5 = fitquartic(x5[:17], y5[:17])[1]
+        quartic_deriv6 = fitquartic(x6[:17], y6[:17])[1]
+
+        # evaluate
+        x_fine = np.linspace(x1.min(), x1.max(), 300)
+        y1eval, y1fine = quartic_deriv1(x1), quartic_deriv1(x_fine)
+        y2eval, y2fine = quartic_deriv2(x2), quartic_deriv2(x_fine)
+        y3eval, y3fine = quartic_deriv3(x3), quartic_deriv3(x_fine)
+        y4eval, y4fine = quartic_deriv4(x4), quartic_deriv4(x_fine)
+        y5eval, y5fine = quartic_deriv5(x5), quartic_deriv5(x_fine)
+        y6eval, y6fine = quartic_deriv6(x6), quartic_deriv6(x_fine)
+
+        # plot
+        plt.figure(figsize=(7.5,5))
+
+        plt.scatter(x6, y6eval, marker='s', s=40, color='#b41f24') # HCPB-UO2
+        plt.scatter(x5, y5eval, marker='1', s=70, color='#b41f24') # HCPB-ThO2
+        plt.scatter(x4, y4eval, marker='^', s=40, color='#0047ba') # DCLL-UO2
+        plt.scatter(x3, y3eval, marker='x', s=50, color='#0047ba') # DCLL-ThO2
+        plt.scatter(x2, y2eval, marker='o', s=30, color='#66b420')   # FLiBe-UF4
+        plt.scatter(x1, y1eval, marker='+', s=60, color='#66b420')   # FLiBe-ThF4
+
+        plt.plot(x_fine, y6fine, '-',   linewidth=1, color='#b41f24',)   #  HCPB-UO2
+        plt.plot(x_fine, y5fine, '--',  linewidth=1, color='#b41f24',)   #  HCPB-ThO2
+        plt.plot(x_fine, y4fine, '-',   linewidth=1, color='#0047ba',)   #  DCLL-UO2
+        plt.plot(x_fine, y3fine, '--',  linewidth=1, color='#0047ba',)   #  DCLL-ThO2
+        plt.plot(x_fine, y2fine, '-',   linewidth=1, color='#66b420', )    #  FLiBe-UF4
+        plt.plot(x_fine, y1fine, '--',  linewidth=1, color='#66b420', )    #  FLiBe-ThF4 
+
+        # Dummy plots for legend -- ppark
+        plt.plot([9e8,9e9], [9e8,9e9], '+--', markersize=8, linewidth=1, color='#66b420',   label=r'FLiBe-ThF$_4$') #  green: #66b420
+        plt.plot([9e8,9e9], [9e8,9e9], 'o-',  markersize=5, linewidth=1, color='#66b420',   label=r'FLiBe-UF$_4$')  # 
+        plt.plot([9e8,9e9], [9e8,9e9], '1--', markersize=9, linewidth=1, color='#b41f24', label=r'HCPB-ThO$_2$')    # 
+        plt.plot([9e8,9e9], [9e8,9e9], 's-',  markersize=5, linewidth=1, color='#b41f24', label=r'HCPB-UO$_2$')     # 
+        plt.plot([9e8,9e9], [9e8,9e9], 'x--', markersize=7, linewidth=1, color='#0047ba', label=r'DCLL-ThO$_2$')    #  red: #b41f24
+        plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'DCLL-UO$_2$')     #  blue: #0047ba
+
+        # plt.title(f'Tritium breeding ratio (All)') # Exclude title for production figs --ppark 2025-08-06
+        plt.xlabel(r'Fertile isotope density $n$ in blanket [kg$/$m$^3$]')
+        plt.ylabel(r'$dR_{\text{fis}}/dn$ [kg$/\text{yr}^2$]')
+
+        plt.xlim(-5,160)
+        plt.ylim(-0.25,6)  # plt.ylim(-7.5,225+7.5) REMEMBER TO CHANGE 
+
+        # Tick grid
+        ax = plt.gca()
+        ax.xaxis.set_ticks_position('both')
+        ax.xaxis.set_minor_locator(MultipleLocator(10))
+        ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
+ 
+        ax.yaxis.set_ticks_position('both')
+        ax.yaxis.set_major_locator(MultipleLocator(1))   # ax.yaxis.set_major_locator(MultipleLocator(25))
+        ax.yaxis.set_minor_locator(MultipleLocator(0.25)) # ax.yaxis.set_minor_locator(MultipleLocator(12.5))
+        ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
+
+        plt.tight_layout()
+
+        leg = plt.legend(fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1)
+        leg.get_frame().set_linewidth(0.5) 
+    
+        if self.save:
+            plt.savefig(f'./Figures/pdf/fig_dRdn.pdf', bbox_inches='tight', format='pdf')
+            plt.savefig(f'./Figures/png/fig_dRdn.png', bbox_inches='tight', format='png')
+            print("Exported rate of change for fissile material production with respect to fertile material plot for all blankets.")
+        else:
+            print("Did not export dR / dn plot due to user setting.")
+
+        if self.show: plt.show()
+        plt.close('all')
+
+
+    def plot_fisovern(self):
+        print(f"\nPlotting fissile material divided by fertile density vs. fertile density...")
+
+        tot_n_per_yr = NPS_FUS * 3.156e+7
+
+        # Gotta then convert fissile atoms/yr to kg/yr
+        pu239_at_to_kg_per_yr = tot_n_per_yr / AVO * AMU_PU239 / 1e3
+        u233_at_to_kg_per_yr  = tot_n_per_yr / AVO * AMU_U233  / 1e3
+
+        # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
+        # cut out the first point since dividing by zero.
+        # helium cooled pebble bed
+        x6, y6 =     self.pb_u_rr_df['fertile_kg/m3'][1:], pu239_at_to_kg_per_yr * self.pb_u_rr_df['U238(n,g)'][1:]
+        x5, y5 =    self.pb_th_rr_df['fertile_kg/m3'][1:], u233_at_to_kg_per_yr * self.pb_th_rr_df['Th232(n,g)'][1:]
+
+        # dual coolant lead lithium     
+        x4, y4 =   self.pbli_u_rr_df['fertile_kg/m3'][1:],  pu239_at_to_kg_per_yr *  self.pbli_u_rr_df['U238(n,g)'][1:]
+        x3, y3 =  self.pbli_th_rr_df['fertile_kg/m3'][1:],  u233_at_to_kg_per_yr * self.pbli_th_rr_df['Th232(n,g)'][1:]
+
+        # flibe
+        x2, y2 =  self.flibe_u_rr_df['fertile_kg/m3'][1:],  pu239_at_to_kg_per_yr *  self.flibe_u_rr_df['U238(n,g)'][1:]
+        x1, y1 = self.flibe_th_rr_df['fertile_kg/m3'][1:],  u233_at_to_kg_per_yr * self.flibe_th_rr_df['Th232(n,g)'][1:]
+
+        x_fine = np.linspace(x1.min(), x1.max(), 300) # Evaluate on a fine grid
+        y_akima1 = Akima1DInterpolator(x1, y1/x1)(x_fine)
+        y_akima2 = Akima1DInterpolator(x2, y2/x2)(x_fine)
+        y_akima3 = Akima1DInterpolator(x3, y3/x3)(x_fine)
+        y_akima4 = Akima1DInterpolator(x4, y4/x4)(x_fine)
+        y_akima5 = Akima1DInterpolator(x5, y5/x5)(x_fine)
+        y_akima6 = Akima1DInterpolator(x6, y6/x6)(x_fine)
+
+        # plot
+        plt.figure(figsize=(7.5,5))
+
+        plt.scatter(x6, y6/x6, marker='s', s=40, color='#b41f24') # HCPB-UO2
+        plt.scatter(x5, y5/x5, marker='1', s=70, color='#b41f24') # HCPB-ThO2
+        plt.scatter(x4, y4/x4, marker='^', s=40, color='#0047ba') # DCLL-UO2
+        plt.scatter(x3, y3/x3, marker='x', s=50, color='#0047ba') # DCLL-ThO2
+        plt.scatter(x2, y2/x2, marker='o', s=30, color='#66b420')   # FLiBe-UF4
+        plt.scatter(x1, y1/x1, marker='+', s=60, color='#66b420')   # FLiBe-ThF4
+
+        plt.plot(x_fine, y_akima6, '-',   linewidth=1, color='#b41f24',)   #  HCPB-UO2
+        plt.plot(x_fine, y_akima5, '--',  linewidth=1, color='#b41f24',)   #  HCPB-ThO2
+        plt.plot(x_fine, y_akima4, '-',   linewidth=1, color='#0047ba',)   #  DCLL-UO2
+        plt.plot(x_fine, y_akima3, '--',  linewidth=1, color='#0047ba',)   #  DCLL-ThO2
+        plt.plot(x_fine, y_akima2, '-',   linewidth=1, color='#66b420', )    #  FLiBe-UF4
+        plt.plot(x_fine, y_akima1, '--',  linewidth=1, color='#66b420', )    #  FLiBe-ThF4 
+
+        # Dummy plots for legend -- ppark
+        plt.plot([9e8,9e9], [9e8,9e9], '+--', markersize=8, linewidth=1, color='#66b420',   label=r'FLiBe-ThF$_4$') #  green: #66b420
+        plt.plot([9e8,9e9], [9e8,9e9], 'o-',  markersize=5, linewidth=1, color='#66b420',   label=r'FLiBe-UF$_4$')  # 
+        plt.plot([9e8,9e9], [9e8,9e9], '1--', markersize=9, linewidth=1, color='#b41f24', label=r'HCPB-ThO$_2$')    # 
+        plt.plot([9e8,9e9], [9e8,9e9], 's-',  markersize=5, linewidth=1, color='#b41f24', label=r'HCPB-UO$_2$')     # 
+        plt.plot([9e8,9e9], [9e8,9e9], 'x--', markersize=7, linewidth=1, color='#0047ba', label=r'DCLL-ThO$_2$')    #  red: #b41f24
+        plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'DCLL-UO$_2$')     #  blue: #0047ba
+
+        # plt.title(f'Tritium breeding ratio (All)') # Exclude title for production figs --ppark 2025-08-06
+        plt.xlabel(r'Fertile isotope density $n$ in blanket [kg$/$m$^3$]')
+        plt.ylabel(r'$R_{\text{fis}}/n$ [kg$/$yr]')
+
+        plt.xlim(-5,160)
+        plt.ylim(-0.25,6) 
+
+        # Tick grid
+        ax = plt.gca()
+        ax.xaxis.set_ticks_position('both')
+        ax.xaxis.set_minor_locator(MultipleLocator(10))
+        ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
+ 
+        ax.yaxis.set_ticks_position('both')
+        ax.yaxis.set_major_locator(MultipleLocator(1)) 
+        ax.yaxis.set_minor_locator(MultipleLocator(0.25)) 
+        ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
+
+        plt.tight_layout()
+
+        leg = plt.legend(fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1)
+        leg.get_frame().set_linewidth(0.5) 
+    
+        if self.save:
+            plt.savefig(f'./Figures/pdf/fig_Rn.pdf', bbox_inches='tight', format='pdf')
+            plt.savefig(f'./Figures/png/fig_Rn.png', bbox_inches='tight', format='png')
+            print("Exported fissile material production divided by fertile material for all blankets.")
+        else:
+            print("Did not export R/n plot due to user setting.")
 
         if self.show: plt.show()
         plt.close('all')
