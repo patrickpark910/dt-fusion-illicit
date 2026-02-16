@@ -1,6 +1,26 @@
 import os
 import re
 
+def cleanup_zone_identifiers(root_directory='.'):
+    """
+    Recursively finds and deletes all :Zone.Identifier files 
+    starting from the root_directory.
+    """
+    deleted_count = 0
+    
+    for root, dirs, files in os.walk(root_directory):
+        for file in files:
+            if ":Zone.Identifier" in file:
+                file_path = os.path.join(root, file)
+                try:
+                    os.remove(file_path)
+                    print(f"Deleted: {file_path}")
+                    deleted_count += 1
+                except OSError as e:
+                    print(f"Error deleting {file_path}: {e}")
+                    
+    print(f"\nCleanup complete. Total files removed: {deleted_count}")
+
 def rename_tally_folders(directory="."):
     """
     Renames folders like:
@@ -70,6 +90,9 @@ def delete_target_files(root_dir, target_name="fertile_n-gamma.csv"):
 
 if __name__ == "__main__":
     print('1')
-    rename_folders()
+    # rename_folders()
+    
+    cleanup_zone_identifiers()
+
     print('2')
     # delete_target_files(".")
