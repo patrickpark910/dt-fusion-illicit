@@ -59,9 +59,9 @@ def find_loading_at_tbr_drop(df, tbr_drop_frac=0.10):
 
 
 def run_all():
-    os.makedirs('./Figures/PDF', exist_ok=True)
-    os.makedirs('./Figures/PNG', exist_ok=True)
-    os.makedirs('./Figures/Data', exist_ok=True)
+    os.makedirs('./Figures/pdf', exist_ok=True)
+    os.makedirs('./Figures/png', exist_ok=True)
+    os.makedirs('./Figures/data', exist_ok=True)
 
     # Data config: (path, label, color, marker) - FLiBe, DCLL, HCPB; add Li30.0 if available
     configs = [
@@ -123,28 +123,33 @@ def run_all():
         print(s)
     print()
 
-    # --- Plot 1: TBR vs loading (with 10% drop line) ---
+    # --- Plot 1: TBR vs loading (with 10% drop line per config) ---
     plt.figure(figsize=(8, 6))
     ax = plt.gca()
     ax.axhspan(0, 1.00, color='#e0ded8')
+    # Data curves (solid)
     for df, label, color, marker in datasets:
         if df is None:
             continue
         tbr_scaled = BLANKET_COVERAGE * df['tbr']
         plt.plot(df['fertile_kg/m3'], tbr_scaled, marker=marker, linestyle='-', color=color, label=label, markersize=5)
-    tbr_0_vals = [r['tbr_0'] for r in results if not np.isnan(r['tbr_0'])]
-    if tbr_0_vals:
-        tbr_ref = BLANKET_COVERAGE * np.mean(tbr_0_vals)
-        ax.axhline(tbr_ref * 0.9, color='gray', linestyle='--', alpha=0.8, label='10% TBR drop')
+    # Colored dashed horizontal line at 10% TBR drop for each config (0.9 * TBR_0)
+    for r in results:
+        if np.isnan(r['tbr_0']) or r['tbr_at_10pct_drop'] is None:
+            continue
+        tbr_drop = BLANKET_COVERAGE * r['tbr_at_10pct_drop']
+        ax.axhline(tbr_drop, color=r['color'], linestyle='--', alpha=0.85, linewidth=1.2)
+        ax.plot([], [], color=r['color'], linestyle='--', linewidth=1.5, alpha=0.85,
+                label='10% drop: ' + r['label'])
     plt.xlabel(r'Fertile isotope density in breeder [kg/m³]')
     plt.ylabel('Tritium breeding ratio')
     plt.xlim(-5, 1025)
     plt.ylim(0.75, 1.5)
-    plt.legend()
+    plt.legend(loc='best', fontsize=8)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig('./Figures/PDF/fig_rob_tbr_drop.pdf', bbox_inches='tight')
-    plt.savefig('./Figures/PNG/fig_rob_tbr_drop.png', bbox_inches='tight')
+    plt.savefig('./Figures/pdf/fig_rob_tbr_drop.pdf', bbox_inches='tight')
+    plt.savefig('./Figures/png/fig_rob_tbr_drop.png', bbox_inches='tight')
     print("Saved: fig_rob_tbr_drop")
     plt.close()
 
@@ -202,8 +207,8 @@ def run_all():
         ax2.legend()
         ax2.grid(True, alpha=0.3)
         plt.tight_layout()
-        plt.savefig('./Figures/PDF/fig_rob_heat_factor.pdf', bbox_inches='tight')
-        plt.savefig('./Figures/PNG/fig_rob_heat_factor.png', bbox_inches='tight')
+        plt.savefig('./Figures/pdf/fig_rob_heat_factor.pdf', bbox_inches='tight')
+        plt.savefig('./Figures/png/fig_rob_heat_factor.png', bbox_inches='tight')
         print("Saved: fig_rob_heat_factor")
         plt.close()
     else:
@@ -211,7 +216,7 @@ def run_all():
 
     # Export results table
     df_results = pd.DataFrame(results)
-    df_results.to_csv('./Figures/Data/rob_tbr_drop_summary.csv', index=False)
+    df_results.to_csv('./Figures/data/rob_tbr_drop_summary.csv', index=False)
     print("Saved: rob_tbr_drop_summary.csv")
     print("\nDone.")
 
