@@ -59,9 +59,9 @@ def find_loading_at_tbr_drop(df, tbr_drop_frac=0.10):
 
 
 def run_all():
-    os.makedirs('./Figures/pdf', exist_ok=True)
-    os.makedirs('./Figures/png', exist_ok=True)
-    os.makedirs('./Figures/data', exist_ok=True)
+    os.makedirs('./Figures/PDF', exist_ok=True)
+    os.makedirs('./Figures/PNG', exist_ok=True)
+    os.makedirs('./Figures/Data', exist_ok=True)
 
     # Data config: (path, label, color, marker) - FLiBe, DCLL, HCPB; add Li30.0 if available
     configs = [
@@ -143,8 +143,8 @@ def run_all():
     plt.legend()
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig('./Figures/pdf/fig_rob_tbr_drop.pdf', bbox_inches='tight')
-    plt.savefig('./Figures/png/fig_rob_tbr_drop.png', bbox_inches='tight')
+    plt.savefig('./Figures/PDF/fig_rob_tbr_drop.pdf', bbox_inches='tight')
+    plt.savefig('./Figures/PNG/fig_rob_tbr_drop.png', bbox_inches='tight')
     print("Saved: fig_rob_tbr_drop")
     plt.close()
 
@@ -202,8 +202,8 @@ def run_all():
         ax2.legend()
         ax2.grid(True, alpha=0.3)
         plt.tight_layout()
-        plt.savefig('./Figures/pdf/fig_rob_heat_factor.pdf', bbox_inches='tight')
-        plt.savefig('./Figures/png/fig_rob_heat_factor.png', bbox_inches='tight')
+        plt.savefig('./Figures/PDF/fig_rob_heat_factor.pdf', bbox_inches='tight')
+        plt.savefig('./Figures/PNG/fig_rob_heat_factor.png', bbox_inches='tight')
         print("Saved: fig_rob_heat_factor")
         plt.close()
     else:
@@ -211,7 +211,7 @@ def run_all():
 
     # Export results table
     df_results = pd.DataFrame(results)
-    df_results.to_csv('./Figures/data/rob_tbr_drop_summary.csv', index=False)
+    df_results.to_csv('./Figures/Data/rob_tbr_drop_summary.csv', index=False)
     print("Saved: rob_tbr_drop_summary.csv")
     print("\nDone.")
 

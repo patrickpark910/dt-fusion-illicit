@@ -113,27 +113,27 @@ class FLiBe(Reactor):
             self.fertile = openmc.Material(name='fertile', temperature=self.temp_k)
             self.fertile.add_elements_from_formula('UF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
             self.fertile.set_density('g/cm3', DENSITY_UF4) 
-            fertile_density = DENSITY_UF4
+            xf4_x_ratio = AMU_UF4 / AMU_U238
 
         elif self.fertile_isotope == 'Th232':
 
             self.fertile = openmc.Material(name='fertile', temperature=self.temp_k)
             self.fertile.add_elements_from_formula('ThF4','ao') # 'ao' here refers to 1:4 atomic ratio of Th:F in ThF4
             self.fertile.set_density('g/cm3', DENSITY_ThF4) 
-            fertile_density = DENSITY_ThF4
+            xf4_x_ratio = AMU_ThF4 / AMU_Th232
 
 
-        # Per 1 m³ of breeding region: XF4 displaces FLiBe (additive model)
-        # vf_fertile = vol fraction of UF4/ThF4 in mixture
-        vf_fertile = self.fertile_kgm3 / (self.fertile.density*1000)  # 1 g/cm³ = 1000 kg/m³
+        # Per 1 m³ blanket, we deduct the volume of XF4 based on its mass density and specified kg/m³, then we compute the new volume fractions of FLiBe and XF4.
+        # ORNL data show mixing UF4/ThF4 in 2(LiF)-BeF2 is additive in molar volume, i.e., XF4 takes up its own volume in the mixture, up to c.1000 C.
+        # cf. Cantor 73 (ORNL-TM-4308) p.19, Cantor 68 (ORNL-TM-2316) p.34
 
-        vf_flibe_new   = 1 / (1 + vf_fertile)
-        vf_fertile_new = vf_fertile / (1 + vf_fertile)
-
-        self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [vf_flibe_new, vf_fertile_new], 'vo') # fractions in 'mix_materials' MUST add up to 1
+        vf_xf4   = self.fertile_kgm3 * xf4_x_ratio / (self.fertile.density*1000)  # 1 g/cm³ = 1000 kg/m³
+        vf_flibe = 1.0 - vf_xf4
 
         # FLiBe volume = blanket volume minus XF4 volume (deduct as U/Th loading increases)
-        self.breeder_volume = self.blanket_volume * (1 - vf_fertile_new)
+        self.breeder_volume = self.blanket_volume * vf_flibe
+
+        self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [vf_flibe, vf_xf4], 'vo') # fractions in 'mix_materials' MUST add up to 1
         self.blanket.name, self.blanket.temperature = self.name, self.temp_k
 
 
@@ -143,6 +143,28 @@ class FLiBe(Reactor):
 
         self.materials = openmc.Materials([self.firstwall, self.beryllium, self.structure, self.blanket]) # self.air, 
         # self.materials.export_to_xml(self.path)
+
+
+        # ------------------------------------------------------------------
+        # Debugging printouts
+        # ------------------------------------------------------------------
+
+        uh_oh_did_i_make_a_fucky_wucky = True
+
+        if self.run_debug and uh_oh_did_i_make_a_fucky_wucky:
+            print(f"")
+            print(f"| DEBUG PRINTOUT - MATERIALS")
+            print(f"| ")
+            print(f"| Breeder = 2(LiF)-BeF2")
+            print(f"| Blanket vol: {self.blanket_volume:.6f} [m³] (total blanket volume)")
+            print(f"| Breeder vol: {self.breeder_volume:.6f} [m³] (breeder in blanket)")
+            print(f"| XF4     vol: {(self.blanket_volume-self.breeder_volume):.6f} [m³] (XF4 in blanket)")
+            print(f"| ")
+            print(f"| With respect to the BREEDER, i.e., per 1 m³ of breeder volume, we have these new volume fractions:")
+            print(f"|   vf_flibe =  {(vf_flibe*100):.6f} vol%")
+            print(f"|   vf_xf4   =  {(vf_xf4*100):.6f} vol%")
+            print(f"|   check they add up = {(vf_xf4+vf_flibe)*100:.6f} vol%")
+            print(f"")
 
 
     def geometry(self):

@@ -93,7 +93,7 @@ class Plot:
         self.save, self.show = save, show
         # self.name = 'All_Blankets'
 
-        for sd in ['pdf','png','data']:
+        for sd in ['PNG','PDF','Data']:
             sd_path = f'./Figures/{sd}/'
             print(f"Ensuring directory exists: {sd_path}")
             os.makedirs(sd_path, exist_ok=True)
@@ -317,8 +317,8 @@ class Plot:
             leg.get_frame().set_linewidth(0.5) 
 
             if self.save:
-                plt.savefig(f'./Figures/pdf/fig_tbr_{v["suffix"]}.pdf', bbox_inches='tight', format='pdf')
-                plt.savefig(f'./Figures/png/fig_tbr_{v["suffix"]}.png', bbox_inches='tight', format='png')
+                plt.savefig(f'./Figures/PDF/fig_tbr_{v["suffix"]}.pdf', bbox_inches='tight', format='pdf')
+                plt.savefig(f'./Figures/PNG/fig_tbr_{v["suffix"]}.png', bbox_inches='tight', format='png')
                 print(f"Exported TBR plot: fig_tbr_{v['suffix']}")
             
             if self.show: 
@@ -446,8 +446,8 @@ class Plot:
             leg.get_frame().set_linewidth(0.5) 
 
             if self.save:
-                plt.savefig(f'./Figures/pdf/fig_fpr_{v["suffix"]}.pdf', bbox_inches='tight', format='pdf')
-                plt.savefig(f'./Figures/png/fig_fpr_{v["suffix"]}.png', bbox_inches='tight', format='png')
+                plt.savefig(f'./Figures/PDF/fig_fpr_{v["suffix"]}.pdf', bbox_inches='tight', format='pdf')
+                plt.savefig(f'./Figures/PNG/fig_fpr_{v["suffix"]}.png', bbox_inches='tight', format='png')
                 print("Exported fissile production per year plot for all blankets.")
             else:
                 print("Did not export fissile production per year plot due to user setting.")
@@ -533,8 +533,8 @@ class Plot:
                     ax.set_ylabel(r"Cumulative fraction of fertile $($n,$\gamma)$ rxns")
 
         if self.save:
-            plt.savefig(f'./Figures/pdf/fig_cum_norm_histogram.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/png/fig_cum_norm_histogram.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/PDF/fig_cum_norm_histogram.pdf', bbox_inches='tight', format='pdf')
+            plt.savefig(f'./Figures/PNG/fig_cum_norm_histogram.png', bbox_inches='tight', format='png')
             print(f"Exported cumulative normalized histogram plots.")
         else:
             print(f"Did not export cumulative normalized histogram plot.")
@@ -631,8 +631,8 @@ class Plot:
         leg.get_frame().set_linewidth(0.5) 
     
         if self.save:
-            plt.savefig(f'./Figures/pdf/fig_dRdn.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/png/fig_dRdn.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/PDF/fig_dRdn.pdf', bbox_inches='tight', format='pdf')
+            plt.savefig(f'./Figures/PNG/fig_dRdn.png', bbox_inches='tight', format='png')
             print("Exported rate of change for fissile material production with respect to fertile material plot for all blankets.")
         else:
             print("Did not export dR / dn plot due to user setting.")
@@ -721,8 +721,8 @@ class Plot:
         leg.get_frame().set_linewidth(0.5) 
     
         if self.save:
-            plt.savefig(f'./Figures/pdf/fig_Rn.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/png/fig_Rn.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/PDF/fig_Rn.pdf', bbox_inches='tight', format='pdf')
+            plt.savefig(f'./Figures/PNG/fig_Rn.png', bbox_inches='tight', format='png')
             print("Exported fissile material production divided by fertile material for all blankets.")
         else:
             print("Did not export R/n plot due to user setting.")

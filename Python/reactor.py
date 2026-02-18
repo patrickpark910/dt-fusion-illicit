@@ -12,7 +12,7 @@ from Python.utilities import *
 
 class Reactor(ABC):
 
-    def __init__(self, blanket_name, fertile_kgm3=0.0, fertile_isotope='U238', run_type='tallies', run_openmc=True, run_debug=True):
+    def __init__(self, blanket_name, fertile_kgm3=0.0, fertile_isotope='U238', run_type='tallies', print_xml=True, run_openmc=True, run_debug=True):
 
         self.fertile_kgm3 = fertile_kgm3
         self.fertile_isotope = fertile_isotope
@@ -23,6 +23,7 @@ class Reactor(ABC):
             self.fissile_isotope = 'U233'
 
         self.run_type    = run_type
+        self.print_xml   = print_xml
         self.run_openmc  = run_openmc
         self.run_debug   = run_debug
         self.n_particles = N_PARTICLES # int(1e6)
@@ -171,24 +172,23 @@ class Reactor(ABC):
 
         self.materials.cross_sections = set_xs_path()
         self.model = openmc.model.Model(self.geometry, self.materials, self.settings, self.tallies)
-        self.model.export_to_model_xml(self.path)
+
+        if self.print_xml:
+            self.model.export_to_model_xml(self.path)
+            print(f"{C.YELLOW}Comment.{C.END} OpenMC model XML files printed to: {self.path}")
+        else:
+            print(f"{C.RED}Warning.{C.END} OpenMC model XML files NOT printed (print_xml=False) to: {self.path}")
 
 
-    def openmc(self, threads=None):
-        """
-        Run OpenMC simulation with optional parallelization.
-        
-        Args:
-            threads: Number of OpenMP threads to use. If None, uses SLURM_CPUS_PER_TASK
-                     or defaults to 1. Set to 24 to use all cores on the node.
-        """
-        if threads is None:
-            # Try to get from SLURM environment variable, or use 1
-            threads = int(os.environ.get('SLURM_CPUS_PER_TASK', 
-                         os.environ.get('SLURM_NTASKS_PER_NODE', '1')))
-        
-        # Use threads parameter for OpenMP parallelization
-        self.model.run(cwd=self.path, threads=threads)
+    def openmc(self):
+
+        if self.run_openmc:
+            if has_statepoint(self.path):
+                print(f"{C.YELLOW}Warning.{C.END} File {self.path}/statepoint.XX.h5 already exists, so this OpenMC run will be skipped...")
+            else:
+                self.model.run(cwd=self.path)
+        else:    
+            print(f"{C.RED}Warning.{C.END} OpenMC calculation skipped (run_openmc=False) for: {self.path}")
 
 
     def volumes(self, samples=int(1e10)):
@@ -274,8 +274,6 @@ class Reactor(ABC):
                       self.blanket: (129, 204, 185),   # teal
                       # Void regions will be white by default
                       }
-            if hasattr(self, 'beryllium'):
-                C[self.beryllium] = (255, 215, 120)  # light gold (Be neutron multiplier)
 
         elif self.blanket_name in ['DCLL']:
             C = {self.firstwall: (30, 27, 41),           # very dark gray
@@ -335,13 +333,13 @@ class Reactor(ABC):
 
         """ Load tallies """
         sp_path = f'{self.path}/statepoint.{self.n_cycles}.h5'
-        print(f"Loading statepoint: {sp_path}")
         
         try:
+            print(f"{C.YELLOW}Comment.{C.END} Loading statepoint: {sp_path}")
             sp = openmc.StatePoint(sp_path) 
         except Exception as e:
-            print(f"\n{e}\n")
-            sys.exit(f"can't read the sp")
+            print(f"{C.RED}Warning.{C.END} Statepoint.XX.h5 missing or could not be read at: {sp_path}")
+            return
 
         
         print(f"Reading tallies...")
@@ -357,7 +355,6 @@ class Reactor(ABC):
         Li_spec   = sp.get_tally(name='Li rxn rates spectrum').get_pandas_dataframe()
         fertile      = sp.get_tally(name=f'Fertile rxn rates').get_pandas_dataframe()
         fertile_spec = sp.get_tally(name=f'Fertile rxn rates spectrum').get_pandas_dataframe()
-        heat         = sp.get_tally(name='volumetric heating').get_pandas_dataframe()
 
         # Add new column for energy bin midpoint (for plotting)
         for df in [flux_spec, fertile_spec, Li_spec]:
@@ -418,21 +415,13 @@ class Reactor(ABC):
         fissile_per_yr_list = [Pu_per_srcn * scaling_factor for Pu_per_srcn  in U238_ng_list]
         fissile_per_yr_err_list = [err * scaling_factor for err in U238_ng_err_list]
 
-        # Total heating [eV/source] summed over all cells (heating-local)
-        heat_total = heat[heat['score'] == 'heating-local']['mean'].sum()
-        heat_total_err = np.sqrt((heat[heat['score'] == 'heating-local']['std. dev.']**2).sum())
 
         """Create list of cell IDs randomly assigned by OpenMC to match mtu loading to cell ID"""
-        cell_ids = [str(x) for x in flux['cell'].unique().tolist()]
-        # Heating [eV/source] per cell, aligned with flux order (total row will sum)
-        heat_h = heat[heat['score'] == 'heating-local'].set_index('cell')
-        heat_list = [heat_h.loc[c, 'mean'] if c in heat_h.index else 0 for c in flux['cell'].unique()]
-        heat_err_list = [heat_h.loc[c, 'std. dev.'] if c in heat_h.index else 0 for c in flux['cell'].unique()]
+        cell_ids = [str(x) for x in flux['cell'].unique().tolist()] 
+        # turn into str to add 'total' at end -- otherwise gets pandas error for type mismatch -- ppark 2025-10-07
 
         df = pd.DataFrame({'cell': cell_ids,
                            'flux': flux_list,
-                           'heat_eV_src'       : heat_list,
-                           'heat_eV_src_stdev' : heat_err_list,
                            'Li6(n,t)'          : Li6_nt_list,
                            'Li6(n,t)_stdev'    : Li6_nt_err_list,
                            'Li7(n,t)'          : Li7_nt_list,

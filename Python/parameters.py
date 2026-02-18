@@ -8,13 +8,13 @@ ISOTOPES = ['U238', 'Th232']
 BLANKET_COVERAGE = 1.00 # Assume blanket covers 80% of plasma surface, rest for divertor
 TEMP_K = 900 # [K] ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
 
-N_PARTICLES, N_CYCLES = int(1e7), 10
+N_PARTICLES, N_CYCLES = int(4e6), 25
 
 """ Material parameters of breeders """
 
-# FLiBe (F4Li2Be)
-DENSITY_FLIBE   =  1.94  # [g/cm³]
-ENRICH_FLIBE    =  7.50  # [at%] enrich of Li-6
+# FLiBe (2(LiF)-BeF2)
+DENSITY_FLIBE   =  1.9505  # [g/cm³] from EOS at 900 K and 101 kPa, calculated in Jupyter/FLiBe/flibe_mats.py, ref. Humrickhouse 17 (INL-44148) --ppark 2026-02-13
+ENRICH_FLIBE    =  7.50    # [at%] enrich of Li-6
 
 # Lead-lithium (DCLL, 83 at% Pb - 17 at% Li)
 DENSITY_DCLL    =  9.40  # [g/cm³]
@@ -28,12 +28,15 @@ ENRICH_HCPB     = 60.00  # [at%] enrich of Li-6
 
 """ Material parameters of fertile material """
 
+# Densities 6.88 g/cm³ (UF4) and 6.61 g/cm³ (ThF4) are computed from molar volume when added to 2(LiF)-BeF2 at 900 K 
+# respectively per Cantor (1965) ORNL-TM-3913, p.29 and Cantor (1973) ORNL-TM-4308, p.13 --ppark 2026-02-13
+DENSITY_UF4  =  6.88 # [g/cm³] nominally 6.7 for powder mass at room temp 
+DENSITY_ThF4 =  6.61 # [g/cm³] nominally 6.3 for powder mass at room temp 
+
 # BISO particle parameters
 ENRICH_U     =  0.71 # [wt%]
-DENSITY_UO2  = 10.50 # [g/cm³]
+DENSITY_UO2  = 10.50 # [g/cm³] 
 DENSITY_ThO2 = 10.00 # [g/cm³]
-DENSITY_UF4  =  6.70 # [g/cm³]
-DENSITY_ThF4 =  6.30 # [g/cm³]
 DENSITY_SiC  =  3.20 # [g/cm³]
 
 BISO_KERNEL_RADIUS   = 0.04 # [cm]  (400 μm / 800 μm wide)
