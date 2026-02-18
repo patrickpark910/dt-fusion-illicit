@@ -4,54 +4,19 @@
 
 <h3 align="center">Resonance Absorption Effects of Fertile Isotopes in Fusion Blankets</h3>
 
-  <p align="center">
-    project_description
-    <br />
-    <a href="https://github.com/github_username/repo_name"><strong>Explore the docs »</strong></a>
-    <br />
-  </p>
-</div>
 
-
-
-<!-- TABLE OF CONTENTS -->
-
-<details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
-  </ol>
-</details>
-<!-- ABOUT THE PROJECT -->
 
 ## About The Project
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
-
-Here's a blank template to get started. To avoid retyping too much info, do a search and replace with your text editor for the following: `github_username`, `repo_name`, `twitter_handle`, `linkedin_username`, `email_client`, `email`, `Resonance Absorption Effects of Fertile Isotopes in Fusion Blankets`, `project_description`, `project_license`
+To-do
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-
 <!-- GETTING STARTED -->
+
 ## Getting Started
 
+### Downloading our code
 1. Download (clone) the repository:
 
    ```bash
@@ -63,99 +28,99 @@ Here's a blank template to get started. To avoid retyping too much info, do a se
 
    ```bash
    wsl # if on Windows
-   python3 -m venv ./Python/venv
-   source ./Python/venv/bin/activate
+   python3 -m venv .venv
+   source .venv/bin/activate
    python -m pip install -U pip
    ```
 
-3. Install OpenMC into this virtual environment:
+3. Install your OpenMC into our virtual environment:
 
    ```bash
-   pip install -e /mnt/c/OpenMC
+   pip install -e /path/to/your/openmc/folder
    ```
 
-4. Install Python dependencies:
+4. Install our Python dependencies:
 
    ```bash
    pip install -r requirements.txt
    ```
 
+
+
+### Running our code
+
+Once you have this set up, you can now run our code.  All our calculations are controlled via `main.py`. You can configure the run type, materials, and execution behavior using command-line flags:
+   ```bash
+   python main.py -r [run_type] -b [blankets] -i [isotopes] [flags]
+   ```
+Our code has three main functionalities: plot OpenMC geometries (`-r plot`), draw Miller shapes of a tokamak and compute volumes of each cell (`-r volume`), or calculate various tallies within the model (`-r tallies`). The full list of options is shown below:
+
+
+   | **Flag** | **Full** | **Description**                                              | **Default** |
+   | -------- | ------------ | ------------------------------------------------------------ | ----------- |
+   | `-r`     | `--run_type` | Choose **one**: `tallies`, `volume`, or `plot`.              | `tallies`   |
+   | `-b`     | `--blankets` | Specify one or more blankets (space-separated), e.g., `-b FLiBe` or  `-b FLiBe DCLL HCPB` | All         |
+   | `-i`     | `--isotopes` | Specify one or more fertile isotopes (space-separated), e.g., `-i U238` | All         |
+   |          | `--no_xml`   | Runs through the code but doesn't print `model.xml` (useful for debugging) |             |
+   |          | `--no_run`   | Doesn't execute the OpenMC calculation                       |             |
+   |          | `--no_debug` | Turns off the debug print statements                         |             |
+
+NB. The engine, by default, automatically prints XMLs, runs OpenMC, and prints debug statements. Use the flags `--no_xml --no_run --no_debug` to turn off the respective function.
+
+
+
+### Usage Examples
+
+Run tally calculations for a FLiBe blankets for all fertile isotopes (U238, Th232):
+```bash
+python main.py -r tallies -b FLiBe
+```
+Run tally calculations for FLiBe, DCLL blankets and only add U238:
+```bash
+python main.py -r tallies -b FLiBe DCLL -i U238 Th232
+```
+Run tally simulations for a HCPB blanket and only add Th232. Say I want to test what the volume ratios of Th232 to Li4SiO4 are, for which I have written some debug print statements, and I don't need to print the XML nor run OpenMC. 
+```bash
+python main.py -r tallies -b HCPB -i Th232 --no_xml --no_run
+```
+Generate the XML for a geometry plots without actually running the OpenMC plotting calculation:
+```bash
+python main.py -r plot --no_run
+```
+
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-<!-- USAGE EXAMPLES -->
-
-## Usage
-
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
-
-_For more examples, please refer to the [Documentation](https://example.com)_
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ROADMAP -->
-## Roadmap
-
-- [ ] Feature 1
-- [ ] Feature 2
-- [ ] Feature 3
-    - [ ] Nested Feature
-
-See the [open issues](https://github.com/github_username/repo_name/issues) for a full list of proposed features (and known issues).
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 <!-- CONTRIBUTING -->
 ## Contributing
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
-Don't forget to give the project a star! Thanks again!
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue or shoot us an email. 
 
 1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+2. Create your Feature Branch (`git checkout -b feature`)
 3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-### Top contributors:
-
-<a href="https://github.com/github_username/repo_name/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=github_username/repo_name" alt="contrib.rocks image" />
-</a>
-
-
-
-<!-- LICENSE -->
-## License
-
-Distributed under the project_license. See `LICENSE.txt` for more information.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
 <!-- CONTACT -->
+
 ## Contact
 
 Emma R. Zoccoli - ezoccoli3@gatech.edu
 Greta X. Li - gl3210@princeton.edu 
-Patrick J. Park - pjp2136@columbia.edu (permanent)
+Patrick J. Park - pjp2136@columbia.edu 
 Robert J. Goldston - Principal Investigator - rjg@princeton.edu 
 
-Project Link: [https://github.com/github_username/repo_name](https://github.com/github_username/repo_name)
+Project Link: [https://github.com/patrickpark910/dt-fusion-illicit](https://github.com/patrickpark910/dt-fusion-illicit)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 
 <!-- ACKNOWLEDGMENTS -->
+
 ## Acknowledgments
 
 * []()
