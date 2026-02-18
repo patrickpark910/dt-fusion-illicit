@@ -8,7 +8,7 @@ ISOTOPES = ['U238', 'Th232']
 BLANKET_COVERAGE = 1.00 # Assume blanket covers 80% of plasma surface, rest for divertor
 TEMP_K = 900 # [K] ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
 
-N_PARTICLES, N_CYCLES = int(1e6), 100
+N_PARTICLES, N_CYCLES = int(1e7), 10
 
 """ Material parameters of breeders """
 
@@ -83,13 +83,14 @@ FLIBE_KAPPA  = 1.72   #      elongation
 FLIBE_DELTA  = 0.4    #      triangularity
 
 FLIBE_FW_CM  =   0.2  # [cm] first wall
+FLIBE_BE_CM  =   1.0  # [cm] beryllium neutron multiplier layer
 FLIBE_ST1_CM =   1.0  # [cm] structural region 1
 FLIBE_BR1_CM =   2.0  # [cm]   breeding region 1
 FLIBE_ST2_CM =   3.0  # [cm] structural region 2
 FLIBE_BR2_CM = 100.0  # [cm]   breeding region 2
 FLIBE_ST3_CM =   3.0  # [cm] structural region 3
 
-FLIBE_BL_VOL = 771.8  # [m³] from ./OpenMC/volume_FLiBe_900K_Li7.5_U000.00kgm3/volume_1.csv
+FLIBE_BL_VOL = 771.8  # [m³] Re-run volumes() after geometry changes (e.g. Be layer)
 
 
 # --------------------------------------------

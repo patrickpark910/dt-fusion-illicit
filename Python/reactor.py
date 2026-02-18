@@ -174,9 +174,21 @@ class Reactor(ABC):
         self.model.export_to_model_xml(self.path)
 
 
-    def openmc(self):
-
-        self.model.run(cwd=self.path)
+    def openmc(self, threads=None):
+        """
+        Run OpenMC simulation with optional parallelization.
+        
+        Args:
+            threads: Number of OpenMP threads to use. If None, uses SLURM_CPUS_PER_TASK
+                     or defaults to 1. Set to 24 to use all cores on the node.
+        """
+        if threads is None:
+            # Try to get from SLURM environment variable, or use 1
+            threads = int(os.environ.get('SLURM_CPUS_PER_TASK', 
+                         os.environ.get('SLURM_NTASKS_PER_NODE', '1')))
+        
+        # Use threads parameter for OpenMP parallelization
+        self.model.run(cwd=self.path, threads=threads)
 
 
     def volumes(self, samples=int(1e10)):
@@ -262,6 +274,8 @@ class Reactor(ABC):
                       self.blanket: (129, 204, 185),   # teal
                       # Void regions will be white by default
                       }
+            if hasattr(self, 'beryllium'):
+                C[self.beryllium] = (255, 215, 120)  # light gold (Be neutron multiplier)
 
         elif self.blanket_name in ['DCLL']:
             C = {self.firstwall: (30, 27, 41),           # very dark gray
@@ -343,6 +357,7 @@ class Reactor(ABC):
         Li_spec   = sp.get_tally(name='Li rxn rates spectrum').get_pandas_dataframe()
         fertile      = sp.get_tally(name=f'Fertile rxn rates').get_pandas_dataframe()
         fertile_spec = sp.get_tally(name=f'Fertile rxn rates spectrum').get_pandas_dataframe()
+        heat         = sp.get_tally(name='volumetric heating').get_pandas_dataframe()
 
         # Add new column for energy bin midpoint (for plotting)
         for df in [flux_spec, fertile_spec, Li_spec]:
@@ -403,13 +418,21 @@ class Reactor(ABC):
         fissile_per_yr_list = [Pu_per_srcn * scaling_factor for Pu_per_srcn  in U238_ng_list]
         fissile_per_yr_err_list = [err * scaling_factor for err in U238_ng_err_list]
 
+        # Total heating [eV/source] summed over all cells (heating-local)
+        heat_total = heat[heat['score'] == 'heating-local']['mean'].sum()
+        heat_total_err = np.sqrt((heat[heat['score'] == 'heating-local']['std. dev.']**2).sum())
 
         """Create list of cell IDs randomly assigned by OpenMC to match mtu loading to cell ID"""
-        cell_ids = [str(x) for x in flux['cell'].unique().tolist()] 
-        # turn into str to add 'total' at end -- otherwise gets pandas error for type mismatch -- ppark 2025-10-07
+        cell_ids = [str(x) for x in flux['cell'].unique().tolist()]
+        # Heating [eV/source] per cell, aligned with flux order (total row will sum)
+        heat_h = heat[heat['score'] == 'heating-local'].set_index('cell')
+        heat_list = [heat_h.loc[c, 'mean'] if c in heat_h.index else 0 for c in flux['cell'].unique()]
+        heat_err_list = [heat_h.loc[c, 'std. dev.'] if c in heat_h.index else 0 for c in flux['cell'].unique()]
 
         df = pd.DataFrame({'cell': cell_ids,
                            'flux': flux_list,
+                           'heat_eV_src'       : heat_list,
+                           'heat_eV_src_stdev' : heat_err_list,
                            'Li6(n,t)'          : Li6_nt_list,
                            'Li6(n,t)_stdev'    : Li6_nt_err_list,
                            'Li7(n,t)'          : Li7_nt_list,

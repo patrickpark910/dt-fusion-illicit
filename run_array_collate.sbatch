@@ -1,0 +1,64 @@
+#!/bin/bash
+#SBATCH -J dt_fusion_collate          # Job name
+#SBATCH --account=paceship-tritium   # Charge account
+#SBATCH -N 1                          # One node
+#SBATCH --ntasks-per-node=1           # Single task for collation
+#SBATCH -p cpu-small                 # Partition
+#SBATCH --mem=16G                     # Memory allocation (less needed)
+#SBATCH -t 01:00:00                   # Duration (1 hour should be plenty)
+#SBATCH -q inferno                    # Queue (inferno = resource-guaranteed, uses compute credits)
+#SBATCH --mail-type=BEGIN,END,FAIL    # Email notifications
+#SBATCH --mail-user=ezoccoli3@gatech.edu
+#SBATCH -o report-collate-%j.out      # Combined stdout/stderr
+#SBATCH --dependency=afterok:JOBID    # Replace JOBID with your array job ID
+
+# Always run from the folder you submitted in
+cd $SLURM_SUBMIT_DIR
+
+# Load and activate OpenMC environment
+module load anaconda3
+conda activate openmc-env
+
+# Move to your project directory (scratch)
+cd /storage/scratch1/7/ezoccoli3/dt-fusion-illicit
+
+# Collate all tallies after array jobs complete
+echo "Collating tallies for FLiBe..."
+
+python << 'PYTHON_SCRIPT'
+import sys
+sys.path.insert(0, '.')
+
+from Python.parameters import *
+from Python.utilities import *
+from Python.flibe import *
+import main
+
+# Import build_reactor from main module
+from main import build_reactor
+
+# Run collation for FLiBe with both isotopes
+for fertile_isotope in ['U238', 'Th232']:
+    print(f"Collating tallies for FLiBe {fertile_isotope}...")
+    # Get a sample run to extract volume info
+    sample_run = build_reactor('FLiBe',
+                              blanket_name='FLiBe',
+                              fertile_isotope=fertile_isotope,
+                              fertile_kgm3=0.0,
+                              run_type='tallies',
+                              run_openmc=False)
+    sample_run.initialize()
+    
+    # Use blanket_volume for FLiBe (as noted in main.py)
+    vol_m3 = sample_run.blanket_volume
+    main.collate_tallies('FLiBe', fertile_isotope, sample_run.breeder_enrich, sample_run.temp_k, vol_m3)
+
+# Run rob.py for analysis
+print("Running rob.py for analysis...")
+import rob
+rob.run_all()
+
+print("Collation complete!")
+PYTHON_SCRIPT
+
+echo "Collation job complete. Outputs are in $SLURM_SUBMIT_DIR"

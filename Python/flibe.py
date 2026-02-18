@@ -12,10 +12,10 @@ class FLiBe(Reactor):
 
         self.temp_k          = TEMP_K
         self.blanket_name    = 'FLiBe'
-        self.blanket_volume  = FLIBE_BL_VOL  # m³
+        self.blanket_volume  = FLIBE_BL_VOL  # m³ total breeding region (FLiBe + XF4)
         self.breeder_density = DENSITY_FLIBE # g/cm³
         self.breeder_enrich  = ENRICH_FLIBE  # wt% 
-        self.breeder_volume  = self.blanket_volume  # m³
+        self.breeder_volume  = self.blanket_volume  # set in materials() after XF4 deduction
 
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
@@ -53,7 +53,15 @@ class FLiBe(Reactor):
         # and the rest O, N ,C, Na, K, Al, Ca, Cr, Cu, Fe impurities...
         # I think we can just set it to be W to save compute time loading nuclide data
         
+        
+        # ------------------------------------------------------------------
+        # Beryllium    
+        # ------------------------------------------------------------------
 
+        self.beryllium = openmc.Material(name='beryllium', temperature=self.temp_k)
+        self.beryllium.depletable = False
+        self.beryllium.add_element('Be', 1) 
+        self.beryllium.set_density('g/cm3', 1.845) 
         # ------------------------------------------------------------------
         # Structure (V-4Cr-4Ti)
         # ------------------------------------------------------------------
@@ -115,13 +123,17 @@ class FLiBe(Reactor):
             fertile_density = DENSITY_ThF4
 
 
-        # Per 1 m³ of FLiBe breeder, you have 1 m³ FLiBe into which you are dissolving X kg of U-238 or Th-232
+        # Per 1 m³ of breeding region: XF4 displaces FLiBe (additive model)
+        # vf_fertile = vol fraction of UF4/ThF4 in mixture
         vf_fertile = self.fertile_kgm3 / (self.fertile.density*1000)  # 1 g/cm³ = 1000 kg/m³
 
         vf_flibe_new   = 1 / (1 + vf_fertile)
         vf_fertile_new = vf_fertile / (1 + vf_fertile)
 
         self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [vf_flibe_new, vf_fertile_new], 'vo') # fractions in 'mix_materials' MUST add up to 1
+
+        # FLiBe volume = blanket volume minus XF4 volume (deduct as U/Th loading increases)
+        self.breeder_volume = self.blanket_volume * (1 - vf_fertile_new)
         self.blanket.name, self.blanket.temperature = self.name, self.temp_k
 
 
@@ -129,7 +141,7 @@ class FLiBe(Reactor):
         # Add materials 
         # ------------------------------------------------------------------
 
-        self.materials = openmc.Materials([self.firstwall, self.structure, self.blanket]) # self.air, 
+        self.materials = openmc.Materials([self.firstwall, self.beryllium, self.structure, self.blanket]) # self.air, 
         # self.materials.export_to_xml(self.path)
 
 
@@ -142,7 +154,8 @@ class FLiBe(Reactor):
         self.R0, self.a, self.kappa, self.delta = FLIBE_R0, FLIBE_A, FLIBE_KAPPA, FLIBE_DELTA 
 
         d_fw  = FLIBE_FW_CM 
-        d_st0 = d_fw  + FLIBE_ST1_CM
+        d_be  = d_fw  + FLIBE_BE_CM
+        d_st0 = d_be  + FLIBE_ST1_CM
         d_br0 = d_st0 + FLIBE_BR1_CM
         d_st1 = d_br0 + FLIBE_ST2_CM
         d_br1 = d_st1 + FLIBE_BR2_CM
@@ -159,6 +172,7 @@ class FLiBe(Reactor):
         # Arrays of a (minor r) and z points
         points_vc  = miller_model(self.R0, self.a, self.kappa, self.delta)                 # coords around vacuum chamber
         points_fw  = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_fw)   # outer coords around first wall
+        points_be  = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_be)   # outer coords around beryllium layer
         points_st0 = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_st0)  # outer coords around structural region 0
         points_br0 = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_br0)  # outer coords around breeding channel
         points_st1 = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_st1)  # outer coords around structural region 1
@@ -168,6 +182,7 @@ class FLiBe(Reactor):
         # Create OpenMC surfaces and STORE THEM AS CLASS ATTRIBUTES
         self.surface_vc  = openmc.model.Polygon(points_vc , basis='rz')  # Plasma-facing surface (inner FW)
         self.surface_fw  = openmc.model.Polygon(points_fw , basis='rz')  # Outer surface of first wall
+        self.surface_be  = openmc.model.Polygon(points_be , basis='rz')  # Outer surface of beryllium layer
         self.surface_st0 = openmc.model.Polygon(points_st0, basis='rz')
         self.surface_br0 = openmc.model.Polygon(points_br0, basis='rz')
         self.surface_st1 = openmc.model.Polygon(points_st1, basis='rz')
@@ -181,12 +196,13 @@ class FLiBe(Reactor):
         
 
         # ------------------------------------------------------------------
-        # Cells | 10: vc, fw | 2X: structure | 3X: breeding
+        # Cells | 10: vc | 11: fw | 41: be | 2X: structure | 3X: breeding
         # ------------------------------------------------------------------
         cell_vc   = openmc.Cell(cell_id=10, region= -self.surface_vc)
         cell_vc.importance = {'neutron':1}
         cell_fw   = openmc.Cell(cell_id=11, region= +self.surface_vc  & -self.surface_fw  , fill=self.firstwall) 
-        cell_st0  = openmc.Cell(cell_id=21, region= +self.surface_fw  & -self.surface_st0 , fill=self.structure)
+        cell_be   = openmc.Cell(cell_id=41, region= +self.surface_fw  & -self.surface_be  , fill=self.beryllium)
+        cell_st0  = openmc.Cell(cell_id=21, region= +self.surface_be  & -self.surface_st0 , fill=self.structure)
         cell_br0  = openmc.Cell(cell_id=31, region= +self.surface_st0 & -self.surface_br0 , fill=self.blanket)
         cell_st1  = openmc.Cell(cell_id=22, region= +self.surface_br0 & -self.surface_st1 , fill=self.structure)
         cell_br1  = openmc.Cell(cell_id=32, region= +self.surface_st1 & -self.surface_br1 , fill=self.blanket)
@@ -196,6 +212,6 @@ class FLiBe(Reactor):
         cell_void = openmc.Cell(cell_id=99, region= +self.surface_st2 & -outer_cylinder & +bottom_plane & -top_plane) # fill=self.air
         cell_void.importance = {'neutron':0}
 
-        self.cells = [cell_vc, cell_fw, cell_st0, cell_br0, cell_st1, cell_br1, cell_st2, cell_void]
+        self.cells = [cell_vc, cell_fw, cell_be, cell_st0, cell_br0, cell_st1, cell_br1, cell_st2, cell_void]
         self.geometry = openmc.Geometry(openmc.Universe(cells=self.cells))
         # self.geometry.export_to_xml(self.path)

@@ -89,7 +89,9 @@ def main():
                         current_run.extract_tallies()
 
                 print(f"Collating tallies for {blanket} {fertile_isotope} at {current_run.temp_k}")
-                collate_tallies(blanket, fertile_isotope, current_run.breeder_enrich, current_run.temp_k, current_run.breeder_volume)
+                # FLiBe: use blanket_volume (mixture) for mt; breeder_volume = FLiBe-only (XF4 deducted)
+                vol_m3 = current_run.blanket_volume if blanket == 'FLiBe' else current_run.breeder_volume
+                collate_tallies(blanket, fertile_isotope, current_run.breeder_enrich, current_run.temp_k, vol_m3)
 
 
 def build_reactor(blanket:str, **kwargs):
@@ -125,7 +127,8 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich,temp_k, vol_m3):
 
     df_all = pd.DataFrame(columns=['filename','fertile_kg/m3', 'fertile_mt', 
                                    'Li6(n,t)', 'Li7(n,Xt)', f'{fertile_isotope}(n,g)',
-                                   'tbr', f'{fissile_isotope}_kg/yr'])
+                                   'tbr', f'{fissile_isotope}_kg/yr',
+                                   f'{fertile_isotope}(n,fis)', 'heat_eV_src'])
 
     tally_folders = [x for x in os.listdir("./OpenMC/") if (x.startswith(f"tallies_{blanket}_{temp_k}K_Li{breeder_enrich:04.1f}")) and x.split("_")[-2].startswith(fertile_isotope)]
 
@@ -162,17 +165,20 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich,temp_k, vol_m3):
             continue
 
 
-        li6  = df[ df['cell']=='total' ]['Li6(n,t)'].values[0]
-        li7  = df[ df['cell']=='total' ]['Li7(n,t)'].values[0]
-        u238 = df[ df['cell']=='total' ][f'{fertile_isotope}(n,g)'].values[0]
-        tbr  = df[ df['cell']=='total' ]['tbr'].values[0]
-        pu   = df[ df['cell']=='total' ][f'{fissile_isotope}_kg/yr'].values[0]
+        row = df[df['cell']=='total'].iloc[0]
+        li6  = row['Li6(n,t)']
+        li7  = row['Li7(n,t)']
+        u238 = row[f'{fertile_isotope}(n,g)']
+        tbr  = row['tbr']
+        pu   = row[f'{fissile_isotope}_kg/yr']
+        fis  = row[f'{fertile_isotope}(n,fis)'] if f'{fertile_isotope}(n,fis)' in df.columns else 0
+        heat = row['heat_eV_src'] if 'heat_eV_src' in df.columns else np.nan
 
-        li6_stdev  = df[ df['cell']=='total' ]['Li6(n,t)_stdev'].values[0]
-        li7_stdev  = df[ df['cell']=='total' ]['Li7(n,t)_stdev'].values[0]
-        u238_stdev = df[ df['cell']=='total' ][f'{fertile_isotope}(n,g)_stdev'].values[0]
-        tbr_stdev  = df[ df['cell']=='total' ]['tbr_stdev'].values[0]
-        pu_stdev   = df[ df['cell']=='total' ][f'{fissile_isotope}_kg/yr_stdev'].values[0]
+        li6_stdev  = row['Li6(n,t)_stdev']
+        li7_stdev  = row['Li7(n,t)_stdev']
+        u238_stdev = row[f'{fertile_isotope}(n,g)_stdev']
+        tbr_stdev  = row['tbr_stdev']
+        pu_stdev   = row[f'{fissile_isotope}_kg/yr_stdev']
 
         df_all.loc[len(df_all)] = {'filename': folder,
                               'fertile_kg/m3': fertile,
@@ -186,7 +192,9 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich,temp_k, vol_m3):
                                         'tbr': tbr,
                                   'tbr_stdev': tbr_stdev,
                    f'{fissile_isotope}_kg/yr': pu,
-             f'{fissile_isotope}_kg/yr_stdev': pu_stdev, }
+             f'{fissile_isotope}_kg/yr_stdev': pu_stdev,
+                   f'{fertile_isotope}(n,fis)': fis,
+                                   'heat_eV_src': heat, }
 
         dst = f"./Figures/Data/{blanket}_{temp_k}K_Li{breeder_enrich:04.1f}_{fertile_isotope}"
         df_all.to_csv(f"{dst}_rxns.csv", index=False)
