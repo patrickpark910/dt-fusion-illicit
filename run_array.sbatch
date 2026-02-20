@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -J dt_fusion_array            # Job name
 #SBATCH --account=paceship-tritium    # Charge account
-#SBATCH --array=0-39                  # 40 jobs: 0-39 (2 isotopes × 20 loadings)
+#SBATCH --array=0-119                 # 120 jobs: FLiBe(0-39) + DCLL(40-79) + HCPB(80-119); each block 2 isotopes × 20 loadings
 #SBATCH -N 1                          # One node per job
 #SBATCH --ntasks-per-node=1           # 1 task, 24 CPUs for OpenMP
 #SBATCH --cpus-per-task=24            # Use all 24 cores for OpenMP threads
@@ -24,23 +24,25 @@ conda activate openmc-env
 cd /storage/scratch1/7/ezoccoli3/dt-fusion-illicit
 
 # Calculate which configuration to run based on array index
-# Array index maps to: (isotope_index * 20) + loading_index
-# Isotopes: 0=U238, 1=Th232
-# Loadings: 0-19 (20 values)
+# 0-39 FLiBe, 40-79 DCLL, 80-119 HCPB; within each block: 2 isotopes × 20 loadings
 
+BLANKETS=("FLiBe" "DCLL" "HCPB")
 ISOTOPES=("U238" "Th232")
 FERTILE_KGM3=(0 0.1 0.5 1.5 3 7.5 15 30 45 60 75 90 105 120 135 150 250 500 750 999.99)
 
-ISOTOPE_IDX=$((SLURM_ARRAY_TASK_ID / 20))
-LOADING_IDX=$((SLURM_ARRAY_TASK_ID % 20))
+BLANKET_IDX=$((SLURM_ARRAY_TASK_ID / 40))
+SUB_IDX=$((SLURM_ARRAY_TASK_ID % 40))
+ISOTOPE_IDX=$((SUB_IDX / 20))
+LOADING_IDX=$((SUB_IDX % 20))
 
+BLANKET=${BLANKETS[$BLANKET_IDX]}
 ISOTOPE=${ISOTOPES[$ISOTOPE_IDX]}
 LOADING=${FERTILE_KGM3[$LOADING_IDX]}
 
-echo "Array job $SLURM_ARRAY_TASK_ID: Running FLiBe with $ISOTOPE at ${LOADING} kg/m³"
+echo "Array job $SLURM_ARRAY_TASK_ID: Running $BLANKET with $ISOTOPE at ${LOADING} kg/m³"
 
 # Export variables for Python script
-export ISOTOPE LOADING
+export BLANKET ISOTOPE LOADING
 
 # Run single configuration
 python << 'PYTHON_SCRIPT'
@@ -48,16 +50,15 @@ import sys
 sys.path.insert(0, '.')
 
 from Python.reactor import *
-from Python.flibe import *
 from Python.parameters import *
 from Python.utilities import *
-from main import build_reactor  # ADD THIS LINE
+import main  # pulls in FLiBe, DCLL, HCPB via main's imports
+from main import build_reactor
 import os
 
-# Override to run only this specific configuration
+BLANKET = os.environ['BLANKET']
 ISOTOPE = os.environ['ISOTOPE']
 LOADING = float(os.environ['LOADING'])
-BLANKET = "FLiBe"
 
 print(f"Running: {BLANKET} {ISOTOPE} {LOADING} kg/m³")
 
@@ -83,4 +84,4 @@ if current_run.run_openmc:
 print(f"{C.GREEN}Completed: {BLANKET} {ISOTOPE} {LOADING} kg/m³{C.END}")
 PYTHON_SCRIPT
 
-echo "Array job $SLURM_ARRAY_TASK_ID complete: FLiBe $ISOTOPE ${LOADING} kg/m³"
+echo "Array job $SLURM_ARRAY_TASK_ID complete: $BLANKET $ISOTOPE ${LOADING} kg/m³"
