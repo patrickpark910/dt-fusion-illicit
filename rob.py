@@ -63,16 +63,14 @@ def run_all():
     os.makedirs('./Figures/png', exist_ok=True)
     os.makedirs('./Figures/data', exist_ok=True)
 
-    # Data config: (path, label, color, marker) - FLiBe, DCLL, HCPB; add Li30.0 if available
+    # Data config: (path, label, color, marker) - FLiBe, DCLL, HCPB
     configs = [
         ('./Figures/Data/FLiBe_900K_Li07.5_U238_rxns.csv',  r'FLiBe-UF$_4$ (Li7.5)',  '#66b420', 'o'),
         ('./Figures/Data/FLiBe_900K_Li07.5_Th232_rxns.csv', r'FLiBe-ThF$_4$ (Li7.5)', '#66b420', '+'),
-        ('./Figures/Data/FLiBe_900K_Li30.0_U238_rxns.csv',  r'FLiBe-UF$_4$ (Li30)',   '#5a9e1a', 'v'),
-        ('./Figures/Data/FLiBe_900K_Li30.0_Th232_rxns.csv', r'FLiBe-ThF$_4$ (Li30)',  '#5a9e1a', 'p'),
-        ('./Figures/Data/DCLL_900K_Li90.0_U238_rxns.csv',   r'DCLL-UO$_2$',   '#0047ba', '^'),
+        ('./Figures/Data/DCLL_900K_Li90.0_U238_rxns.csv',  r'DCLL-UO$_2$',   '#0047ba', '^'),
         ('./Figures/Data/DCLL_900K_Li90.0_Th232_rxns.csv',  r'DCLL-ThO$_2$',  '#0047ba', 'x'),
-        ('./Figures/Data/HCPB_900K_Li60.0_U238_rxns.csv',   r'HCPB-UO$_2$',   '#b41f24', 's'),
-        ('./Figures/Data/HCPB_900K_Li60.0_Th232_rxns.csv',  r'HCPB-ThO$_2$',  '#b41f24', '1'),
+        ('./Figures/Data/HCPB_900K_Li60.0_U238_rxns.csv',  r'HCPB-UO$_2$',   '#b41f24', 's'),
+        ('./Figures/Data/HCPB_900K_Li60.0_Th232_rxns.csv', r'HCPB-ThO$_2$',  '#b41f24', '1'),
     ]
 
     # Apply HCPB TBR correction if available (from plot.py)

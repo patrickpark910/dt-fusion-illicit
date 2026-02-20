@@ -356,6 +356,27 @@ class Reactor(ABC):
         fertile      = sp.get_tally(name=f'Fertile rxn rates').get_pandas_dataframe()
         fertile_spec = sp.get_tally(name=f'Fertile rxn rates spectrum').get_pandas_dataframe()
 
+        # Volumetric heating [eV per source] per cell (optional; may be missing in old statepoints)
+        heat_list = []
+        heat_err_list = []
+        try:
+            heat_df = sp.get_tally(name='volumetric heating').get_pandas_dataframe()
+            if 'score' in heat_df.columns:
+                heat_df = heat_df[heat_df['score'] == 'heating-local']
+            cell_ids_raw = flux['cell'].unique().tolist()
+            for cid in cell_ids_raw:
+                row = heat_df[heat_df['cell'] == cid]
+                if len(row) > 0:
+                    heat_list.append(row['mean'].values[0])
+                    heat_err_list.append(row['std. dev.'].values[0])
+                else:
+                    heat_list.append(np.nan)
+                    heat_err_list.append(np.nan)
+        except (KeyError, ValueError):
+            n_cells = len(flux['cell'].unique())
+            heat_list = [np.nan] * n_cells
+            heat_err_list = [np.nan] * n_cells
+
         # Add new column for energy bin midpoint (for plotting)
         for df in [flux_spec, fertile_spec, Li_spec]:
             df['energy mid [eV]'] = (df['energy low [eV]'] + df['energy high [eV]'])/ 2
@@ -433,7 +454,9 @@ class Reactor(ABC):
                            f'{self.fertile_isotope}(n,g)'         : U238_ng_list,
                            f'{self.fertile_isotope}(n,g)_stdev'   : U238_ng_err_list,
                            f'{self.fissile_isotope}_kg/yr'        : fissile_per_yr_list,
-                           f'{self.fissile_isotope}_kg/yr_stdev'  : fissile_per_yr_err_list,   })
+                           f'{self.fissile_isotope}_kg/yr_stdev'  : fissile_per_yr_err_list,
+                           'heat_eV_src'       : heat_list,
+                           'heat_eV_src_stdev' : heat_err_list,   })
 
         totals = df.sum(numeric_only=True)
         totals['cell'] = 'total'
