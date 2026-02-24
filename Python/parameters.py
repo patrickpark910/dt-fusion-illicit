@@ -1,14 +1,13 @@
-
 """ Universal parameters for ALL models """
 
 # Run settings
 FERTILE_KGM3 = [0, 0.1, 0.5, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99] # 0.5,  250, 500, 750, 1000]
 BLANKETS = ['ARC','ARCB','FLiBe','DCLL','HCPB']
 ISOTOPES = ['U238', 'Th232']
-BLANKET_COVERAGE = 1.00 # Assume blanket covers 80% of plasma surface, rest for divertor
+BLANKET_COVERAGE = 1.00 # Assume blanket covers 88% of plasma surface, rest for divertor -- removed as irrelevant for our conclusions --ppark 2026-02-11
 TEMP_K = 900 # [K] ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
 
-N_PARTICLES, N_CYCLES = int(1e6), 10
+N_PARTICLES, N_CYCLES = int(4e6), 25
 
 """ Material parameters of breeders """
 
@@ -39,8 +38,8 @@ DENSITY_UO2  = 10.50 # [g/cm³]
 DENSITY_ThO2 = 10.00 # [g/cm³]
 DENSITY_SiC  =  3.20 # [g/cm³]
 
-BISO_KERNEL_RADIUS   = 0.04 # [cm]  (400 μm / 800 μm wide)
-BISO_RADIUS          = 0.05 # [cm]  (500 μm / 100 μm thick)
+BISO_KERNEL_RADIUS   = 0.04 # [cm]  (400 μm inner radius / 800 μm wide)
+BISO_RADIUS          = 0.05 # [cm]  (500 μm inner radius / 100 μm thick)
 BISO_VOLUME          = (4/3)*3.14159265359*(BISO_RADIUS)**3         # volume of single BISO particle - trying to avoid np import in this file
 KERNEL_VOLUME        = (4/3)*3.14159265359*(BISO_KERNEL_RADIUS)**3  # volume of UO2/ThO2 kernel in single BISO particle
 BISO_KERNEL_VOL_FRAC = KERNEL_VOLUME / BISO_VOLUME           # (= 0.512) volume fraction of the kernel in BISO
@@ -93,7 +92,7 @@ FLIBE_ST2_CM =   3.0  # [cm] structural region 2
 FLIBE_BR2_CM = 100.0  # [cm]   breeding region 2
 FLIBE_ST3_CM =   3.0  # [cm] structural region 3
 
-FLIBE_BL_VOL = 771.8  # [m³] Re-run volumes() after geometry changes (e.g. Be layer)
+FLIBE_BL_VOL = 773.3 # [m³] re-run after adding Be layer, full val: 12.7878381613389 + 760.486252951442 = 773.274091112781
 
 
 # --------------------------------------------
