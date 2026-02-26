@@ -14,7 +14,7 @@ class HCPB(Reactor):
         self.blanket_name    = 'HCPB'
         self.blanket_volume  = HCPB_BL_VOL   # [m³]
         self.breeder_volume  = HCPB_BR_VOL   # [m³]
-        self.breeder_enrich  = ENRICH_HCPB   # at% 
+        self.breeder_enrich  = ENRICH_HCPB   # [at%]
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
         self.name = f"{self.run_type}_{self.blanket_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_kgm3:06.2f}kgm3"         

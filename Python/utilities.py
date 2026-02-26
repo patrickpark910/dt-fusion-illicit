@@ -93,6 +93,51 @@ def log_midpoints(points):
     return [float(np.sqrt(points[i] * points[i + 1])) for i in range(len(points) - 1)]
 
 
+def read_and_sort(path:str):
+    """
+    Reads a CSV file and sorts it by 'fertile_kg/m3' if the column exists.
+    """
+    df = pd.read_csv(path)
+    if 'fertile_kg/m3' in df.columns:
+        df = df.sort_values(by='fertile_kg/m3').reset_index(drop=True)
+    return df
+    
+
+def readtxtFile(path): 
+    energy, microxs = [], []
+
+    with open(path, 'r') as file:
+        file.readline()
+        file.readline()
+
+        for line in file:
+            values = line.split()
+            energy.append(float(values[0]))
+            microxs.append(float(values[1]))
+
+    return np.array(energy), np.log(np.array(microxs))
+
+
+def fitquartic(x,y):
+    '''
+    Fits [a, b, c, d] for ax^4 + bx^3 + cx^2 + dx = y (force zero production at zero enrichment)
+    Return approximation expression, derivative of approximation
+    
+    x: array, enrichment amounts
+    y: array, Pu-239 production per year 
+    '''
+    def quartic(x,a,b,c,d):
+        return a*x**4 + b*x**3 + c*x**2 + d*x
+    
+    params, _ = curve_fit(quartic, x, y)
+    a_fit,b_fit,c_fit,d_fit = params
+
+    f = lambda x: a_fit*x**4 + b_fit*x**3 + c_fit*x**2 + d_fit*x
+    fprime = lambda x: 4*a_fit*x**3 + 3*b_fit*x**2 + 2*c_fit*x + d_fit
+
+    return f, fprime
+
+
 def fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope='U238'):
     """
     Converts given kg/m³ of fertile material to the number of BISO particles per cm³

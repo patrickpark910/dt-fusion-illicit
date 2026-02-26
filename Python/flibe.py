@@ -61,7 +61,9 @@ class FLiBe(Reactor):
         self.beryllium = openmc.Material(name='beryllium', temperature=self.temp_k)
         self.beryllium.depletable = False
         self.beryllium.add_element('Be', 1) 
-        self.beryllium.set_density('g/cm3', 1.845) 
+        self.beryllium.set_density('g/cm3', DENSITY_BE) 
+
+
         # ------------------------------------------------------------------
         # Structure (V-4Cr-4Ti)
         # ------------------------------------------------------------------

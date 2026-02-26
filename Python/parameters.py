@@ -14,6 +14,8 @@ N_PARTICLES, N_CYCLES = int(4e6), 25
 # FLiBe (2(LiF)-BeF2)
 DENSITY_FLIBE   =  1.9505  # [g/cm³] from EOS at 900 K and 101 kPa, calculated in Jupyter/FLiBe/flibe_mats.py, ref. Humrickhouse 17 (INL-44148) --ppark 2026-02-13
 ENRICH_FLIBE    =  7.50    # [at%] enrich of Li-6
+LIMIT_UF4_FLIBE  = 768.0   # [kg/m³]
+LIMIT_THF4_FLIBE = 768.0   # [kg/m³]
 
 # Lead-lithium (DCLL, 83 at% Pb - 17 at% Li)
 DENSITY_DCLL    =  9.40  # [g/cm³]
@@ -92,7 +94,8 @@ FLIBE_ST2_CM =   3.0  # [cm] structural region 2
 FLIBE_BR2_CM = 100.0  # [cm]   breeding region 2
 FLIBE_ST3_CM =   3.0  # [cm] structural region 3
 
-FLIBE_BL_VOL = 773.3 # [m³] re-run after adding Be layer, full val: 12.7878381613389 + 760.486252951442 = 773.274091112781
+FLIBE_BL_VOL = 773.3 # [m³] from ./OpenMC/volume_DCLL_900K_Li90.0_U000.00kgm3/volume_1.csv 
+# value IS updated run after adding Be layer, full val: 12.7878381613389 + 760.486252951442 = 773.274091112781
 
 
 # --------------------------------------------

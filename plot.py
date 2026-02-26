@@ -1,6 +1,7 @@
 import os, sys
 import pandas as pd
 import numpy as np
+import argparse
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FuncFormatter
 from scipy.interpolate import Akima1DInterpolator
@@ -13,90 +14,78 @@ from Python.parameters import *
 
 
 def plot_all():
-    """ Read CSV data into pandas DataFrames """
 
-    combined_plot = Plot(save=True, show=True)
+    for sd in ['PNG','PDF','Data']:
+        sd_path = f'./Figures/{sd}/'
+        print(f"Comment. <plot.py/plot_all()> Ensuring directory exists: {sd_path}")
+        os.makedirs(sd_path, exist_ok=True)
+
+
+    plot_types = ['tbr','fpr','hist','dfis','fisn']
+
+    parser = argparse.ArgumentParser(description=f"Choose plots with -p flag, multiple separated by spaces: {plot_types}")
+
+    parser.add_argument("-p", "--plot_type", 
+                        type=str, nargs="+", default=plot_types, 
+                        help=f"Specify plot, multiple separated by spaces: {plot_types}. Defaults to all plots." )
+      
+    parser.add_argument("--no_show", 
+                        dest="show", action="store_false",
+                        help="Disable showing the plots.")
     
-    """ Pick which one to plot by uncommenting """
-    combined_plot.plot_tbr()
-    combined_plot.plot_pu_per_yr()
-    # combined_plot.plot_cum_norm_histogram()
-    # combined_plot.plot_dfisdfer()
-    # combined_plot.plot_fisovern()
+    parser.add_argument("--no_save", 
+                        dest="save", action="store_false",
+                        help="Disable saving the plots. ")
 
-    print("All plots completed and saved.")
+    parser.set_defaults(show=True, save=True)
 
+    plot_type  = [p.lower() if isinstance(p, str) else p for p in parser.parse_args().plot_type]  # parser.parse_args().plot_type 
+    plot_show  = parser.parse_args().show   
+    plot_save  = parser.parse_args().save
 
-def readtxtFile(path): 
-    energy, microxs = [], []
-
-    with open(path, 'r') as file:
-        file.readline()
-        file.readline()
-
-        for line in file:
-            values = line.split()
-            energy.append(float(values[0]))
-            microxs.append(float(values[1]))
-
-    return np.array(energy), np.log(np.array(microxs))
+    combined_plot = Plot(show=plot_show, save=plot_save)
 
 
-def fitquartic(x,y):
-    '''
-    Fits [a, b, c, d] for ax^4 + bx^3 + cx^2 + dx = y (force zero production at zero enrichment)
-    Return approximation expression, derivative of approximation
-    
-    x: array, enrichment amounts
-    y: array, Pu-239 production per year 
-    '''
-    def quartic(x,a,b,c,d):
-        return a*x**4 + b*x**3 + c*x**2 + d*x
-    
-    params, _ = curve_fit(quartic, x, y)
-    a_fit,b_fit,c_fit,d_fit = params
+    for p in plot_type:
+        if p == 'tbr':
+            combined_plot.plot_tbr()
+        elif p == 'fpr':
+            combined_plot.plot_fpr()
+        elif p == 'hist':
+            combined_plot.plot_cum_norm_histogram()
+        elif p == 'dfis':
+            combined_plot.plot_dfisdfer()
+        elif p == 'fisn':
+            combined_plot.plot_fisovern()
 
-    f = lambda x: a_fit*x**4 + b_fit*x**3 + c_fit*x**2 + d_fit*x
-    fprime = lambda x: 4*a_fit*x**3 + 3*b_fit*x**2 + 2*c_fit*x + d_fit
-
-    return f, fprime
+    print("\nComment. <plot.py/plot_all()> All plotting commands completed.")
 
 
 class Plot:
 
-    def __init__(self, save=False, show=True):
-
-        def read_and_sort(path:str):
-            """
-            Reads a CSV file and sorts it by 'fertile_kg/m3' if the column exists.
-            """
-            df = pd.read_csv(path)
-            if 'fertile_kg/m3' in df.columns:
-                df = df.sort_values(by='fertile_kg/m3').reset_index(drop=True)
-            return df
+    def __init__(self, show=True, save=False, ):
 
         # Dataframes of reaction rates (rr)
-        self.flibe_u_rr_df  = read_and_sort('./Figures/Data/FLiBe_900K_Li07.5_U238_rxns.csv')
-        self.flibe_th_rr_df = read_and_sort('./Figures/Data/FLiBe_900K_Li07.5_Th232_rxns.csv')
-        self.dcll_u_rr_df   = read_and_sort('./Figures/Data/DCLL_900K_Li90.0_U238_rxns.csv')
-        self.dcll_th_rr_df  = read_and_sort('./Figures/Data/DCLL_900K_Li90.0_Th232_rxns.csv')
-        self.hcpb_u_rr_df   = read_and_sort('./Figures/Data/HCPB_900K_Li60.0_U238_rxns.csv')
-        self.hcpb_th_rr_df  = read_and_sort('./Figures/Data/HCPB_900K_Li60.0_Th232_rxns.csv')
+        self.flibe_u_rr_df  = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_U238_rxns.csv")
+        self.flibe_th_rr_df = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_Th232_rxns.csv")
+        self.dcll_u_rr_df   = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_U238_rxns.csv")
+        self.dcll_th_rr_df  = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_Th232_rxns.csv")
+        self.hcpb_u_rr_df   = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_U238_rxns.csv")
+        self.hcpb_th_rr_df  = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_Th232_rxns.csv")
 
-        self.flibe_u_ng_df  = read_and_sort('./Figures/Data/FLiBe_900K_Li07.5_U238_n-gamma.csv')
-        self.flibe_th_ng_df = read_and_sort('./Figures/Data/FLiBe_900K_Li07.5_Th232_n-gamma.csv')
-        self.dcll_u_ng_df   = read_and_sort('./Figures/Data/DCLL_900K_Li90.0_U238_n-gamma.csv')
-        self.dcll_th_ng_df  = read_and_sort('./Figures/Data/DCLL_900K_Li90.0_Th232_n-gamma.csv')
-        self.hcpb_u_ng_df   = read_and_sort('./Figures/Data/HCPB_900K_Li60.0_U238_n-gamma.csv')
-        self.hcpb_th_ng_df  = read_and_sort('./Figures/Data/HCPB_900K_Li60.0_Th232_n-gamma.csv')
+        self.flibe_u_ng_df  = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_U238_n-gamma.csv")
+        self.flibe_th_ng_df = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_Th232_n-gamma.csv")
+        self.dcll_u_ng_df   = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_U238_n-gamma.csv")
+        self.dcll_th_ng_df  = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_Th232_n-gamma.csv")
+        self.hcpb_u_ng_df   = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_U238_n-gamma.csv")
+        self.hcpb_th_ng_df  = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_Th232_n-gamma.csv")
 
-        self.save, self.show = save, show
-        # self.name = 'All_Blankets'
+        self.flibe_u_rr_df = self.flibe_u_rr_df[self.flibe_u_rr_df['fertile_kg/m3'] <= LIMIT_UF4_FLIBE]
+        self.flibe_th_rr_df = self.flibe_th_rr_df[self.flibe_th_rr_df['fertile_kg/m3'] <= LIMIT_THF4_FLIBE]
+        self.flibe_u_ng_df = self.flibe_u_ng_df[self.flibe_u_ng_df['fertile_kg/m3'] <= LIMIT_UF4_FLIBE]
+        self.flibe_th_ng_df = self.flibe_th_ng_df[self.flibe_th_ng_df['fertile_kg/m3'] <= LIMIT_THF4_FLIBE]
 
-        for sd in ['PNG','PDF','Data']:
-            sd_path = f'./Figures/{sd}/'
-            print(f"Ensuring directory exists: {sd_path}")
-            os.makedirs(sd_path, exist_ok=True)
+        self.show, self.save = show, save
 
 
     def plot_flux(self):
@@ -205,16 +194,15 @@ class Plot:
         plt.close('all')
 
 
-
     def plot_tbr(self):
 
-        print(f"\nPlotting tritium breeding ratio vs. fertile density...")
+        print(f"\nComment. <plot.py/plot_tbr()> Plotting tritium breeding ratio vs. fertile density...")
 
         # -------------------------------------------------------------
         # Weigh HCPB TBR by correction factor derived from wedge modelinestyle
         # -------------------------------------------------------------
 
-        df_u    = pd.DataFrame(HCPB_CONV_U_TBR, columns=['fertile_kgm3', 'ratio'])
+        df_u    = pd.DataFrame(HCPB_CONV_U_TBR,  columns=['fertile_kgm3', 'ratio'])
         df_th   = pd.DataFrame(HCPB_CONV_TH_TBR, columns=['fertile_kgm3', 'ratio'])
 
         # NB. np.interp(x_values_to_calculate, original_x, original_y)
@@ -250,11 +238,13 @@ class Plot:
         # Set view limits for each of the plots
         view_limits = [ # Zoomed in on (0, 155) fertile kg/m3
                         {'xlim': (-5, 155),   'xmax': 150, 'x_major': 15,  'x_minor': 5,  
-                         'ylim': (1.04, 1.46), 'suffix': '0150kgm3', 'fertile_kgm3': selected1},   # 'ylim': (0.94, 1.26)
+                         'ylim': (1.04, 1.46), 'suffix': '0150kgm3', 'fertile_kgm3': selected1,   # 'ylim': (0.94, 1.26)
+                         'leg_loc': 'center right',}, # leg_loc options: best or upper/center/lower left/right/center
                         # Zoomed out to (0, 1000) fertile kg/m3
-                        {'xlim': (-25, 1025), 'xmax':1000, 'x_major': 200, 'x_minor': 100, 
-                         'ylim': (0.79, 1.46), 'suffix': '1000kgm3', 'fertile_kgm3': selected2} ]
-
+                        {'xlim': (-25, 1025), 'xmax':1000, 'x_major': 100, 'x_minor': 50, 
+                         'ylim': (0.84, 1.46), 'suffix': '1000kgm3', 'fertile_kgm3': selected2,
+                         'leg_loc': 'upper right'} ] 
+  
 
         for v in view_limits:
 
@@ -272,12 +262,12 @@ class Plot:
                 y_filtered = BLANKET_COVERAGE * df_filtered['tbr']
 
                 # Plot filtered data
-                plt.scatter(x_filtered, y_filtered, marker=marker, s=markersize*8, color=color, zorder=3)
+                plt.scatter(x_filtered, y_filtered, marker=marker, s=markersize*5, color=color, zorder=3)
 
                 # But still fit the polynomial to all of the data you did compute
                 x_fit = df['fertile_kg/m3']
                 y_fit = BLANKET_COVERAGE * df['tbr']
-                print(x_fit)
+                # print(x_fit)
 
                 if degree == 'makima':
                     x_fine = np.linspace(0, v['xmax'], 500)
@@ -313,21 +303,25 @@ class Plot:
             ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
 
             plt.tight_layout()
-            leg = plt.legend(fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=3)
+            leg = plt.legend(loc=v['leg_loc'], fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=3)
             leg.get_frame().set_linewidth(0.5) 
+
+            if self.show: 
+                plt.show()
+            else:
+                print(f"{C.YELLOW}Comment.{C.END} <plot.py/plot_tbr()> Did NOT show TBR plot due to user setting: fig_tbr_{v['suffix']}")
 
             if self.save:
                 plt.savefig(f'./Figures/PDF/fig_tbr_{v["suffix"]}.pdf', bbox_inches='tight', format='pdf')
                 plt.savefig(f'./Figures/PNG/fig_tbr_{v["suffix"]}.png', bbox_inches='tight', format='png')
-                print(f"Exported TBR plot: fig_tbr_{v['suffix']}")
-            
-            if self.show: 
-                plt.show()
+                print(f"Comment. <plot.py/plot_tbr()> Exported TBR plot: fig_tbr_{v['suffix']}")
+            else:
+                print(f"{C.YELLOW}Comment.{C.END} <plot.py/plot_tbr()> Did NOT export TBR plot due to user setting: fig_tbr_{v['suffix']}")
 
         plt.close('all')
 
 
-    def plot_pu_per_yr(self):
+    def plot_fpr(self):
       
         print(f"\nPlotting Pu-239 production per year for all blankets...")
 
@@ -365,10 +359,10 @@ class Plot:
         # -----------------------------------------------------------------------------------------
         datasets = [
             (self.flibe_th_rr_df, r'FLiBe-ThF$_4$', '#66b420', '+', 12, '--', 'makima', 'Th232(n,g)', u233_conv),
-            (self.flibe_u_rr_df,  r'FLiBe-UF$_4$',  '#66b420', 'o', 5,  '-',  'makima',  'U238(n,g)',  pu239_conv),
             (hcpb_th_rr_df_corr,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, '--', 'makima', 'Th232(n,g)', u233_conv),
-            (hcpb_u_rr_df_corr,   r'HCPB-UO$_2$',   '#b41f24', 's', 6,  '-',  'makima',  'U238(n,g)',  pu239_conv),
             (self.dcll_th_rr_df,  r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, '--', 'makima', 'Th232(n,g)', u233_conv),
+            (self.flibe_u_rr_df,  r'FLiBe-UF$_4$',  '#66b420', 'o', 5,  '-',  'makima',  'U238(n,g)',  pu239_conv),
+            (hcpb_u_rr_df_corr,   r'HCPB-UO$_2$',   '#b41f24', 's', 6,  '-',  'makima',  'U238(n,g)',  pu239_conv),
             (self.dcll_u_rr_df,   r'DCLL-UO$_2$',   '#0047ba', '^', 8,  '-',  'makima',  'U238(n,g)',  pu239_conv),
         ]
 
@@ -378,11 +372,15 @@ class Plot:
 
         # Set view limits for each of the plots
         view_limits = [ # Zoomed in on (0, 155) fertile kg/m3
-                        {'xlim': (-5, 155),   'xmax': 150, 'x_major': 15,  'x_minor': 5,  
-                         'ylim': (-15, 415), 'suffix': '0150kgm3', 'fertile_kgm3': selected1},
+                        {'xlim': (-2.5, 152.5),   'xmax': 150, 'x_major': 15,  'x_minor': 5,  
+                         'ylim': (-15, 565), 'y_major': 50, 'y_minor':25 ,
+                         'suffix': '0150kgm3', 'fertile_kgm3': selected1,
+                         'leg_loc': 'upper left'},
                         # Zoomed out to (0, 1000) fertile kg/m3
-                        {'xlim': (-25, 1025), 'xmax':1000, 'x_major': 200, 'x_minor': 100, 
-                         'ylim': (-40, 1440), 'suffix': '1000kgm3', 'fertile_kgm3': selected2} ]
+                        {'xlim': (-25, 1025), 'xmax':1000, 'x_major': 100, 'x_minor': 50, 
+                         'ylim': (-50, 1850), 'y_major': 200, 'y_minor':100,
+                         'suffix': '1000kgm3', 'fertile_kgm3': selected2,
+                         'leg_loc': 'upper left'} ]
 
 
         for v in view_limits:
@@ -401,7 +399,7 @@ class Plot:
                 y_filtered = df_filtered[rxn] * conv
 
                 # Plot filtered data
-                plt.scatter(x_filtered, y_filtered, marker=marker, s=markersize*8, color=color, zorder=3)
+                plt.scatter(x_filtered, y_filtered, marker=marker, s=markersize*5, color=color, zorder=3)
 
                 # But still fit the polynomial to all of the data you did compute
                 x_fit = df['fertile_kg/m3']
@@ -435,14 +433,14 @@ class Plot:
             ax.xaxis.set_minor_locator(MultipleLocator(v['x_minor']))
             
             ax.yaxis.set_ticks_position('both')
-            # ax.yaxis.set_major_locator(MultipleLocator(0.05))
-            ax.yaxis.set_minor_locator(MultipleLocator(100))
+            ax.yaxis.set_major_locator(MultipleLocator(v['y_major']))
+            ax.yaxis.set_minor_locator(MultipleLocator(v['y_minor']))
             
             ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
             ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
 
             plt.tight_layout()
-            leg = plt.legend(fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=3)
+            leg = plt.legend(loc=v['leg_loc'], fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=2)
             leg.get_frame().set_linewidth(0.5) 
 
             if self.save:
@@ -585,10 +583,10 @@ class Plot:
         # plot
         plt.figure(figsize=(7.5,5))
 
-        plt.scatter(x6, y6eval, marker='s', s=40, color='#b41f24') # HCPB-UO2
-        plt.scatter(x5, y5eval, marker='1', s=70, color='#b41f24') # HCPB-ThO2
-        plt.scatter(x4, y4eval, marker='^', s=40, color='#0047ba') # DCLL-UO2
-        plt.scatter(x3, y3eval, marker='x', s=50, color='#0047ba') # DCLL-ThO2
+        plt.scatter(x6, y6eval, marker='s', s=40, color='#b41f24')   # HCPB-UO2
+        plt.scatter(x5, y5eval, marker='1', s=70, color='#b41f24')   # HCPB-ThO2
+        plt.scatter(x4, y4eval, marker='^', s=40, color='#0047ba')   # DCLL-UO2
+        plt.scatter(x3, y3eval, marker='x', s=50, color='#0047ba')   # DCLL-ThO2
         plt.scatter(x2, y2eval, marker='o', s=30, color='#66b420')   # FLiBe-UF4
         plt.scatter(x1, y1eval, marker='+', s=60, color='#66b420')   # FLiBe-ThF4
 
@@ -596,16 +594,16 @@ class Plot:
         plt.plot(x_fine, y5fine, '--',  linewidth=1, color='#b41f24',)   #  HCPB-ThO2
         plt.plot(x_fine, y4fine, '-',   linewidth=1, color='#0047ba',)   #  DCLL-UO2
         plt.plot(x_fine, y3fine, '--',  linewidth=1, color='#0047ba',)   #  DCLL-ThO2
-        plt.plot(x_fine, y2fine, '-',   linewidth=1, color='#66b420', )    #  FLiBe-UF4
-        plt.plot(x_fine, y1fine, '--',  linewidth=1, color='#66b420', )    #  FLiBe-ThF4 
+        plt.plot(x_fine, y2fine, '-',   linewidth=1, color='#66b420', )  #  FLiBe-UF4
+        plt.plot(x_fine, y1fine, '--',  linewidth=1, color='#66b420', )  #  FLiBe-ThF4 
 
         # Dummy plots for legend -- ppark
-        plt.plot([9e8,9e9], [9e8,9e9], '+--', markersize=8, linewidth=1, color='#66b420',   label=r'FLiBe-ThF$_4$') #  green: #66b420
-        plt.plot([9e8,9e9], [9e8,9e9], 'o-',  markersize=5, linewidth=1, color='#66b420',   label=r'FLiBe-UF$_4$')  # 
-        plt.plot([9e8,9e9], [9e8,9e9], '1--', markersize=9, linewidth=1, color='#b41f24', label=r'HCPB-ThO$_2$')    # 
-        plt.plot([9e8,9e9], [9e8,9e9], 's-',  markersize=5, linewidth=1, color='#b41f24', label=r'HCPB-UO$_2$')     # 
-        plt.plot([9e8,9e9], [9e8,9e9], 'x--', markersize=7, linewidth=1, color='#0047ba', label=r'DCLL-ThO$_2$')    #  red: #b41f24
-        plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'DCLL-UO$_2$')     #  blue: #0047ba
+        plt.plot([9e8,9e9], [9e8,9e9], '+--', markersize=8, linewidth=1, color='#66b420', label=r'FLiBe-ThF$_4$')   #  green: #66b420
+        plt.plot([9e8,9e9], [9e8,9e9], 'o-',  markersize=5, linewidth=1, color='#66b420', label=r'FLiBe-UF$_4$')    #  green: #66b420
+        plt.plot([9e8,9e9], [9e8,9e9], '1--', markersize=9, linewidth=1, color='#b41f24', label=r'HCPB-ThO$_2$')    #  red:   #b41f24
+        plt.plot([9e8,9e9], [9e8,9e9], 's-',  markersize=5, linewidth=1, color='#b41f24', label=r'HCPB-UO$_2$')     #  red:   #b41f24
+        plt.plot([9e8,9e9], [9e8,9e9], 'x--', markersize=7, linewidth=1, color='#0047ba', label=r'DCLL-ThO$_2$')    #  blue:  #0047ba
+        plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'DCLL-UO$_2$')     #  blue:  #0047ba
 
         # plt.title(f'Tritium breeding ratio (All)') # Exclude title for production figs --ppark 2025-08-06
         plt.xlabel(r'Fertile isotope density $n$ in blanket [kg$/$m$^3$]')
