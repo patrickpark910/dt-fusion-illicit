@@ -305,8 +305,8 @@ class Wedge():
             # ll_in, ur_in   = ll_in*np.array([1.01, 1.01, 0.99]), ur_in*np.array([1.01, 1.01, 1.01])
             # ll_out, ur_out = ll_out*np.array([1.01, 1.01, 0.99]), ur_out*np.array([1.01, 1.01, 1.01])
 
-            shape_in  = (2, 2, 128)  # (Nx, Ny, Nz)
-            shape_out = (2, 2, 375)
+            shape_in  = (4, 4, 256)  # (Nx, Ny, Nz)
+            shape_out = (4, 4, 750)
 
             pitch_in  = (ur_in - ll_in) / shape_in
             pitch_out = (ur_out - ll_out) / shape_out
@@ -426,7 +426,7 @@ class Wedge():
         #     nps, batches = int(1e5), int(10)
 
         self.settings.run_mode  = 'fixed source'
-        self.settings.particles = int(4e5) # nps
+        self.settings.particles = int(4e4) # nps
         self.settings.batches   = int(25)  # batches
 
         # self.settings.trace = (1,1,1)
@@ -437,8 +437,8 @@ class Wedge():
 
         fertile_kgm3 = self.fertile_kgm3
 
-        target_total_biso = 2012 
-        N1, N2 = 512, 1500
+        target_total_biso = 16096 # 20120 
+        N1, N2 = 4096, 12000 # 5120, 15000
 
         # HCPB tokamak dimensions (along z in model)
         h1, h2 = 45.0, 82.0     # inboard, outboard thicknesses
@@ -610,7 +610,7 @@ if __name__ == '__main__':
     os.makedirs(f"./OpenMC/", exist_ok=True)
 
     for case in ['A','C',]:
-        for isotope in ['U238', 'Th232']: # 
-            for fertile_kgm3 in [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]: #     # [0.001, 0.10]  # [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]
+        for isotope in ['U238',]: # 
+            for fertile_kgm3 in reversed([0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]): #     
                 current_run = Wedge(case, fertile_kgm3, isotope=isotope)
                 current_run.openmc(debug=True, write=True, run=True)
