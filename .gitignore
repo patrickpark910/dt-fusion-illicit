@@ -16,9 +16,9 @@ scratch*
 ~$*
 runtp*
 .gitattributes
-Jupyter/BISO_combined/*
 *Zone.Identifier
 **.sbatch
-
+slurm**
+**.slurm
 RUN_OPTIONS.md
-OpenMC/
+/Jupyter/Wedge/**/summary.h5
