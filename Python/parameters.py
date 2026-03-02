@@ -129,6 +129,53 @@ DCLL_VF_HE_NOM = 0.097
 DCLL_BL_VOL = 427.3   # [m³] from ./OpenMC/volume_DCLL_900K_Li90.0_U000.00kgm3/volume_1.csv
 DCLL_BR_VOL = DCLL_BL_VOL * DCLL_VF_LL_NOM  
 
+DCLL_CONV_U_TBR = [ (0.0 , 1.0),    # tie intercept at 1 and linear fit to all points
+                    (15  , 1.0),    # -- see wedge_data_2026-03-02.xlsx for details
+                    (30  , 1.0),    # -- ppark 2026-03-02
+                    (60  , 1.0),
+                    (90  , 1.0),
+                    (120 , 1.0),
+                    (150 , 1.0),
+                    (250 , 1.0),
+                    (500 , 1.0),
+                    (750 , 1.0),
+                    (1000, 1.0), ]  # updated with 4e4x25 runs 2026-03-02 --ppark
+
+DCLL_CONV_U_FPR = [ (0.1 , 1.0),    # interpolate piecewise linear! 
+                    (15  , 1.0),    # -- see wedge_data_2026-03-02.xlsx for details
+                    (30  , 1.0),    # -- ppark 2026-03-02
+                    (60  , 1.0), 
+                    (90  , 1.0), 
+                    (120 , 1.0),  
+                    (150 , 1.0),  
+                    (250 , 1.0),  
+                    (500 , 1.0),  
+                    (750 , 1.0),  
+                    (1000, 1.0), ]  # updated with 4e4x25 runs 2026-03-02 --ppark
+
+DCLL_CONV_TH_TBR = [ (0.0 , 1.0),    # tie intercept at 1 and linear fit to all points
+                     (15  , 1.0),    # -- see wedge_data_2026-03-02.xlsx for details
+                     (30  , 1.0),    # -- ppark 2026-03-02
+                     (60  , 1.0),
+                     (90  , 1.0),
+                     (120 , 1.0),
+                     (150 , 1.0),
+                     (250 , 1.0),
+                     (500 , 1.0),
+                     (750 , 1.0),
+                     (1000, 1.0), ]  # updated with 4e4x25 runs 2026-03-02 --ppark
+
+DCLL_CONV_TH_FPR = [ (0.1 , 1.0),    # interpolate piecewise linear! 
+                     (15  , 1.0),    # -- see wedge_data_2026-03-02.xlsx for details
+                     (30  , 1.0),    # -- ppark 2026-03-02
+                     (60  , 1.0), 
+                     (90  , 1.0), 
+                     (120 , 1.0),  
+                     (150 , 1.0),  
+                     (250 , 1.0),  
+                     (500 , 1.0),  
+                     (750 , 1.0),  
+                     (1000, 1.0), ]  # updated with 4e4x25 runs 2026-03-02 --ppark
 
 # --------------------------------------------
 # HELIUM-COOLED PEBBLE BED BLANKET
@@ -154,12 +201,9 @@ HCPB_VF_HE_NOM = 0.3730  # He-4 (gas)
 HCPB_BL_VOL = 520.6 # [m³] from ./OpenMC/volume_HCPB_900K_Li60.0_U000.00kgm3/volume_1.csv
 HCPB_BR_VOL = HCPB_BL_VOL * (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
 
-HCPB_CONV_U_TBR = [ (0.0 , 1.000000),
-                    (0.1 , 1.000030),
-                    (0.5 , 1.000393),
-                    (1.5 , 1.001544),
-                    (15  , 1.002585),
-                    (30  , 1.004769),
+HCPB_CONV_U_TBR = [ (0.0 , 1.000000),    # tie intercept at 1 and linear fit to all points
+                    (15  , 1.002585),    # -- see wedge_data_2026-03-02.xlsx for details
+                    (30  , 1.004769),    # -- ppark 2026-03-02
                     (60  , 1.005142),
                     (90  , 1.007954),
                     (120 , 1.009000),
@@ -167,14 +211,11 @@ HCPB_CONV_U_TBR = [ (0.0 , 1.000000),
                     (250 , 1.014159),
                     (500 , 1.024346),
                     (750 , 1.036454),
-                    (1000, 1.053860), ]  # fixed 2026-01-30 --ppark
+                    (1000, 1.053860), ]  # updated with 4e4x25 runs 2026-03-02 --ppark
 
-HCPB_CONV_U_FPR = [ (0.0 , 1.0),
-                    (0.1 , 0.621527),  
-                    (0.5 , 0.627409),  
-                    (1.5 , 0.627534),  
-                    (15  , 0.658516), 
-                    (30  , 0.686023), 
+HCPB_CONV_U_FPR = [ (0.1 , 0.621527),    # interpolate piecewise linear! 
+                    (15  , 0.658516),    # -- see wedge_data_2026-03-02.xlsx for details
+                    (30  , 0.686023),    # -- ppark 2026-03-02
                     (60  , 0.711563), 
                     (90  , 0.750919), 
                     (120 , 0.775424),  
@@ -182,11 +223,31 @@ HCPB_CONV_U_FPR = [ (0.0 , 1.0),
                     (250 , 0.839986),  
                     (500 , 0.879656),  
                     (750 , 0.893032),  
-                    (1000, 0.896262), ]  # fixed 2026-01-30 --ppark
+                    (1000, 0.896262), ]  # updated with 4e4x25 runs 2026-03-02 --ppark
 
-HCPB_CONV_TH_TBR = HCPB_CONV_U_TBR  # NEED TO FIX 2026-01-30 --ppark
+HCPB_CONV_TH_TBR = [ (0.0 , 1.000000),    # tie intercept at 1 and linear fit to all points
+                     (15  , 1.002133),    # -- see wedge_data_2026-03-02.xlsx for details
+                     (30  , 1.002733),    # -- ppark 2026-03-02
+                     (60  , 1.004473),
+                     (90  , 1.007394),
+                     (120 , 1.008155),
+                     (150 , 1.010818),
+                     (250 , 1.012987),
+                     (500 , 1.028692),
+                     (750 , 1.041010),
+                     (1000, 1.057434), ]  # updated with 4e4x25 runs 2026-03-02 --ppark
 
-HCPB_CONV_TH_FPR = HCPB_CONV_U_FPR  # NEED TO FIX 2026-01-30 --ppark
+HCPB_CONV_TH_FPR = [ (0.1 , 0.775196),    # interpolate piecewise linear! 
+                     (15  , 0.800833),    # -- see wedge_data_2026-03-02.xlsx for details
+                     (30  , 0.819147),    # -- ppark 2026-03-02
+                     (60  , 0.826557), 
+                     (90  , 0.844662), 
+                     (120 , 0.850961),  
+                     (150 , 0.863309),  
+                     (250 , 0.882049),  
+                     (500 , 0.902653),  
+                     (750 , 0.906310),  
+                     (1000, 0.903355), ]  # updated with 4e4x25 runs 2026-03-02 --ppark
 
 
 
