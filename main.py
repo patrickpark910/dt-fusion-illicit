@@ -35,6 +35,10 @@ def main():
                         type=str, nargs="+", default=ISOTOPES,
                         help=f"Specify fertile isotopes, separated by space, among this list: {ISOTOPES}" )
     
+    parser.add_argument("-l", "--lithium", 
+                        type=str, nargs="+", default=ISOTOPES,
+                        help=f"Specify lithium enrichments, separated by space, among this list: {ISOTOPES}" )
+    
     parser.add_argument("--no_xml", 
                         dest="print_xml", action="store_false",
                         help="Disable printing model.xml files")

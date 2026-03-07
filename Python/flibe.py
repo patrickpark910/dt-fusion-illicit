@@ -12,9 +12,9 @@ class FLiBe(Reactor):
 
         self.temp_k          = TEMP_K
         self.blanket_name    = 'FLiBe'
-        self.blanket_volume  = FLIBE_BL_VOL  # m³ total breeding region (FLiBe + XF4)
-        self.breeder_density = DENSITY_FLIBE # g/cm³
-        self.breeder_enrich  = ENRICH_FLIBE  # wt% 
+        self.blanket_volume  = FLIBE_BL_VOL         # m³ total breeding region (FLiBe + XF4)
+        self.breeder_density = DENSITY_FLIBE        # g/cm³
+        self.breeder_enrich  = 0 # ENRICH_FLIBE     # wt% 
         self.breeder_volume  = self.blanket_volume  # set in materials() after XF4 deduction
 
 

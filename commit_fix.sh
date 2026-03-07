@@ -1,101 +1,83 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Rewrites commits authored/committed by Cursor Agent to your identity.
+# =============================================================================
+# remove_cursor_coauthor.sh
+# Removes all "Co-authored-by" lines referencing Cursor from every commit
+# in your repository's history, then force-pushes the cleaned history.
+#
 # Usage:
-#   TARGET_NAME="Your Name" TARGET_EMAIL="you@example.com" ./cursorfix.sh git@github.com:ORG/REPO.git
-# Optional:
-#   CURSOR_EMAILS="cursoragent@users.noreply.github.com,cursoragent@cursor.com"
-#   CURSOR_NAMES="cursoragent,Cursor Agent"
-#   CURSOR_SUBSTRINGS="cursoragent,cursor agent,@cursor.com"
+#   cd /path/to/your/dt-fusion-illicit
+#   bash remove_cursor_coauthor.sh
+#
+# WARNING: This rewrites git history. Coordinate with collaborators —
+#          they will need to re-clone or reset their local copies afterward.
+# =============================================================================
 
-REPO_URL="${1:-}"
-TARGET_NAME="${TARGET_NAME:-$(git config --global --get user.name || true)}"
-TARGET_EMAIL="${TARGET_EMAIL:-$(git config --global --get user.email || true)}"
-CURSOR_EMAILS="${CURSOR_EMAILS:-cursoragent@users.noreply.github.com,cursoragent@cursor.com}"
-CURSOR_NAMES="${CURSOR_NAMES:-cursoragent,Cursor Agent,Cursoragent}"
-CURSOR_SUBSTRINGS="${CURSOR_SUBSTRINGS:-cursoragent,cursor agent,@cursor.com}"
-WORKDIR="${WORKDIR:-/tmp/repo-clean-$$.git}"
-
-if [[ -z "$REPO_URL" ]]; then
-  echo "ERROR: Missing repository URL."
-  echo "Example: $0 git@github.com:ORG/REPO.git"
-  exit 1
+# Safety check: make sure we're in a git repo
+if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+    echo "ERROR: Not inside a git repository. cd into your repo first."
+    exit 1
 fi
 
-if [[ -z "$TARGET_NAME" || -z "$TARGET_EMAIL" ]]; then
-  cat <<MSG
-ERROR: Missing TARGET_NAME or TARGET_EMAIL.
-Set them explicitly, for example:
-  TARGET_NAME="Your Name" TARGET_EMAIL="you@example.com" $0 git@github.com:ORG/REPO.git
-Or configure your global git identity:
-  git config --global user.name "Your Name"
-  git config --global user.email "you@example.com"
-MSG
-  exit 1
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+echo "Current branch: $BRANCH"
+echo ""
+
+# Show how many commits currently have Cursor co-author trailers
+COUNT=$(git log --all --grep="Co-authored-by.*[Cc]ursor" --oneline | wc -l)
+echo "Found $COUNT commit(s) with Cursor co-author trailers."
+echo ""
+
+if [ "$COUNT" -eq 0 ]; then
+    echo "Nothing to do! No Cursor co-author trailers found."
+    exit 0
 fi
 
-if ! command -v git >/dev/null 2>&1; then
-  echo "ERROR: git is not installed."
-  exit 1
+echo "This will rewrite history for ALL branches and tags."
+read -p "Continue? (y/N) " confirm
+if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+    echo "Aborted."
+    exit 0
 fi
 
-if ! git filter-repo -h >/dev/null 2>&1; then
-  cat <<'MSG'
-ERROR: git-filter-repo is not installed.
-Install one of:
-  - pipx install git-filter-repo
-  - python3 -m pip install --user git-filter-repo
-  - brew install git-filter-repo
-Then rerun this script.
-MSG
-  exit 1
-fi
+echo ""
+echo "Rewriting commit messages..."
 
-if [[ -e "$WORKDIR" ]]; then
-  echo "Cleaning existing workdir: $WORKDIR"
-  rm -rf "$WORKDIR"
-fi
+# Use git filter-branch to strip Co-authored-by lines mentioning Cursor
+git filter-branch -f --msg-filter '
+    sed -E "/^Co-authored-by:.*[Cc]ursor.*$/d"
+' --tag-name-filter cat -- --all
 
-echo "Cloning mirror: $REPO_URL"
-git clone --mirror "$REPO_URL" "$WORKDIR"
+echo ""
+echo "Done rewriting history."
+echo ""
 
-cd "$WORKDIR"
+# Clean up the backup refs that filter-branch creates
+echo "Cleaning up backup refs..."
+git for-each-ref --format="%(refname)" refs/original/ | while read ref; do
+    git update-ref -d "$ref"
+done
+git reflog expire --expire=now --all
+git gc --prune=now --aggressive
 
-CALLBACK_FILE="$(mktemp)"
-cat > "$CALLBACK_FILE" <<PY
-target_name = "${TARGET_NAME}".encode("utf-8")
-target_email = "${TARGET_EMAIL}".encode("utf-8")
-cursor_emails = {e.strip().lower().encode("utf-8") for e in "${CURSOR_EMAILS}".split(",") if e.strip()}
-cursor_names = {n.strip().lower().encode("utf-8") for n in "${CURSOR_NAMES}".split(",") if n.strip()}
-cursor_substrings = [s.strip().lower().encode("utf-8") for s in "${CURSOR_SUBSTRINGS}".split(",") if s.strip()]
-
-def _looks_like_cursor_identity(name: bytes, email: bytes) -> bool:
-    nl = name.lower()
-    el = email.lower()
-    if el in cursor_emails or nl in cursor_names:
-        return True
-    # Fallback matching when exact name/email is unknown.
-    return any(sub in nl or sub in el for sub in cursor_substrings)
-
-if _looks_like_cursor_identity(commit.author_name, commit.author_email):
-    commit.author_name = target_name
-    commit.author_email = target_email
-
-if _looks_like_cursor_identity(commit.committer_name, commit.committer_email):
-    commit.committer_name = target_name
-    commit.committer_email = target_email
-PY
-
-echo "Rewriting history with git filter-repo..."
-git filter-repo --force --commit-callback "$(cat "$CALLBACK_FILE")"
-rm -f "$CALLBACK_FILE"
-
-if ! git remote get-url origin >/dev/null 2>&1; then
-  git remote add origin "$REPO_URL"
-fi
-
-echo "Force pushing rewritten refs to origin..."
-git push --force --mirror origin
-
-echo "Done. GitHub Contributors can take some time to refresh contributor cache."
+echo ""
+echo "============================================"
+echo " History rewritten successfully!"
+echo "============================================"
+echo ""
+echo "Next steps:"
+echo "  1. Verify the fix:  git log --all --grep='Co-authored-by.*Cursor' --oneline"
+echo "     (should return nothing)"
+echo ""
+echo "  2. Force-push ALL branches:"
+echo "     git push origin --force --all"
+echo "     git push origin --force --tags"
+echo ""
+echo "  3. Tell collaborators to re-clone the repo (or run: git fetch --all && git reset --hard origin/$BRANCH)"
+echo ""
+echo "  4. If GitHub still shows Cursor as a contributor after a few hours,"
+echo "     you may need to contact GitHub Support — it can be a caching issue."
+echo ""
+echo "  5. (Optional) Delete the commit_fix.sh and path/to/the/commit/ from your repo"
+echo "     if those were from a previous attempt to fix this."
