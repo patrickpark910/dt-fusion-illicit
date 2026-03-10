@@ -1,7 +1,7 @@
 """ Universal parameters for ALL models """
 
 # Run settings
-FERTILE_KGM3 = [0, 0.1, 0.5, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99] # 0.5,  250, 500, 750, 1000]
+FERTILE_KGM3 = [999.99, 750, 500, 250] # [0, 0.1, 0.5, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99] # 0.5,  250, 500, 750, 1000]
 BLANKETS = ['ARC','ARCB','FLiBe','DCLL','HCPB']
 ISOTOPES = ['U238', 'Th232']
 BLANKET_COVERAGE = 1.00 # Assume blanket covers 88% of plasma surface, rest for divertor -- removed as irrelevant for our conclusions --ppark 2026-02-11

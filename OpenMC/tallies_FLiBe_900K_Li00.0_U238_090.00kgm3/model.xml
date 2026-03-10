@@ -1648,6 +1648,9 @@
         <parameters>14000000.0 1.0</parameters>
       </energy>
     </source>
+    <state_point>
+      <batches>5 10 15 20 25</batches>
+    </state_point>
   </settings>
   <tallies>
     <filter id="35" type="cell">

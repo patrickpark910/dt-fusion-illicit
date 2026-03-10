@@ -163,7 +163,8 @@ class Reactor(ABC):
         self.settings.batches   = self.n_cycles
 
         """ Dump data to statepoint intermittently to allow restarts later """
-        self.settings.statepoint = {'batches': range(1, self.n_cycles+1, 10)} 
+        save_sp_every = 5
+        self.settings.statepoint = {'batches': range(save_sp_every, self.n_cycles + 1, save_sp_every)} 
 
 
     def compile(self):
