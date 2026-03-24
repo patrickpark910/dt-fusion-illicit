@@ -501,7 +501,7 @@ class Prism():
 
         fertile_kgm3 = self.fertile_kgm3
 
-        self.nps, self.batches = int(4e2), int(25)
+        self.nps, self.batches = int(4e4), int(25)
         # if fertile_kgm3 < 10.0:
         #     self.nps = int(1e7)
         #     self.batches = int(10)
