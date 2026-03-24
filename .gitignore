@@ -5,6 +5,7 @@ venv/
 .ipynb_checkpoints/
 __pycache__/
 Cluster/
+_Local/
 test/
 test*
 scratch*
