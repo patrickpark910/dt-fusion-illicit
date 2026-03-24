@@ -3,13 +3,79 @@ import sys
 import numpy as np
 import openmc
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-
 # export OPENMC_CROSS_SECTIONS=/Users/gretali/Desktop/research2025/FissileDependence/endfb-viii.0-hdf5/cross_sections.xml
 
-from Python.reactor    import *
-from Python.parameters import *
-from Python.utilities  import *
+# GLOBAL PARAMETERS
+TEMP_K = 900
+BISO_VOLUME = 4/3*np.pi*(0.05)**3
+KERNEL_VOLUME = 4/3*np.pi*(0.04)**3
+
+DENSITY_UO2  = 10.50 # [g/cm³]
+DENSITY_ThO2 = 10.00 # [g/cm³]
+
+AMU_U235 = 235.0439299
+AMU_U238 = 238.05078826
+AMU_U = 238.02891 # for natural enrichment
+AMU_O = 15.999
+AMU_UO2 = AMU_U + 2 * AMU_O
+AMU_Th232 = 232.0381
+
+# Lead-lithium (DCLL, 83 at% Pb - 17 at% Li)
+DENSITY_DCLL    =  9.40  # [g/cm³]
+ENRICH_DCLL     = 90.00  # [at%] enrich of Li-6
+
+# Volume fractions in DCLL blanket (Glaser & Goldston 2012, Tb.1)
+DCLL_VF_FS_NOM = 0.019 
+DCLL_VF_LL_NOM = 0.808  
+DCLL_VF_SI_NOM = 0.076
+DCLL_VF_HE_NOM = 0.097
+
+
+def fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope='U238'):
+    if fertile_isotope == 'U238':
+        biso_per_cc = fertile_kgm3 * AMU_UO2 / AMU_U238 / KERNEL_VOLUME / DENSITY_UO2 / 100**3 * 1000
+    elif fertile_isotope == 'Th232':
+        biso_per_cc = fertile_kgm3 * AMU_ThO2 / AMU_Th232 / KERNEL_VOLUME / DENSITY_ThO2 / 100**3 * 1000
+    return biso_per_cc
+
+
+def has_statepoint(directory_path):
+    """
+    Check if any file starting with 'statepoint' exists in the given directory.
+    
+    Args:
+        directory_path (str): Path to the directory to search
+    
+    Returns:
+        bool: True if a file starting with 'statepoint' is found, False otherwise
+    """
+    found = False
+    for filename in os.listdir(directory_path):
+        if filename.startswith("statepoint"):
+            found = True
+    return found
+
+
+def logspace_per_decade(start, stop, pts_per_decade):
+    """
+    Returns values from 'start' to 'stop' so that each factor-of-10
+    interval contains 'pts_per_decade' points (including its first endpoint).
+    Might be a little off if 'stop' isn't precisely at a decade, ex. 20e6 eV
+
+    example: 10 points per decade from 1e-5 → 2e7
+    grid = logspace_per_decade(1e-5, 20e6, pts_per_decade=10)
+    for i in grid:
+        print(np.log10(i))
+    # print(np.log10(i) for i in grid)
+    """
+    log_start = np.log10(start)
+    log_stop  = np.log10(stop)
+    total_decades = log_stop - log_start
+    # how many intervals of size 1 decade we need, as a float
+    total_steps = total_decades * pts_per_decade
+    # +1 so that we include the very last point at `stop`
+    npts = int(np.ceil(total_steps)) + 1
+    return np.logspace(log_start, log_stop, num=npts)
 
 
 def lattice_coords(lower_left, shape, pitch):
@@ -31,7 +97,6 @@ def lattice_coords(lower_left, shape, pitch):
 
     coords = []
     
-    # Iterate through each dimension to calculate the center of each voxel
     for i in range(nx):
         x = lx + (i + 0.5) * dx
         for j in range(ny):
@@ -136,6 +201,7 @@ class Prism():
             self.materials = openmc.Materials([self.manifold, self.blanket, self.divider, self.f82h, self.coolant, self.firstwall, self.shield])
 
             if debug:
+                print(f"Case A: Homogeneous BISO")
                 print(f"BISO materials mix")
                 print(f"  Vol frac kernel : {(KERNEL_VOLUME/BISO_VOLUME):.6f}")
                 print(f"  Vol frac coat   : {(1-(KERNEL_VOLUME/BISO_VOLUME)):.6f}")
@@ -285,14 +351,11 @@ class Prism():
             ll_out_36, ur_out_36 = c36.region.bounding_box
             ll_out_38, ur_out_38 = c38.region.bounding_box 
 
-            shape_in_per = (2, 2, 75) # per inboard breeding region
-            shape_out_per = (2, 2, 117) # per outboard breeding region
-
-            pitch_in_23 = (ur_in_23 - ll_in_23) / shape_in_per
-            pitch_in_25 = (ur_in_25 - ll_in_25) / shape_in_per
-            pitch_out_34 = (ur_out_34 - ll_out_34) / shape_out_per
-            pitch_out_36 = (ur_out_36 - ll_out_36) / shape_out_per
-            pitch_out_38 = (ur_out_38 - ll_out_38) / shape_out_per
+            pitch_in_23 = (ur_in_23 - ll_in_23) / self.geom['shape_in_per']
+            pitch_in_25 = (ur_in_25 - ll_in_25) / self.geom['shape_in_per']
+            pitch_out_34 = (ur_out_34 - ll_out_34) / self.geom['shape_out_per']
+            pitch_out_36 = (ur_out_36 - ll_out_36) / self.geom['shape_out_per']
+            pitch_out_38 = (ur_out_38 - ll_out_38) / self.geom['shape_out_per']
 
             if case == 'B': # Random packing
                 # -- NB. 'pack_spheres' returns a list of coordinates, not cell instances
@@ -319,19 +382,19 @@ class Prism():
                 biso_out_38 = [openmc.model.TRISO(0.05, u50, center=c) for c in centers_38]
 
                 # fill this mega cells with blanket material 
-                c23.fill = openmc.model.create_triso_lattice(biso_in_23, ll_in_23, pitch_in_23, shape_in_per, self.blanket)
-                c25.fill = openmc.model.create_triso_lattice(biso_in_25, ll_in_25, pitch_in_25, shape_in_per, self.blanket)
-                c34.fill = openmc.model.create_triso_lattice(biso_out_34, ll_out_34, pitch_out_34, shape_out_per, self.blanket)
-                c36.fill = openmc.model.create_triso_lattice(biso_out_36, ll_out_36, pitch_out_36, shape_out_per, self.blanket)
-                c38.fill = openmc.model.create_triso_lattice(biso_out_38, ll_out_38, pitch_out_38, shape_out_per, self.blanket)
+                c23.fill = openmc.model.create_triso_lattice(biso_in_23, ll_in_23, pitch_in_23, self.geom['shape_in_per'], self.blanket)
+                c25.fill = openmc.model.create_triso_lattice(biso_in_25, ll_in_25, pitch_in_25, self.geom['shape_in_per'], self.blanket)
+                c34.fill = openmc.model.create_triso_lattice(biso_out_34, ll_out_34, pitch_out_34, self.geom['shape_out_per'], self.blanket)
+                c36.fill = openmc.model.create_triso_lattice(biso_out_36, ll_out_36, pitch_out_36, self.geom['shape_out_per'], self.blanket)
+                c38.fill = openmc.model.create_triso_lattice(biso_out_38, ll_out_38, pitch_out_38, self.geom['shape_out_per'], self.blanket)
 
             elif case == 'C':
                 # Rectangular lattice
-                centers_23  = lattice_coords(ll_in_23, shape_in_per, pitch_in_23)
-                centers_25  = lattice_coords(ll_in_25, shape_in_per, pitch_in_25)
-                centers_34  = lattice_coords(ll_out_34, shape_out_per, pitch_out_34)
-                centers_36  = lattice_coords(ll_out_36, shape_out_per, pitch_out_36)
-                centers_38  = lattice_coords(ll_out_38, shape_out_per, pitch_out_38)
+                centers_23  = lattice_coords(ll_in_23, self.geom['shape_in_per'], pitch_in_23)
+                centers_25  = lattice_coords(ll_in_25, self.geom['shape_in_per'], pitch_in_25)
+                centers_34  = lattice_coords(ll_out_34, self.geom['shape_out_per'], pitch_out_34)
+                centers_36  = lattice_coords(ll_out_36, self.geom['shape_out_per'], pitch_out_36)
+                centers_38  = lattice_coords(ll_out_38, self.geom['shape_out_per'], pitch_out_38)
                 
                 # openmc.model.TRISO(outer_radius, fill, center=(0.0, 0.0, 0.0)) -- each model.TRISO instance IS a cell
                 biso_in_23  = [openmc.model.TRISO(0.05, u50, center=c) for c in centers_23]
@@ -340,29 +403,29 @@ class Prism():
                 biso_out_36 = [openmc.model.TRISO(0.05, u50, center=c) for c in centers_36]
                 biso_out_38 = [openmc.model.TRISO(0.05, u50, center=c) for c in centers_38]
 
-                c23.fill = openmc.model.create_triso_lattice(biso_in_23, ll_in_23, pitch_in_23, shape_in_per, self.blanket)
-                c25.fill = openmc.model.create_triso_lattice(biso_in_25, ll_in_25, pitch_in_25, shape_in_per, self.blanket)
-                c34.fill = openmc.model.create_triso_lattice(biso_out_34, ll_out_34, pitch_out_34, shape_out_per, self.blanket)
-                c36.fill = openmc.model.create_triso_lattice(biso_out_36, ll_out_36, pitch_out_36, shape_out_per, self.blanket)
-                c38.fill = openmc.model.create_triso_lattice(biso_out_38, ll_out_38, pitch_out_38, shape_out_per, self.blanket)
+                c23.fill = openmc.model.create_triso_lattice(biso_in_23, ll_in_23, pitch_in_23, self.geom['shape_in_per'], self.blanket)
+                c25.fill = openmc.model.create_triso_lattice(biso_in_25, ll_in_25, pitch_in_25, self.geom['shape_in_per'], self.blanket)
+                c34.fill = openmc.model.create_triso_lattice(biso_out_34, ll_out_34, pitch_out_34, self.geom['shape_out_per'], self.blanket)
+                c36.fill = openmc.model.create_triso_lattice(biso_out_36, ll_out_36, pitch_out_36, self.geom['shape_out_per'], self.blanket)
+                c38.fill = openmc.model.create_triso_lattice(biso_out_38, ll_out_38, pitch_out_38, self.geom['shape_out_per'], self.blanket)
 
                 if debug:
                     print(f"Case C: Fixed lattice BISO placement")
                     print(f"  Inboard lattice:")
-                    print(f"    Shape: {shape_in_per}")
+                    print(f"    Shape: {self.geom['shape_in_per']}")
                     print(f"    Pitch: {pitch_in_23} cm")
                     print(f"    Lower left: {ll_in_23}")
                     print(f"    Upper right: {ur_in_23}")
-                    print(f"    Subtotal one inboard breeding region BISO particles: {np.prod(shape_in_per)}, x2 = {np.prod(shape_in_per) * 2}")
+                    print(f"    Subtotal one inboard breeding region BISO particles: {np.prod(self.geom['shape_in_per'])}, x2 = {np.prod(self.geom['shape_in_per']) * 2}")
                     print(f"  Outboard lattice:")
-                    print(f"    Shape: {shape_out_per}")
+                    print(f"    Shape: {self.geom['shape_out_per']}")
                     print(f"    Pitch: {pitch_out_34} cm")
                     print(f"    Lower left: {ll_out_34}")
                     print(f"    Upper right: {ur_out_34}")
-                    print(f"    Subtotal one outboard breeding region BISO particles: {np.prod(shape_out_per)}, x3 = {np.prod(shape_out_per) * 3}")
-                    print(f"  Total BISO particles: {np.prod(shape_in_per)*2 + np.prod(shape_out_per)*3}")
+                    print(f"    Subtotal one outboard breeding region BISO particles: {np.prod(self.geom['shape_out_per'])}, x3 = {np.prod(self.geom['shape_out_per']) * 3}")
+                    print(f"  Total BISO particles: {np.prod(self.geom['shape_in_per'])*2 + np.prod(self.geom['shape_out_per'])*3}")
 
-        self.cells = [c10, c20, c21, c22, c23, c24, c25, c26, c27, c29, c30, c31, c32, c33, c34, c35, c36, c37, c38, c39, c40, c41]
+        self.cells = [c10, c20, c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32, c33, c34, c35, c36, c37, c38, c39, c40, c41]
         self.geometry = openmc.Geometry(openmc.Universe(cells=self.cells))
 
 
@@ -377,14 +440,14 @@ class Prism():
         flux_energy_tally = self.make_tally('flux spectrum', ['flux'], filters=[cell_filter, energy_filter])
 
         # Fertile element reaction rates
-        fertile_tally_tot    = self.make_tally(f'Total fertile rxn rate',     ['(n,gamma)', 'fission', 'elastic'], nuclides=['U238', 'U235', 'Th232'])
-        fertile_tally        = self.make_tally(f'Fertile rxn rates',          ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter], nuclides=['U238', 'U235', 'Th232'])
-        fertile_energy_tally = self.make_tally(f'Fertile rxn rates spectrum', ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['U238', 'U235', 'Th232'])
+        fertile_tally_tot    = self.make_tally(f'Total fertile rxn rate',     ['(n,gamma)', 'fission', '(n,2n)', 'elastic'], nuclides=['U238', 'U235', 'Th232'])
+        fertile_tally        = self.make_tally(f'Fertile rxn rates',          ['(n,gamma)', 'fission', '(n,2n)', 'elastic'], filters=[cell_filter], nuclides=['U238', 'U235', 'Th232'])
+        fertile_energy_tally = self.make_tally(f'Fertile rxn rates spectrum', ['(n,gamma)', 'fission', '(n,2n)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['U238', 'U235', 'Th232'])
 
         # Lithium reaction rates
-        Li_tally_tot    = self.make_tally('Total Li rxn rate',     ['(n,gamma)', '(n,Xt)', 'elastic'], nuclides=['Li6', 'Li7'])
-        Li_tally        = self.make_tally('Li rxn rates',          ['(n,gamma)', '(n,Xt)', 'elastic'], filters=[cell_filter], nuclides=['Li6', 'Li7'])
-        Li_energy_tally = self.make_tally('Li rxn rates spectrum', ['(n,gamma)', '(n,Xt)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Li6', 'Li7'])
+        Li_tally_tot    = self.make_tally('Total (n,t) rxn rate',  ['(n,Xt)'])
+        Li_tally        = self.make_tally('Li rxn rates',          ['(n,Xt)', '(n,gamma)', 'elastic'], filters=[cell_filter], nuclides=['Li6', 'Li7'])
+        Li_energy_tally = self.make_tally('Li rxn rates spectrum', ['(n,Xt)', '(n,gamma)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Li6', 'Li7'])
 
         # Put in order you want it to print in... recommend fertile_tally's first
         self.tallies.extend([fertile_tally_tot, Li_tally_tot, fertile_tally, Li_tally, flux_tally, fertile_energy_tally, flux_energy_tally, Li_energy_tally]) 
@@ -438,24 +501,28 @@ class Prism():
 
         fertile_kgm3 = self.fertile_kgm3
 
-        if fertile_kgm3 < 10.0:
-            self.nps = int(1e7)
-            self.batches = int(10)
-        else:
-            self.nps = int(1e5)
-            self.batches = int(10)
+        self.nps, self.batches = int(4e2), int(25)
+        # if fertile_kgm3 < 10.0:
+        #     self.nps = int(1e7)
+        #     self.batches = int(10)
+        # else:
+        #     self.nps = int(1e5)
+        #     self.batches = int(10)
 
-        target_total_biso = 2004 # maybe change, maybe it's not 2012 particles. 
+        target_total_biso = 16096 # maybe change, maybe it's not 2012 particles. 
 
         # N_in/N_out = breeder_length_in/breeder_length_out * f1/f2
-        N_in, N_out = 600, 1404  
-        N_in_per = 300 # per single breeding inboard region
-        N_out_per = 468 # per single breeding outboard region
+        N_in, N_out = 6240, 9856     # inboard is 39% of total blanket volume, just like the fluence fraction
+        N_in_per    = int(N_in)  / 2      # per single breeding inboard region
+        N_out_per   = int(N_out) / 3      # per single breeding outboard region
+
+        shape_in_per  = (4, 4, int(N_in_per/16))  # per inboard breeding region
+        shape_out_per = (4, 4, int(N_out_per/16)) # per outboard breeding region
 
         # DCLL tokamak dimensions (along z in model)
-        f1, f2 = 0.39, 0.61 # fraction of fluence into inboard vs. outboard in full OpenMC DCLL model
-        thickness_per = 21
-        thickness_in = 2 * thickness_per
+        f1, f2        = 0.39, 0.61  # fraction of fluence into inboard vs. outboard in full OpenMC DCLL model
+        thickness_per = 21          # thickness of each breeding region in cm
+        thickness_in  = 2 * thickness_per
         thickness_out = 3 * thickness_per
 
 
@@ -504,9 +571,9 @@ class Prism():
             print(f"")
             print(f"With respect to the whole BREEDING REGION, we have these new volume fractions:")
             print(f"  vf_biso_br =  {(vf_biso_br*100):.6f} vol%")
-            print(f"  vf_pbli_br   =  {(vf_pbli_br*100):.6f} vol%")
-            print(f"  VF_FS_NOM   =  {(DCLL_VF_FS_NOM*100):.6f} vol%")
-            print(f"  VF_SI_NOM =  {(DCLL_VF_SI_NOM*100):.6f} vol%")
+            print(f"  vf_pbli_br =  {(vf_pbli_br*100):.6f} vol%")
+            print(f"  VF_FS_NOM  =  {(DCLL_VF_FS_NOM*100):.6f} vol%")
+            print(f"  VF_SI_NOM  =  {(DCLL_VF_SI_NOM*100):.6f} vol%")
             print(f"  VF_HE_NOM  =  {(DCLL_VF_HE_NOM*100):.6f} vol%")
             print(f"  check they add up   = {(vf_checksum2*100):.6f} vol%")
             print(f"  check that BISO + PbLi adds up to the nominal PbLi fraction")
@@ -540,7 +607,7 @@ class Prism():
         self.vf_pbli_bv = vf_pbli_bv
         self.vf_pbli_br = vf_pbli_br
 
-        self.geom = {'N_in':N_in, 'N_out':N_out, 'b_in':b_in, 'b_out':b_out, 'c_in':c_in, 'c_out':c_out, 'thickness_per':thickness_per, 'pC':plane_C, 'pD':plane_D}
+        self.geom = {'shape_in_per':shape_in_per, 'shape_out_per':shape_out_per, 'N_in':N_in, 'N_out':N_out, 'b_in':b_in, 'b_out':b_out, 'c_in':c_in, 'c_out':c_out, 'thickness_per':thickness_per, 'pC':plane_C, 'pD':plane_D}
 
 
     def openmc(self, debug=False, write=True, run=False):
@@ -566,7 +633,9 @@ if __name__ == '__main__':
 
     os.makedirs(f"./OpenMC/", exist_ok=True)
 
-    for case in ['C',]:
-        for fertile_kgm3 in [0.10, 60, 150]: # [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99] : #  [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]
-            current_run = Prism(case, fertile_kgm3, isotope='U238')
-            current_run.openmc(debug=True, write=True, run=False)
+    for iso in ['U238','Th232']:
+        for case in ['A','C']:
+            for fertile_kgm3 in [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]: # [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99] : #  [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]
+                openmc.reset_auto_ids()
+                current_run = Prism(case, fertile_kgm3, isotope=iso)
+                current_run.openmc(debug=True, write=True, run=True)
