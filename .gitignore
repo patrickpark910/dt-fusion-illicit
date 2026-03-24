@@ -4,8 +4,6 @@ venv/
 .idea/
 .ipynb_checkpoints/
 __pycache__/
-Cluster/
-_Local/
 test/
 test*
 scratch*
@@ -18,10 +16,4 @@ scratch*
 ~$*
 runtp*
 .gitattributes
-*Zone.Identifier
-**.sbatch
-slurm**
-**.slurm
-RUN_OPTIONS.md
-**/summary.h5
-**/tracks.h5
+Jupyter/BISO_combined/*
