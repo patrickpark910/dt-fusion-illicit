@@ -7,6 +7,16 @@ from matplotlib.ticker import MultipleLocator, ScalarFormatter, FuncFormatter
 import numpy as np
 
 
+""" Comments -- ppark 2026-03-23:
+This file is too long and unreadable. Several changes can be made:
+- Why is there no main loop? The code that gets executed is sandwiched between functions! 
+  That makes it hard for others to understand or debug or use. I've made some emergency fixes
+  for now to get this to work
+- File paths are hardcoded and not robust
+- You shouldn't look for statepoints with try-except loops
+"""
+
+
 current_dir = os.getcwd()
 print(current_dir)
 
