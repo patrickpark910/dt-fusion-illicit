@@ -1,8 +1,8 @@
 """ Universal parameters for ALL models """
 
 # Run settings
-FERTILE_KGM3 = [999.99, 750, 500, 250] # [0, 0.1, 0.5, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99] # 0.5,  250, 500, 750, 1000]
-BLANKETS = ['ARC','ARCB','FLiBe','DCLL','HCPB']
+FERTILE_KGM3 = [0, 0.1, 0.5, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99] # [0, 0.1, 0.5, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99] # 0.5,  250, 500, 750, 1000]
+BLANKETS = ['FLiBe','DCLL','HCPB']
 ISOTOPES = ['U238', 'Th232']
 BLANKET_COVERAGE = 1.00 # Assume blanket covers 88% of plasma surface, rest for divertor -- removed as irrelevant for our conclusions --ppark 2026-02-11
 TEMP_K = 900 # [K] ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
@@ -130,19 +130,13 @@ DCLL_BL_VOL = 427.3   # [m³] from ./OpenMC/volume_DCLL_900K_Li90.0_U000.00kgm3/
 DCLL_BR_VOL = DCLL_BL_VOL * DCLL_VF_LL_NOM  
 
 DCLL_CONV_U_TBR = [ (0.0 , 1.0),    # tie intercept at 1 and linear fit to all points
-                    (15  , 1.0),    # -- see wedge_data_2026-03-02.xlsx for details
-                    (30  , 1.0),    # -- ppark 2026-03-02
-                    (60  , 1.0),
-                    (90  , 1.0),
-                    (120 , 1.0),
-                    (150 , 1.0),
-                    (250 , 1.0),
-                    (500 , 1.0),
+                    (250 , 1.0),    # -- see /Jupyter/Wedge/wedge_data_2026-03-25.xlsx for details
+                    (500 , 1.0),    # -- ppark 2026-03-25
                     (750 , 1.0),
-                    (1000, 1.0), ]  # updated with 4e4x25 runs 2026-03-02 --ppark
+                    (1000, 1.0), ]  # updated with 4e4x25 runs 2026-03-25 --ppark
 
 DCLL_CONV_U_FPR = [ (0.1 , 1.0),    # interpolate piecewise linear! 
-                    (15  , 1.0),    # -- see wedge_data_2026-03-02.xlsx for details
+                    (15  , 1.0),    # -- see wedge_data_2026-03-25.xlsx for details
                     (30  , 1.0),    # -- ppark 2026-03-02
                     (60  , 1.0), 
                     (90  , 1.0), 

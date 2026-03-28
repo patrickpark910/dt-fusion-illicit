@@ -12,8 +12,8 @@ class HCPB(Reactor):
 
         self.temp_k          = TEMP_K
         self.blanket_name    = 'HCPB'
-        self.blanket_volume  = HCPB_BL_VOL   # [m³]
-        self.breeder_volume  = HCPB_BR_VOL   # [m³]
+        self.blanket_volume  = HCPB_BL_VOL   # [m³] physical volume of the blanket geometry
+        self.breeder_volume  = HCPB_BR_VOL   # [m³] volume of breeder material
         self.breeder_enrich  = ENRICH_HCPB   # [at%]
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K

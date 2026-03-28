@@ -169,6 +169,7 @@ class Reactor(ABC):
 
     def compile(self):
         
+        openmc.reset_auto_ids()
         self.materials()
         self.geometry()
         self.settings()
@@ -338,12 +339,33 @@ class Reactor(ABC):
         """ Load tallies """
         sp_path = f'{self.path}/statepoint.{self.n_cycles}.h5'
         
+        # First try finding statepoint that exactly matches the programmed n_cycles
         try:
             print(f"{C.YELLOW}Comment.{C.END} Loading statepoint: {sp_path}")
             sp = openmc.StatePoint(sp_path) 
+
         except Exception as e:
-            print(f"{C.RED}Warning.{C.END} Statepoint.XX.h5 missing or could not be read at: {sp_path}")
-            return
+            print(f"{C.YELLOW}Warning.{C.END} {e}. statepoint.{self.n_cycles}.h5 missing or could not be read at: {sp_path}")
+        
+            # Second try finding highest statepoint
+            try:
+                print(f"{C.YELLOW}Comment.{C.END} Looking for the highest statepoint in: {self.path}")
+
+                sp_files = [f for f in os.listdir(self.path) if f.startswith('statepoint.') and f.endswith('.h5')]
+
+                if not sp_files:
+                    print(f"{C.RED}Warning.{C.END} <reactor.py/extract_tallies> No statepoints found at all in: {self.path}")
+                    print(f"But, reactor.py/openmc() should have run OpenMC if: (1) there are no statepoints (2) you have self.run_openmc=True (current state: {self.run_openmc})."
+                          f"If you see this error, self.run_openmc=False or you might have broken something in our logic.")
+                    sys.exit(2)
+                    
+                # Get the latest statepoint by batch number
+                sp_path = os.path.join(self.path, max(sp_files, key=lambda x: int(x.split('.')[1])))
+                sp = openmc.StatePoint(sp_path) 
+
+            except Exception as e:
+                print(f"{C.RED}  Fatal.{C.END} <reactor.py/extract_tallies> {e}. No valid statepoints found at all in: {self.path}")
+                sys.exit(2)
 
         
         print(f"Reading tallies...")

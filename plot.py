@@ -651,12 +651,12 @@ class Plot:
         # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
         # cut out the first point since dividing by zero.
         # helium cooled pebble bed
-        x6, y6 =     self.pb_u_rr_df['fertile_kg/m3'][1:], pu239_at_to_kg_per_yr * self.pb_u_rr_df['U238(n,g)'][1:]
-        x5, y5 =    self.pb_th_rr_df['fertile_kg/m3'][1:], u233_at_to_kg_per_yr * self.pb_th_rr_df['Th232(n,g)'][1:]
+        x6, y6 =     self.hcpb_u_rr_df['fertile_kg/m3'][1:], pu239_at_to_kg_per_yr * self.hcpb_u_rr_df['U238(n,g)'][1:]
+        x5, y5 =    self.hcpb_th_rr_df['fertile_kg/m3'][1:], u233_at_to_kg_per_yr * self.hcpb_th_rr_df['Th232(n,g)'][1:]
 
         # dual coolant lead lithium     
-        x4, y4 =   self.pbli_u_rr_df['fertile_kg/m3'][1:],  pu239_at_to_kg_per_yr *  self.pbli_u_rr_df['U238(n,g)'][1:]
-        x3, y3 =  self.pbli_th_rr_df['fertile_kg/m3'][1:],  u233_at_to_kg_per_yr * self.pbli_th_rr_df['Th232(n,g)'][1:]
+        x4, y4 =   self.dcll_u_rr_df['fertile_kg/m3'][1:],  pu239_at_to_kg_per_yr *  self.dcll_u_rr_df['U238(n,g)'][1:]
+        x3, y3 =  self.dcll_th_rr_df['fertile_kg/m3'][1:],  u233_at_to_kg_per_yr * self.dcll_th_rr_df['Th232(n,g)'][1:]
 
         # flibe
         x2, y2 =  self.flibe_u_rr_df['fertile_kg/m3'][1:],  pu239_at_to_kg_per_yr *  self.flibe_u_rr_df['U238(n,g)'][1:]

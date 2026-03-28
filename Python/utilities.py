@@ -4,6 +4,7 @@ Set of helper functions
 import os, re, sys, time, functools
 import numpy as np
 import pandas as pd
+from scipy.optimize import curve_fit
 
 from Python.parameters import *
 # from parameters import *

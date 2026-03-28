@@ -11,7 +11,7 @@
       <nuclide name="W186" ao="0.2843"/>
     </material>
     <material id="218" name="beryllium" temperature="900">
-      <density value="1.845" units="g/cm3"/>
+      <density value="1.85" units="g/cm3"/>
       <nuclide name="Be9" ao="1.0"/>
     </material>
     <material id="219" name="structure" temperature="900">
@@ -1647,6 +1647,9 @@
         <parameters>14000000.0 1.0</parameters>
       </energy>
     </source>
+    <state_point>
+      <batches>5 10 15 20 25</batches>
+    </state_point>
   </settings>
   <tallies>
     <filter id="110" type="cell">
