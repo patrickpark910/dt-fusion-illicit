@@ -2,20 +2,20 @@
 
 # Run settings
 FERTILE_KGM3 = [0, 0.1, 0.5, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99] # [0, 0.1, 0.5, 1.5, 3, 7.5, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99] # 0.5,  250, 500, 750, 1000]
-BLANKETS = ['FLiBe','DCLL','HCPB']
+BLANKETS = ['ARC','ARCB','FLiBe','DCLL','HCPB']
 ISOTOPES = ['U238', 'Th232']
 BLANKET_COVERAGE = 1.00 # Assume blanket covers 88% of plasma surface, rest for divertor -- removed as irrelevant for our conclusions --ppark 2026-02-11
 TEMP_K = 900 # [K] ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
 
-N_PARTICLES, N_CYCLES = int(4e6), 25
+N_PARTICLES, N_CYCLES = int(4e7), 25
 
 """ Material parameters of breeders """
 
 # FLiBe (2(LiF)-BeF2)
 DENSITY_FLIBE   =  1.9505  # [g/cm³] from EOS at 900 K and 101 kPa, calculated in Jupyter/FLiBe/flibe_mats.py, ref. Humrickhouse 17 (INL-44148) --ppark 2026-02-13
 ENRICH_FLIBE    =  7.50    # [at%] enrich of Li-6
-LIMIT_UF4_FLIBE  = 768.0   # [kg/m³]
-LIMIT_THF4_FLIBE = 768.0   # [kg/m³]
+LIMIT_UF4_FLIBE  = 883.0   # [kg(U238)/m³(FLiBe)]
+LIMIT_THF4_FLIBE = 933.0   # [kg(Th232)/m³(FLiBe)]
 
 # Lead-lithium (DCLL, 83 at% Pb - 17 at% Li)
 DENSITY_DCLL    =  9.40  # [g/cm³]
