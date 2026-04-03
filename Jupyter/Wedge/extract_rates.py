@@ -1,27 +1,21 @@
 import os
 import openmc
 import pandas as pd
+import numpy as np
 
 def extract_rates(breeder, isotope):
     """
-    Extracts the TBR (Total (n,t) rxn rate) and (n,gamma) reaction rate 
-    from OpenMC statepoint files for wedge configurations.
-    
-    This function scans the OpenMC output directories for specified isotope loadings, 
-    dynamically determines the most recent statepoint file in each matching folder,
-    extracts the specified reaction rates using OpenMC pandas dataframes, 
-    and saves the collated results into an isotope-specific CSV file.
+    Extracts the TBR and (n,gamma) reaction rates along with their 
+    standard deviations from OpenMC statepoint files.
     """
     base_dir = "./OpenMC"
     results = []
     breeder = breeder.lower()
     
-    # Check if directory exists
     if not os.path.exists(base_dir):
         print(f"Directory {base_dir} not found. Run from Jupyter/Wedge")
         return
 
-    # Find matching folders that include both the breeder and the isotope
     folders = [f for f in os.listdir(base_dir) if f.startswith((f"{breeder}_wedgeA", f"{breeder}_wedgeC")) and isotope in f]
     
     for folder in sorted(folders):
@@ -29,15 +23,12 @@ def extract_rates(breeder, isotope):
         if not os.path.isdir(path):
             continue
   
-        # Parse case and loading from folder name
-        # Format: dcll_wedgeC_U238_150.00kgm3
         parts = folder.split('_')
         if len(parts) < 3:
             continue
-        case = parts[1][-1] # gets 'A' or 'C'
+        case = parts[1][-1] 
         folder_iso = parts[2]
         
-        # Only process folders matching the current isotope argument
         if folder_iso != isotope:
             continue
             
@@ -47,36 +38,42 @@ def extract_rates(breeder, isotope):
         except ValueError:
             continue
             
-        # Look for statepoint files
         sp_files = [f for f in os.listdir(path) if f.startswith('statepoint.') and f.endswith('.h5')]
         if not sp_files:
             print(f"No statepoint found in {folder}")
             continue
-        # Get the latest statepoint by batch number
+        
         sp_path = os.path.join(path, max(sp_files, key=lambda x: int(x.split('.')[1])))
             
         try:
             sp = openmc.StatePoint(sp_path)
             
-            # Extract TBR
+            # --- Extract TBR (n,t) ---
             li_tally = sp.get_tally(name="Total (n,t) rxn rate")
             li_df = li_tally.get_pandas_dataframe()
-            # print(li_df)
-            tbr = float(li_df["mean"].sum())
             
-            # Extract (n,gamma) for the specific isotope
+            tbr_mean = float(li_df["mean"].sum())
+            # Propagate error: sqrt(sum of squares of std. dev.)
+            tbr_std = float(np.sqrt((li_df["std. dev."]**2).sum()))
+            
+            # --- Extract (n,gamma) for the specific isotope ---
             fertile_tally = sp.get_tally(name="Total fertile rxn rate")
             f_df = fertile_tally.get_pandas_dataframe()
-            # print(f_df)
+            
             ng_mask = (f_df["nuclide"] == isotope) & (f_df["score"] == "(n,gamma)")
-            ng_rate = float(f_df.loc[ng_mask, "mean"].sum())
+            
+            ng_mean = float(f_df.loc[ng_mask, "mean"].sum())
+            # Propagate error for the filtered subset
+            ng_std = float(np.sqrt((f_df.loc[ng_mask, "std. dev."]**2).sum()))
             
             results.append({
                 "folder": folder,
                 "case": case,
                 "loading_kg_m3": loading,
-                "tbr": tbr,
-                f"{isotope.lower()}_n_gamma": ng_rate
+                "tbr": tbr_mean,
+                "tbr_std": tbr_std,
+                f"{isotope.lower()}_n_gamma": ng_mean,
+                f"{isotope.lower()}_n_gamma_std": ng_std
             })
             
             print(f"Extracted {folder}")
@@ -84,7 +81,6 @@ def extract_rates(breeder, isotope):
         except Exception as e:
             print(f"Error processing {folder}: {e}")
             
-    # Save to CSV
     if results:
         df = pd.DataFrame(results)
         out_path = f"extracted_rates_{breeder}_{isotope}.csv"

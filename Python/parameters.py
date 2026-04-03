@@ -129,11 +129,11 @@ DCLL_VF_HE_NOM = 0.097
 DCLL_BL_VOL = 427.3   # [m³] from ./OpenMC/volume_DCLL_900K_Li90.0_U000.00kgm3/volume_1.csv
 DCLL_BR_VOL = DCLL_BL_VOL * DCLL_VF_LL_NOM  
 
-DCLL_CONV_U_TBR = [ (0.0 , 1.0),    # tie intercept at 1 and linear fit to all points
-                    (250 , 1.0),    # -- see /Jupyter/Wedge/wedge_data_2026-03-25.xlsx for details
-                    (500 , 1.0),    # -- ppark 2026-03-25
-                    (750 , 1.0),
-                    (1000, 1.0), ]  # updated with 4e4x25 runs 2026-03-25 --ppark
+DCLL_CONV_U_TBR = [ (0.0 , 1.000000),    # tie intercept at 1 and linear fit to all points
+                    (250 , 1.003143),    # -- see /Jupyter/Wedge/wedge_data_2026-03-25.xlsx for details
+                    (500 , 1.007732),    # -- ppark 2026-03-25
+                    (750 , 1.011847),
+                    (1000, 1.016612), ]  # updated with 4e4x25 runs 2026-03-25 --ppark
 
 DCLL_CONV_U_FPR = [ (0.1 , 1.0),    # interpolate piecewise linear! 
                     (15  , 1.0),    # -- see wedge_data_2026-03-25.xlsx for details
@@ -147,17 +147,11 @@ DCLL_CONV_U_FPR = [ (0.1 , 1.0),    # interpolate piecewise linear!
                     (750 , 1.0),  
                     (1000, 1.0), ]  # updated with 4e4x25 runs 2026-03-02 --ppark
 
-DCLL_CONV_TH_TBR = [ (0.0 , 1.0),    # tie intercept at 1 and linear fit to all points
-                     (15  , 1.0),    # -- see wedge_data_2026-03-02.xlsx for details
-                     (30  , 1.0),    # -- ppark 2026-03-02
-                     (60  , 1.0),
-                     (90  , 1.0),
-                     (120 , 1.0),
-                     (150 , 1.0),
-                     (250 , 1.0),
-                     (500 , 1.0),
-                     (750 , 1.0),
-                     (1000, 1.0), ]  # updated with 4e4x25 runs 2026-03-02 --ppark
+DCLL_CONV_TH_TBR = [ (0.0 , 1.000000),
+                     (250 , 1.002089),    # tie intercept at 1 and linear fit to all points 
+                     (500 , 1.006744),    # see /Jupyter/Wedge/wedge_data_2026-03-25.xlsx for details
+                     (750 , 1.010088),    # updated with 4e4x25 runs 2026-03-25 --ppark 
+                     (1000, 1.014491), ]  
 
 DCLL_CONV_TH_FPR = [ (0.1 , 1.0),    # interpolate piecewise linear! 
                      (15  , 1.0),    # -- see wedge_data_2026-03-02.xlsx for details

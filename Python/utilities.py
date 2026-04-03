@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit
 
-from Python.parameters import *
-# from parameters import *
+# from Python.parameters import *
+from parameters import *
 
 
 """
@@ -259,17 +259,17 @@ def miller_model(R0, a, kappa, delta, extrude=0, calc_vol=False, n=100):
         R_offset = np.append(R_offset, R_offset[0])
         Z_offset = np.append(Z_offset, Z_offset[0])
 
-    # if calc_vol:
-    #     # Shoelace area
-    #     A = 0.5 * np.sum(R_offset[:-1]*Z_offset[1:] - R_offset[1:]*Z_offset[:-1])
+    if calc_vol:
+        # Shoelace area
+        A = 0.5 * np.sum(R_offset[:-1]*Z_offset[1:] - R_offset[1:]*Z_offset[:-1])
 
-    #     # Centroid in R
-    #     Cx = (1/(6*A)) * np.sum((R_offset[:-1] + R_offset[1:]) *
-    #                                (R_offset[:-1]*Z_offset[1:] - R_offset[1:]*Z_offset[:-1]))
-    #     # Torus volume
-    #     volume = 2*np.pi*Cx*abs(A)
+        # Centroid in R
+        Cx = (1/(6*A)) * np.sum((R_offset[:-1] + R_offset[1:]) *
+                                (R_offset[:-1]*Z_offset[1:] - R_offset[1:]*Z_offset[:-1]))
+        # Torus volume
+        volume = 2*np.pi*Cx*abs(A)
 
-    #     return R_offset, Z_offset, volume
+        return R_offset, Z_offset, volume
 
     # return R_offset, Z_offset
     return list(zip(R_offset, Z_offset))
@@ -315,7 +315,24 @@ def has_statepoint(directory_path):
 if __name__ == "__main__":
     """ Use this to test any of the functions """
     # calc_biso_blanket_vol_fracs(fertile_kgm3, breeder_volume_m3, fertile_isotope='U238', fertile_enrich=0.71)
-    print(calc_biso_blanket_vol_fracs(1000, LL_BR_VOL, fertile_isotope='Th232'))
+    # print(calc_biso_blanket_vol_fracs(1000, LL_BR_VOL, fertile_isotope='Th232'))
     # for 1000, LL_BR_VOL, 'U', 0.71: (0.7874738114760764, 0.21252618852392352)
 
+    V_br1_in  = miller_model(DCLL_R0, DCLL_A, DCLL_KAPPA, DCLL_DELTA, extrude=(DCLL_FW_CM+DCLL_FWF_CM + DCLL_FWC_CM + DCLL_FWB_CM), calc_vol=True, n=10000)
+    V_br1_out = miller_model(DCLL_R0, DCLL_A, DCLL_KAPPA, DCLL_DELTA, extrude=(DCLL_FW_CM+DCLL_FWF_CM + DCLL_FWC_CM + DCLL_FWB_CM + DCLL_BR1_CM), calc_vol=True, n=10000)
+    V_br1 = (V_br1_out[2] - V_br1_in[2]) / 100**3
+    print(f"Breeding region 1: {V_br1:.6f} m^3")
+
+    V_br2_in  = miller_model(DCLL_R0, DCLL_A, DCLL_KAPPA, DCLL_DELTA, extrude=(DCLL_FW_CM+DCLL_FWF_CM + DCLL_FWC_CM + DCLL_FWB_CM + DCLL_BR1_CM + DCLL_D1_CM), calc_vol=True, n=10000)
+    V_br2_out = miller_model(DCLL_R0, DCLL_A, DCLL_KAPPA, DCLL_DELTA, extrude=(DCLL_FW_CM+DCLL_FWF_CM + DCLL_FWC_CM + DCLL_FWB_CM + DCLL_BR1_CM + DCLL_D1_CM + DCLL_BR2_CM), calc_vol=True, n=10000)
+    V_br2 = (V_br2_out[2] - V_br2_in[2]) / 100**3
+    print(f"Breeding region 2: {V_br2:.6f} m^3")
+
+    V_br3_in  = miller_model(DCLL_R0, DCLL_A, DCLL_KAPPA, DCLL_DELTA, extrude=(DCLL_FW_CM+DCLL_FWF_CM + DCLL_FWC_CM + DCLL_FWB_CM + DCLL_BR1_CM + DCLL_D1_CM + DCLL_BR2_CM + DCLL_D2_CM), calc_vol=True, n=10000)
+    V_br3_out = miller_model(DCLL_R0, DCLL_A, DCLL_KAPPA, DCLL_DELTA, extrude=(DCLL_FW_CM+DCLL_FWF_CM + DCLL_FWC_CM + DCLL_FWB_CM + DCLL_BR1_CM + DCLL_D1_CM + DCLL_BR2_CM + DCLL_D2_CM + DCLL_BR3_CM), calc_vol=True, n=10000)
+    V_br3 = (V_br3_out[2] - V_br3_in[2]) / 100**3
+    print(f"Breeding region 3: {V_br3:.6f} m^3")
+
+    print(f"Actual outboard breeding region 3 volume is: 106.6827507 m^3")
+    print(f"In which case the outboard is this fraction: {106.6827507 / V_br3:.6f}")
 
