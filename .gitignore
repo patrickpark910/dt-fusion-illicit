@@ -7,6 +7,7 @@ __pycache__/
 test/
 test*
 scratch*
+*.pkl
 *.pyc
 *.ppm
 *.w

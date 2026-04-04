@@ -246,33 +246,35 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 
 # Fonts
-try:
-    font_path = './Python/fonts/DIN-Regular.ttf' # DIN-Regular.ttf' # './Python/arial.ttf'
-    fm.fontManager.addfont(font_path)
-    prop = fm.FontProperties(fname=font_path)
-    plt.rcParams['font.family'] = prop.get_name()
-except:
-    font_path = './Python/fonts/arial.ttf' # './arial.ttf'
-    fm.fontManager.addfont(font_path)
-    prop = fm.FontProperties(fname=font_path)
-    plt.rcParams['font.family'] = prop.get_name()
+# try:
+#     font_path = './Python/fonts/DIN-Regular.ttf' # DIN-Regular.ttf' # './Python/arial.ttf'
+#     fm.fontManager.addfont(font_path)
+#     prop = fm.FontProperties(fname=font_path)
+#     plt.rcParams['font.family'] = prop.get_name()
+# except:
+font_path = './Python/fonts/arial.ttf' # './arial.ttf'
+fm.fontManager.addfont(font_path)
+prop = fm.FontProperties(fname=font_path)
+plt.rcParams['font.family'] = prop.get_name()
+plt.rcParams['mathtext.default'] = 'regular'
 
 # Ticks
 plt.rcParams['xtick.direction'] = 'in'
 plt.rcParams['ytick.direction'] = 'in'
 plt.rcParams['xtick.major.width'] = 0.5   # major x‐tick line width
 plt.rcParams['ytick.major.width'] = 0.5   # major y‐tick line width
-plt.rcParams['xtick.major.size'] = 6      # major x‐tick line length
-plt.rcParams['ytick.major.size'] = 6      # major y‐tick line length
-plt.rcParams['xtick.minor.size'] = 3      # minor x‐tick line length
-plt.rcParams['ytick.minor.size'] = 3      # minor y‐tick line length
+plt.rcParams['xtick.major.size']  = 6     # major x‐tick line length
+plt.rcParams['ytick.major.size']  = 6     # major y‐tick line length
+plt.rcParams['xtick.minor.size']  = 3     # minor x‐tick line length
+plt.rcParams['ytick.minor.size']  = 3     # minor y‐tick line length
 plt.rcParams['axes.linewidth']    = 0.5   # axes spines linewidth (use this instead of messing with spine.set_linewidth(1) )
+plt.rcParams['grid.color'] = '#DBDBDB'
 
 # Font sizes
-plt.rcParams['font.size']          = 14   # default text size for labels, legends, etc.
-plt.rcParams['axes.titlesize']     = 14   # axes title
-plt.rcParams['axes.labelsize']     = 14   # x- and y-axis labels
-plt.rcParams['xtick.labelsize']    = 14   # x-tick labels
-plt.rcParams['ytick.labelsize']    = 14   # y-tick labels
-plt.rcParams['legend.fontsize']    = 12   # legend text
-plt.rcParams['figure.titlesize']   = 14   # figure title
+plt.rcParams['font.size']         = 18   # default text size for labels, legends, etc.
+plt.rcParams['axes.titlesize']    = 16   # axes title
+plt.rcParams['axes.labelsize']    = 18   # x- and y-axis labels
+plt.rcParams['xtick.labelsize']   = 14   # x-tick labels
+plt.rcParams['ytick.labelsize']   = 14   # y-tick labels
+plt.rcParams['legend.fontsize']   = 12   # legend text
+plt.rcParams['figure.titlesize']  = 16   # figure title
