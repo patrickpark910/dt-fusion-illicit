@@ -85,6 +85,36 @@ class Plot:
         self.flibe_u_ng_df = self.flibe_u_ng_df[self.flibe_u_ng_df['fertile_kg/m3'] <= LIMIT_UF4_FLIBE]
         self.flibe_th_ng_df = self.flibe_th_ng_df[self.flibe_th_ng_df['fertile_kg/m3'] <= LIMIT_THF4_FLIBE]
 
+        # ------------------------------------------------------------------
+        # Weigh TBRs and FPRs by correction factor derived from wedge models
+        # -------------------------------------------------------------------
+
+        def get_ratio(x, array):
+            """
+            Bc you might be trying to plot a fertile_kg/m3 not listed in XXXX_CONV_X_TBR <parameters.py>
+            (e.g., 350 kg/m³) we piecewise linearly interpolate the correction ratio for any fertile_kg/m3 x
+
+            Usage: np.interp(x_value_to_calculate, original_x, original_y)
+            """
+            df_fertile = pd.DataFrame(array, columns=['fertile_kgm3', 'ratio'])
+            return np.interp(x, df_fertile['fertile_kgm3'], df_fertile['ratio'])
+
+        # Calculate corrected TBR values by multiplying the appropriate correction factor for each fertile_kg/m3
+        self.hcpb_u_rr_df_corr  = self.hcpb_u_rr_df.copy()
+        self.hcpb_th_rr_df_corr = self.hcpb_th_rr_df.copy()
+        self.dcll_u_rr_df_corr  = self.dcll_u_rr_df.copy()
+        self.dcll_th_rr_df_corr = self.dcll_th_rr_df.copy()
+
+        self.hcpb_u_rr_df_corr['tbr']  *= get_ratio(self.hcpb_u_rr_df_corr['fertile_kg/m3'],  HCPB_CONV_U_TBR)
+        self.hcpb_th_rr_df_corr['tbr'] *= get_ratio(self.hcpb_th_rr_df_corr['fertile_kg/m3'], HCPB_CONV_TH_TBR)
+        self.dcll_u_rr_df_corr['tbr']  *= get_ratio(self.dcll_u_rr_df_corr['fertile_kg/m3'],  DCLL_CONV_U_TBR)
+        self.dcll_th_rr_df_corr['tbr'] *= get_ratio(self.dcll_th_rr_df_corr['fertile_kg/m3'], DCLL_CONV_TH_TBR)
+
+        self.hcpb_u_rr_df_corr['U238(n,g)']   *= get_ratio(self.hcpb_u_rr_df_corr['fertile_kg/m3'],  HCPB_CONV_U_FPR)
+        self.hcpb_th_rr_df_corr['Th232(n,g)'] *= get_ratio(self.hcpb_th_rr_df_corr['fertile_kg/m3'], HCPB_CONV_TH_FPR)        
+        self.dcll_u_rr_df_corr['U238(n,g)']   *= get_ratio(self.dcll_u_rr_df_corr['fertile_kg/m3'],  DCLL_CONV_U_FPR)
+        self.dcll_th_rr_df_corr['Th232(n,g)'] *= get_ratio(self.dcll_th_rr_df_corr['fertile_kg/m3'], DCLL_CONV_TH_FPR)
+
         self.show, self.save = show, save
 
 
@@ -199,50 +229,30 @@ class Plot:
         print(f"\nComment. <plot.py/plot_tbr()> Plotting tritium breeding ratio vs. fertile density...")
 
         # -------------------------------------------------------------
-        # Weigh HCPB TBR by correction factor derived from wedge modelinestyle
-        # -------------------------------------------------------------
-
-        df_u    = pd.DataFrame(HCPB_CONV_U_TBR,  columns=['fertile_kgm3', 'ratio'])
-        df_th   = pd.DataFrame(HCPB_CONV_TH_TBR, columns=['fertile_kgm3', 'ratio'])
-
-        # NB. np.interp(x_values_to_calculate, original_x, original_y)
-        def get_ratio(x, df_fertile):
-            return np.interp(x, df_fertile['fertile_kgm3'], df_fertile['ratio'])
-
-        # Apply interpolation to the Uranium dataframe
-        hcpb_u_rr_df_corr = self.hcpb_u_rr_df.copy()
-        hcpb_u_rr_df_corr['tbr'] = hcpb_u_rr_df_corr['tbr'] * get_ratio(hcpb_u_rr_df_corr['fertile_kg/m3'], df_u)
-
-        # Apply interpolation to the Thorium dataframe
-        hcpb_th_rr_df_corr = self.hcpb_th_rr_df.copy()
-        hcpb_th_rr_df_corr['tbr'] = hcpb_th_rr_df_corr['tbr'] * get_ratio(hcpb_th_rr_df_corr['fertile_kg/m3'], df_th)
-
-
-        # -------------------------------------------------------------
         # Plot them!
         # -------------------------------------------------------------
 
         # Load the dataframes to plot, label, color, marker, markersize, linestyle, and polynomial fit
-        datasets = [ (self.flibe_u_rr_df,  r'FLiBe-UF$_4$',  '#66b420', 'o', 5, '-',  'makima'),
-                     (self.flibe_th_rr_df, r'FLiBe-ThF$_4$', '#66b420', '+', 12, '--', 'makima'),
-                     (hcpb_u_rr_df_corr,   r'HCPB-UO$_2$',   '#b41f24', 's', 6, '-',  2),
-                     (hcpb_th_rr_df_corr,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, '--', 2),
-                     (self.dcll_u_rr_df,   r'DCLL-UO$_2$',   '#0047ba', '^', 8, '-',  2),
-                     (self.dcll_th_rr_df,  r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, '--', 2),
+        datasets = [ (self.flibe_u_rr_df,       r'FLiBe-UF$_4$',  '#66b420', 'o',  5,  '-',  'makima'),
+                     (self.flibe_th_rr_df,      r'FLiBe-ThF$_4$', '#66b420', '+', 12, '--',  'makima'),
+                     (self.hcpb_u_rr_df_corr,   r'HCPB-UO$_2$',   '#b41f24', 's',  6,  '-',  2),
+                     (self.hcpb_th_rr_df_corr,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, '--',  2),
+                     (self.dcll_u_rr_df_corr,   r'DCLL-UO$_2$',   '#0047ba', '^',  8,  '-',  2),
+                     (self.dcll_th_rr_df_corr,  r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, '--',  2),
                    ]
 
         # Select a subset of fertile kg/m3 to SHOW to avoid cluttering the low end with markers
         selected1 = [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150,]  # [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99]
         selected2 = [0, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]  # [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99]
 
-        # Set view limits for each of the plots
+        # Settings for each of the plots
         view_limits = [ # Zoomed in on (0, 155) fertile kg/m3
-                        {'xlim': (-5, 155),   'xmax': 150, 'x_major': 15,  'x_minor': 5,  
+                        {'xlim': (-4, 154),   'xmax': 150, 'x_major': 15,  'x_minor': 5,  
                          'ylim': (1.04, 1.46), 'suffix': '0150kgm3', 'fertile_kgm3': selected1,   # 'ylim': (0.94, 1.26)
                          'leg_loc': 'center right',}, # leg_loc options: best or upper/center/lower left/right/center
                         # Zoomed out to (0, 1000) fertile kg/m3
                         {'xlim': (-25, 1025), 'xmax':1000, 'x_major': 100, 'x_minor': 50, 
-                         'ylim': (0.84, 1.46), 'suffix': '1000kgm3', 'fertile_kgm3': selected2,
+                         'ylim': (0.83, 1.47), 'suffix': '1000kgm3', 'fertile_kgm3': selected2,
                          'leg_loc': 'upper right'} ] 
   
 
@@ -250,7 +260,7 @@ class Plot:
 
             plt.figure(figsize=(8, 6))
             ax = plt.gca()
-            ax.axhspan(0, 1.00, color='#e0ded8')            
+            ax.axhspan(0, 1.00, color='#F0F0F0')            
 
             for df, label, color, marker, markersize, linestyle, degree in datasets:
 
@@ -262,20 +272,19 @@ class Plot:
                 y_filtered = BLANKET_COVERAGE * df_filtered['tbr']
 
                 # Plot filtered data
-                plt.scatter(x_filtered, y_filtered, marker=marker, s=markersize*5, color=color, zorder=3)
+                # plt.scatter(x_filtered, y_filtered, marker=marker, s=markersize*5, color=color, zorder=3)
 
                 # But still fit the polynomial to all of the data you did compute
                 x_fit = df['fertile_kg/m3']
                 y_fit = BLANKET_COVERAGE * df['tbr']
-                # print(x_fit)
 
                 if degree == 'makima':
                     x_fine = np.linspace(0, v['xmax'], 500)
-                    y_fine    = Akima1DInterpolator(x_fit, y_fit, method='makima')(x_fine) # poly_func(x_fine)
+                    y_fine = Akima1DInterpolator(x_fit, y_fit, method='makima')(x_fine) # poly_func(x_fine)
 
                 else:
-                    coeffs    = np.polyfit(x_fit, y_fit, degree)
-                    y_fine    = np.poly1d(coeffs)(x_fine)
+                    coeffs = np.polyfit(x_fit, y_fit, degree)
+                    y_fine = np.poly1d(coeffs)(x_fine)
 
                 # Plot interpolation
                 plt.plot(x_fine, y_fine, linestyle, linewidth=1, color=color)
@@ -284,7 +293,7 @@ class Plot:
                 plt.plot([9e8,9e9], [9e8,9e9], marker+linestyle, markersize=markersize, linewidth=1, color=color, label=label)
 
             # Labeling
-            plt.xlabel(r'Fertile isotope density in breeder [kg$/$m$^3$]')
+            plt.xlabel(r'Fertile isotope density [kg$/$m³]')  # specifically use unicode superscript m³ and not m$^3$
             plt.ylabel('Tritium breeding ratio')
 
             # Set Dynamic Limits and Locators
@@ -303,8 +312,9 @@ class Plot:
             ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
 
             plt.tight_layout()
-            leg = plt.legend(loc=v['leg_loc'], fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=3)
-            leg.get_frame().set_linewidth(0.5) 
+            # leg = plt.legend(loc=v['leg_loc'], fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=3)
+            # leg = plt.legend(loc=v['leg_loc'], fancybox=False, edgecolor='none', frameon=True, framealpha=1.0, ncol=3)
+            # leg.get_frame().set_linewidth(0.5) 
 
             if self.save:
                 plt.savefig(f'./Figures/PDF/fig_tbr_{v["suffix"]}.pdf', bbox_inches='tight', format='pdf')
@@ -325,28 +335,6 @@ class Plot:
       
         print(f"\nPlotting Pu-239 production per year for all blankets...")
 
-        # -------------------------------------------------------------
-        # Weigh HCPB TBR by correction factor derived from wedge modelinestyle
-        # -------------------------------------------------------------
-
-        df_u    = pd.DataFrame(HCPB_CONV_U_FPR,  columns=['fertile_kgm3', 'ratio'])
-        df_th   = pd.DataFrame(HCPB_CONV_TH_FPR, columns=['fertile_kgm3', 'ratio'])
-
-        # NB. np.interp(x_values_to_calculate, original_x, original_y)
-        def get_u_ratio(x):
-            return np.interp(x, df_u['fertile_kgm3'], df_u['ratio'])
-
-        def get_th_ratio(x):
-            return np.interp(x, df_th['fertile_kgm3'], df_th['ratio'])
-
-        # Apply interpolation to the Uranium dataframe
-        hcpb_u_rr_df_corr = self.hcpb_u_rr_df.copy()
-        hcpb_u_rr_df_corr['U238(n,g)'] = hcpb_u_rr_df_corr['U238(n,g)'] * get_u_ratio(hcpb_u_rr_df_corr['fertile_kg/m3'])
-
-        # Apply interpolation to the Thorium dataframe
-        hcpb_th_rr_df_corr = self.hcpb_th_rr_df.copy()
-        hcpb_th_rr_df_corr['Th232(n,g)'] = hcpb_th_rr_df_corr['Th232(n,g)'] * get_th_ratio(hcpb_th_rr_df_corr['fertile_kg/m3'])
-
         # Constants and conversion factors
         # <utilities.py> default NPS_FUS = 500 MJ/s * 3.546e17 n/MJ = 1.773e+20 n/s
         tot_n_per_yr = NPS_FUS * 3.156e+7
@@ -357,14 +345,13 @@ class Plot:
         # Dataset Configuration: 
         # (dataframe, label, color, marker, markersize, linestyle, reaction_key, conversion_factor)
         # -----------------------------------------------------------------------------------------
-        datasets = [
-            (self.flibe_th_rr_df, r'FLiBe-ThF$_4$', '#66b420', '+', 12, '--', 'makima', 'Th232(n,g)', u233_conv),
-            (hcpb_th_rr_df_corr,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, '--', 'makima', 'Th232(n,g)', u233_conv),
-            (self.dcll_th_rr_df,  r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, '--', 'makima', 'Th232(n,g)', u233_conv),
-            (self.flibe_u_rr_df,  r'FLiBe-UF$_4$',  '#66b420', 'o', 5,  '-',  'makima',  'U238(n,g)',  pu239_conv),
-            (hcpb_u_rr_df_corr,   r'HCPB-UO$_2$',   '#b41f24', 's', 6,  '-',  'makima',  'U238(n,g)',  pu239_conv),
-            (self.dcll_u_rr_df,   r'DCLL-UO$_2$',   '#0047ba', '^', 8,  '-',  'makima',  'U238(n,g)',  pu239_conv),
-        ]
+        long_dashed = (0, (10, 3))
+        datasets = [ (self.flibe_th_rr_df,      r'FLiBe-ThF$_4$', '#66b420', '+', 12, long_dashed, 'makima', 'Th232(n,g)', u233_conv),
+                     (self.hcpb_th_rr_df_corr,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, long_dashed, 'makima', 'Th232(n,g)', u233_conv),
+                     (self.dcll_th_rr_df_corr,  r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, long_dashed, 'makima', 'Th232(n,g)', u233_conv),
+                     (self.flibe_u_rr_df,       r'FLiBe-UF$_4$',  '#66b420', 'o',  5,         '-', 'makima',  'U238(n,g)', pu239_conv),
+                     (self.hcpb_u_rr_df_corr,   r'HCPB-UO$_2$',   '#b41f24', 's',  6,         '-', 'makima',  'U238(n,g)', pu239_conv),
+                     (self.dcll_u_rr_df_corr,   r'DCLL-UO$_2$',   '#0047ba', '^',  8,         '-', 'makima',  'U238(n,g)', pu239_conv),      ]
 
         # Select a subset of fertile kg/m3 to SHOW to avoid cluttering the low end with markers
         selected1 = [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150,]  # [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99]
@@ -399,7 +386,7 @@ class Plot:
                 y_filtered = df_filtered[rxn] * conv
 
                 # Plot filtered data
-                plt.scatter(x_filtered, y_filtered, marker=marker, s=markersize*5, color=color, zorder=3)
+                # plt.scatter(x_filtered, y_filtered, marker=marker, s=markersize*5, color=color, zorder=3)
 
                 # But still fit the polynomial to all of the data you did compute
                 x_fit = df['fertile_kg/m3']
@@ -407,22 +394,21 @@ class Plot:
 
                 if degree == 'makima':
                     x_fine = np.linspace(0, v['xmax'], 500)
-                    y_fine    = Akima1DInterpolator(x_fit, y_fit, method='makima')(x_fine) # poly_func(x_fine)
+                    y_fine = Akima1DInterpolator(x_fit, y_fit, method='makima')(x_fine) # poly_func(x_fine)
 
                 else:
-                    coeffs    = np.polyfit(x_fit, y_fit, degree)
-                    y_fine    = np.poly1d(coeffs)(x_fine)
+                    coeffs = np.polyfit(x_fit, y_fit, degree)
+                    y_fine = np.poly1d(coeffs)(x_fine)
 
                 # Plot interpolation
-                plt.plot(x_fine, y_fine, linestyle, linewidth=1, color=color)
+                plt.plot(x_fine, y_fine, linestyle=linestyle, linewidth=1, color=color)
 
                 # Dummy plots for legend -- bit of a hack lmao -- ppark
-                plt.plot([9e8,9e9], [9e8,9e9], marker+linestyle, markersize=markersize, linewidth=1, color=color, label=label)
+                # plt.plot([9e8,9e9], [9e8,9e9], marker+linestyle, markersize=markersize, linewidth=1, color=color, label=label)
 
             # Labeling and Titles
-            # plt.title(r'Fissile prod rates up to 1000 kg$/$m$^3$ (2025-10-28)')
-            plt.xlabel(r'Fertile isotope density in breeder [kg$/$m$^3$]')
-            plt.ylabel('Initial fissile production rate [kg$/$yr]')
+            plt.xlabel(r"Fertile isotope density [kg$/$m³]")  # specifically use unicode superscript m³ and not m$^3$
+            plt.ylabel(r"Initial fissile production rate [kg$/$yr]")
 
             # Set Dynamic limits and locators
             plt.xlim(v['xlim'])
@@ -440,8 +426,8 @@ class Plot:
             ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
 
             plt.tight_layout()
-            leg = plt.legend(loc=v['leg_loc'], fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=2)
-            leg.get_frame().set_linewidth(0.5) 
+            # leg = plt.legend(loc=v['leg_loc'], fancybox=False, edgecolor='black', frameon=False, framealpha=.75, ncol=2)
+            # leg.get_frame().set_linewidth(0.5) 
 
             if self.save:
                 plt.savefig(f'./Figures/PDF/fig_fpr_{v["suffix"]}.pdf', bbox_inches='tight', format='pdf')
@@ -463,50 +449,67 @@ class Plot:
         """
         print(f"\nPlotting cumulative, normalized fissile production vs. energy...")
 
-        fig, axes = plt.subplots(3, 2, figsize=(15,15)) # sharex='col', sharey='row', 
 
-        titles = [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$", r"PB-UO$_2$", r"PB-ThO$_2$", r"LL-UO$_2$", r"LL-ThO$_2$",]
+
+        fig, axes = plt.subplots(3, 2, figsize=(15,15), sharex=True, sharey=True) # sharex='col', sharey='row', 
+
+        # load in thorium and uranium background (n, gamma) cross section, shift to 0.1 and 0.9
+        u_path = "./Figures/XSPlot/U238gamma.txt"
+        th_path = "./Figures/XSPlot/Th232gamma.txt"
+        u238_energy, u238_mxs = readtxtFile(u_path) # cross sections are returned as log(microxs)
+        th232_energy, th232_mxs = readtxtFile(th_path)
+
+        u238_mxs_shifted = (u238_mxs - np.min(u238_mxs)) * 0.8 / (np.max(u238_mxs) - np.min(u238_mxs)) + 0.1
+        th232_mxs_shifted = (th232_mxs - np.min(th232_mxs)) * 0.8 / (np.max(th232_mxs) - np.min(th232_mxs)) + 0.1
+
+        for ax in axes.flatten():
+            # Check if the axis is on the bottom edge
+            if ax.get_subplotspec().is_last_row():
+                ax.set_xlabel("Incident neutron energy [eV]", fontsize=16)
+            
+            # Check if the axis is on the left edge
+            if ax.get_subplotspec().is_first_col():
+                ax.set_ylabel(r"Cumulative fraction of fertile $($n,$\gamma)$ rxns", fontsize=16)
+                ax.plot(u238_energy, u238_mxs_shifted, linewidth=1.0, color='gray', alpha=0.25, label=fr'U-238 $($n,$\gamma)$')
+            else:
+                ax.plot(th232_energy, th232_mxs_shifted, linewidth=1.0, color='gray', alpha=0.25, label=fr'Th-232 $($n,$\gamma)$')
+
+        titles = [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$", r"HCPB-UO$_2$", r"HCPB-ThO$_2$", r"DCLL-UO$_2$", r"DCLL-ThO$_2$",]
         dfs    = [self.flibe_u_ng_df, self.flibe_th_ng_df, self.hcpb_u_ng_df, self.hcpb_th_ng_df, self.dcll_u_ng_df, self.dcll_th_ng_df,]
 
         for ax, df, title in zip(axes.flatten(), dfs, titles):
 
             # Filter out MT_fertile loadings we want to plot 
-            df = df[df["fertile_kg/m3"].isin([30,60,90,120,150])]
+            if title in [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$"]:
+                df = df[df["fertile_kg/m3"].isin([0.1, 15, 150, 750])]   
+            else:
+                df = df[df["fertile_kg/m3"].isin([0.1, 15, 150, 999.99])]
 
             # Compute sum of 'mean' for each MT_fertile. 
             df_mean = df.groupby("fertile_kg/m3")["mean"].sum().to_frame() # pd.DataFrame(, columns=["MT_fertile","sum"]) # 2-col df, colA = MT_fertile values, colB = sum of 'mean'
             df_mean.columns = ["sum"]   
             df = df.merge(df_mean, on="fertile_kg/m3", how="left") # adds sum as column to df
-
             df['norm_mean'] = df['mean'] / df['sum']
-
-            # df.to_csv('test.csv',index=False)
-            
 
             # Create bin edges from low and high energy boundaries
             edges = np.unique(np.concatenate([df['energy low [eV]'].values, df['energy high [eV]'].values]))
             bins  = np.sort(df['energy mid [eV]'].unique())
 
-            sub   = df[df['fertile_kg/m3'] == 30]
-            label = int(round(sub['fertile_kg/m3'].iloc[0], -1))
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#ff1f5b', label=fr'{label} kg$/$m$^3$')
+            sub   = df[df['fertile_kg/m3'] == 0.1]
+            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', linewidth=1.0, color='#ff1f5b', label=fr'0.1 kg$/$m³')
 
-            sub = df[df['fertile_kg/m3'] == 60]
-            label = int(round(sub['fertile_kg/m3'].iloc[0], -1))
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#f48628', label=fr'{label} kg$/$m$^3$')
-
-            sub = df[df['fertile_kg/m3'] == 90]
-            label = int(round(sub['fertile_kg/m3'].iloc[0], -1))
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#04cc6c', label=fr'{label} kg$/$m$^3$')
-
-            sub = df[df['fertile_kg/m3'] == 120]
-            label = int(round(sub['fertile_kg/m3'].iloc[0], -1))
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#0c9edd', label=fr'{label} kg$/$m$^3$')
+            sub = df[df['fertile_kg/m3'] == 15]
+            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', linewidth=1.0, color='#f48628', label=fr'15 kg$/$m³')
 
             sub = df[df['fertile_kg/m3'] == 150]
-            label = int(round(sub['fertile_kg/m3'].iloc[0], -1))
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', color='#b367bd', label=fr'{label} kg$/$m$^3$')
-            
+            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', linewidth=1.0, color='#04cc6c', label=fr'150 kg$/$m³')
+
+            if title in [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$"]:
+                sub = df[df['fertile_kg/m3'] == 750]
+                ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', linewidth=1.0, color='#0c9edd', label=fr'750 kg$/$m³')
+            else:
+                sub = df[df['fertile_kg/m3'] == 999.99]
+                ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', linewidth=1.0, color='#0c9edd', label=fr'1000 kg$/$m³')
 
             ax.xaxis.set_ticks_position('both')
             ax.yaxis.set_ticks_position('both')
@@ -515,20 +518,12 @@ class Plot:
             ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
 
             ax.set_xscale('log')
-            ax.set_xlim(0.67*1e0, 1.5*1e7)
+            ax.set_xlim(0.5*1e1, 1.5*1e6)
             ax.set_ylim(-0.03, 1.03)
             fig.tight_layout()
 
-            leg = ax.legend(title=title, fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1, loc="lower right")
+            leg = ax.legend(title=title, title_fontsize=14, fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1, loc="lower right")
             leg.get_frame().set_linewidth(0.5) 
-
-        for i in range(3):
-            for j in range(2):
-                ax = axes[i, j]
-                if i == 2:
-                    ax.set_xlabel("Incident neutron energy [eV]")
-                if j == 0:
-                    ax.set_ylabel(r"Cumulative fraction of fertile $($n,$\gamma)$ rxns")
 
         if self.save:
             plt.savefig(f'./Figures/PDF/fig_cum_norm_histogram.pdf', bbox_inches='tight', format='pdf')
@@ -606,7 +601,7 @@ class Plot:
         plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'DCLL-UO$_2$')     #  blue:  #0047ba
 
         # plt.title(f'Tritium breeding ratio (All)') # Exclude title for production figs --ppark 2025-08-06
-        plt.xlabel(r'Fertile isotope density $n$ in blanket [kg$/$m$^3$]')
+        plt.xlabel(r'Fertile isotope density [kg$/$m³]')  # specifically use unicode superscript m³ and not m$^3$
         plt.ylabel(r'$dR_{\text{fis}}/dn$ [kg$/\text{yr}^2$]')
 
         plt.xlim(-5,160)
@@ -625,7 +620,7 @@ class Plot:
 
         plt.tight_layout()
 
-        leg = plt.legend(fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1)
+        leg = plt.legend(fancybox=False, edgecolor='black', frameon=False, framealpha=.75, ncol=1)
         leg.get_frame().set_linewidth(0.5) 
     
         if self.save:
@@ -696,7 +691,7 @@ class Plot:
         plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'DCLL-UO$_2$')     #  blue: #0047ba
 
         # plt.title(f'Tritium breeding ratio (All)') # Exclude title for production figs --ppark 2025-08-06
-        plt.xlabel(r'Fertile isotope density $n$ in blanket [kg$/$m$^3$]')
+        plt.xlabel(r'Fertile isotope density $n$ in blanket [kg$/$m³]')  # specifically use unicode superscript m³ and not m$^3$
         plt.ylabel(r'$R_{\text{fis}}/n$ [kg$/$yr]')
 
         plt.xlim(-5,160)
@@ -715,7 +710,7 @@ class Plot:
 
         plt.tight_layout()
 
-        leg = plt.legend(fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1)
+        leg = plt.legend(fancybox=False, edgecolor='black', frameon=False, framealpha=.75, ncol=1)
         leg.get_frame().set_linewidth(0.5) 
     
         if self.save:
