@@ -3,120 +3,6 @@ import numpy as np
 import openmc
 
 
-# GLOBAL PARAMETERS
-TEMP_K = 900
-BISO_VOLUME = 4/3*np.pi*(0.05)**3
-KERNEL_VOLUME = 4/3*np.pi*(0.04)**3
-
-DENSITY_UO2  = 10.50 # [g/cm³]
-DENSITY_ThO2 = 10.00 # [g/cm³]
-
-AMU_U235 = 235.0439299
-AMU_U238 = 238.05078826
-AMU_U = 238.02891 # for natural enrichment
-AMU_O = 15.999
-AMU_UO2 = AMU_U + 2 * AMU_O
-AMU_Th232 = 232.0381
-
-# Volume fractions in HCPB blanket
-HCPB_VF_LI_NOM = 0.1304
-HCPB_VF_BE_NOM = 0.3790
-HCPB_VF_EU_NOM = 0.1176
-HCPB_VF_HE_NOM = 0.3730
-
-HCPB_BL_VOL = 520.6 # [m³] from ./OpenMC/volume_HCPB_900K_Li60.0_U000.00kgm3/volume_1.csv
-HCPB_BR_VOL = HCPB_BL_VOL * (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
-
-
-def fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope='U238'):
-    """
-    Converts given kg/m³ of fertile material to the number of BISO particles per cm³
-
-    Args:
-        fertile_kgm3  (float): kg of fertile isotope per m³ of breeder
-        fertile_isotope (str): one of ['U238', 'Th232']
-
-    Returns:
-        biso_per_cc (float): number of biso particles per m³ of breeder
-    """
-    if fertile_isotope == 'U238':
-        biso_per_cc = fertile_kgm3 * AMU_UO2 / AMU_U238 / KERNEL_VOLUME / DENSITY_UO2 / 100**3 * 1000
-    elif fertile_isotope == 'Th232':
-        biso_per_cc = fertile_kgm3 * AMU_ThO2 / AMU_Th232 / KERNEL_VOLUME / DENSITY_ThO2 / 100**3 * 1000
-    return biso_per_cc
-
-
-
-def has_statepoint(directory_path):
-    """
-    Check if any file starting with 'statepoint' exists in the given directory.
-    
-    Args:
-        directory_path (str): Path to the directory to search
-    
-    Returns:
-        bool: True if a file starting with 'statepoint' is found, False otherwise
-    """
-    found = False
-    for filename in os.listdir(directory_path):
-        if filename.startswith("statepoint"):
-            found = True
-    return found
-
-
-def lattice_coords(lower_left, shape, pitch):
-    """
-    Calculates the center coordinates of all cells in a rectangular lattice
-    and returns them as a list of tuples.
-    
-    Args:
-        lower_left (iterable of float): (x, y, z) coordinates of the lower-left corner.
-        shape (iterable of int): number of cells (Nx, Ny, Nz).
-        pitch (iterable of float): width, height, and depth of each cell (Dx, Dy, Dz).
-        
-    Returns: 
-        coords (list of tuple): flat list containing (x, y, z) center coordinates.
-    """
-    nx, ny, nz = shape
-    dx, dy, dz = pitch
-    lx, ly, lz = lower_left
-
-    coords = []
-    
-    # Iterate through each dimension to calculate the center of each voxel
-    for i in range(nx):
-        x = lx + (i + 0.5) * dx
-        for j in range(ny):
-            y = ly + (j + 0.5) * dy
-            for k in range(nz):
-                z = lz + (k + 0.5) * dz
-                coords.append((x, y, z))
-                
-    return coords
-
-
-def logspace_per_decade(start, stop, pts_per_decade):
-    """
-    Returns values from 'start' to 'stop' so that each factor-of-10
-    interval contains 'pts_per_decade' points (including its first endpoint).
-    Might be a little off if 'stop' isn't precisely at a decade, ex. 20e6 eV
-
-    example: 10 points per decade from 1e-5 → 2e7
-    grid = logspace_per_decade(1e-5, 20e6, pts_per_decade=10)
-    for i in grid:
-        print(np.log10(i))
-    # print(np.log10(i) for i in grid)
-    """
-    log_start = np.log10(start)
-    log_stop  = np.log10(stop)
-    total_decades = log_stop - log_start
-    # how many intervals of size 1 decade we need, as a float
-    total_steps = total_decades * pts_per_decade
-    # +1 so that we include the very last point at `stop`
-    npts = int(np.ceil(total_steps)) + 1
-    return np.logspace(log_start, log_stop, num=npts)
-
-
 class Wedge():
 
     def __init__(self, case, fertile_kgm3, isotope='U238', write_openmc=True, run_openmc=False,):
@@ -126,7 +12,7 @@ class Wedge():
         self.fertile_str = f"{fertile_kgm3:06.2f}"
         self.isotope = isotope 
         
-        if   fertile_kgm3 <=  1:
+        if fertile_kgm3 <=  1:
             self.n_particles, self.n_batches = int(4e6), 25  # = 1e8 nps
         elif  1 < fertile_kgm3 <= 10:
             self.n_particles, self.n_batches = int(4e5), 25  # = 1e7 nps
@@ -135,11 +21,9 @@ class Wedge():
         elif fertile_kgm3 > 100:
             self.n_particles, self.n_batches = int(8e3), 25  # = 2e5 nps
 
-        self.n_particles, self.n_batches = int(4e2), 25
+        s = f"{self.n_particles:.0e}x{self.n_batches}".replace("+0", "").replace("+", "")
 
-        s = f"{self.n_particles:.0e}".replace("+0", "").replace("+", "")
-
-        self.name = f"hcpb_wedge{self.case}_{self.isotope}_{self.fertile_str}kgm3_{s}x{self.n_batches}"         
+        self.name = f"hcpb_wedge{self.case}_{self.isotope}_{self.fertile_str}kgm3_{s}"         
         self.path = f"./OpenMC/{self.name}"
 
         os.makedirs(self.path, exist_ok=True)
@@ -528,7 +412,7 @@ class Wedge():
         # vol frac of Eurofer and He-4 doesn't change
         checksum2 = vf_biso_bl + vf_libe_bl + HCPB_VF_EU_NOM + HCPB_VF_HE_NOM  # should equal 1
 
-        # Number of BISO spheres per cc of breeding region
+        # Number of BISO spheres per cc of physicalblanket volume
         biso_per_cc_bl = vf_biso_bl / BISO_VOLUME
 
         """
@@ -588,11 +472,7 @@ class Wedge():
             print(f"'blanket volume' (bl) = total blanket cell volume of (biso) + breeder + structure + coolant ")
             print(f"'breeder volume' (br) = real breeder volume in blanket, updated with any deductions from biso volume ")
             print(f"")
-            print(f"With respect to the BREEDER, i.e., per 1 m³ of Li4SiO4 + Be, we have these new volume fractions:")
-            print(f"  vf_biso_breeder_new =  {(vf_biso_br*100):.6f} vol%")
-            print(f"  vf_li_breeder_new   =  {(vf_li_br*100):.6f} vol%")
-            print(f"  vf_be_breeder_new   =  {(vf_be_br*100):.6f} vol%")
-            print(f"  check they add up   = {(checksum1*100):.6f} vol%")
+            print(f"Per 1 cm³ of (Li4SiO4 + Be), we have: {(biso_per_cc_br * BISO_VOLUME):.6f} cm³ of BISO")
             print(f"")
 
             if self.case in ['A']:
@@ -680,7 +560,6 @@ class Wedge():
 
     def openmc(self, debug=False, write=True, run=False):
 
-        
         openmc.reset_auto_ids()
         self.prism_helpers(debug=debug)
         self.materials()
@@ -705,6 +584,6 @@ if __name__ == '__main__':
 
     for case in ['C','A']:
         for isotope in ['U238','Th232']: # 'Th232'
-            for fertile_kgm3 in [0.10, 0.50, 1.5, 10, 15, 30, 60, 90, 100, 120, 150, 250, 500, 750, 999.99]: #  [0.10, 0.50, 1.5, 10, 15, 30, 60, 90, 100, 120, 150, 250, 500, 750, 999.99]   # [0.10,60,150]
+            for fertile_kgm3 in [0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]: #  [0.10, 0.50, 1.5, 10, 15, 30, 60, 90, 100, 120, 150, 250, 500, 750, 999.99]   # [0.10,60,150]
                 current_run = Wedge(case, fertile_kgm3, isotope=isotope)
                 current_run.openmc(debug=True, write=True, run=True)
