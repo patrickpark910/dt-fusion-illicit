@@ -6,6 +6,7 @@ venv/
 __pycache__/
 test/
 test*
+**/summary.h5
 scratch*
 *.pkl
 *.pyc

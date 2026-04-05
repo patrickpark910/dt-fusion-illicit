@@ -17,7 +17,9 @@ class HCPB(Reactor):
         self.breeder_enrich  = ENRICH_HCPB   # [at%]
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
-        self.name = f"{self.run_type}_{self.blanket_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_kgm3:06.2f}kgm3"         
+        self.n_particles, self.n_cycles = int(4e3), 25
+        s = f"{self.n_particles:.0e}x{self.n_cycles}".replace("+0", "").replace("+", "")
+        self.name = f"{self.run_type}_{self.blanket_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_kgm3:06.2f}kgm3_{s}"         
         self.path = f"./OpenMC/{self.name}"
         
         os.makedirs(self.path, exist_ok=True)
@@ -185,8 +187,8 @@ class HCPB(Reactor):
         # self.blanket.set_density('atom/b-cm', _)  # Compute from OpenMC
         self.blanket.temperature = self.temp_k 
         self.blanket.name = (f"{self.fertile_kgm3:06.2f} kg/m3"
-                             f" | {biso_per_cc_br:.4f} spheres/cc = {(vf_biso_br*100):.4f} vol% in breeder"
-                             f" | {biso_per_cc_bl:.4f} spheres/cc = {(vf_biso_bl*100):.4f} vol% in blanket")
+                          f" | {biso_per_cc_br:.4f} spheres/cc = {(vf_biso_br*100):.4f} vol% in breeder"
+                          f" | {biso_per_cc_bl:.4f} spheres/cc = {(vf_biso_bl*100):.4f} vol% in blanket")
         
 
         # ------------------------------------------------------------------
@@ -213,7 +215,7 @@ class HCPB(Reactor):
             print(f"| BISO/cm³ of breeder: {biso_per_cc_br:.6f} spheres/cm³")
             print(f"|     /cm³ of blanket: {biso_per_cc_bl:.6f} spheres/cm³")
             print(f"| ")
-            print(f"| With respect to the BREEDER, i.e., per 1 m³ of breeder volume, we have these new volume fractions:")
+            print(f"| With respect to the BREEDER, i.e., per 1 m³ of NOMINAL BREEDER volume, we have these new volume fractions:")
             print(f"|   vf_biso_br =  {(vf_biso_br*100):.6f} vol%")
             print(f"|   vf_libe_br =  {(vf_libe_br*100):.6f} vol%")
             print(f"|   check they add up = {(checksum1*100):.6f} vol%")

@@ -174,18 +174,22 @@ def calc_biso_breeder_vol_fracs(fertile_kgm3, fertile_isotope='U238'):
         biso_per_cc_br (float): number of BISO spheres per cm³ of breeder
     """
     # Number of BISO spheres per cc of breeder
-    biso_per_cc_br = fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope=fertile_isotope)
-    vf_biso_br     = biso_per_cc_br * BISO_VOLUME
+    biso_per_cc     = fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope=fertile_isotope)
+    vf_biso_breeder = biso_per_cc * BISO_VOLUME
 
-    if vf_biso_br > 1.0:
+    if vf_biso_breeder > 1.0:
         print(f"Fatal. Your fertile kg/m³ exceeds what can physically fit in the breeder volume!")
         print(f"Fatal. That is, your volume of BISO per cm³ of breeder volume exceeds 1.")
         sys.exit()
 
-    # New volume ratio of breeder relative to nominal breeder volume
-    vf_breeder_br = 1 - vf_biso_br
+    """
+    vf_biso_breeder tells us the X cm³ of BISO per 1 cm³ of breeder material.
+    We want the volume fractions of BISO and breeder relative to the NOMINAL breeder volume, (1 + X) cm³.
+    """
+    vf_biso    = vf_biso_breeder / (vf_biso_breeder + 1)
+    vf_breeder = 1 / (vf_biso_breeder + 1)
 
-    return vf_biso_br, vf_breeder_br, biso_per_cc_br
+    return vf_biso, vf_breeder, biso_per_cc
 
 
 def set_xs_path():

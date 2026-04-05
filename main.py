@@ -144,14 +144,14 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich,temp_k, vol_m3):
                                    'Li6(n,t)', 'Li7(n,Xt)', f'{fertile_isotope}(n,g)',
                                    'tbr', f'{fissile_isotope}_kg/yr'])
 
-    tally_folders = [x for x in os.listdir("./OpenMC/") if (x.startswith(f"tallies_{blanket}_{temp_k}K_Li{breeder_enrich:04.1f}")) and x.split("_")[-2].startswith(fertile_isotope)]
+    tally_folders = [x for x in os.listdir("./OpenMC/") if (x.startswith(f"tallies_{blanket}_{temp_k}K_Li{breeder_enrich:04.1f}")) and x.split("_")[-3].startswith(fertile_isotope)]
 
     flux_list, ng_list = [], []  # Use lists instead of empty DataFrames
 
     for folder in tally_folders:
 
         # Extract the fertile loading
-        part = folder.split("_")[-1]
+        part = folder.split("_")[-2]
         fertile = float(part.replace("kgm3", ""))
         mt = fertile*vol_m3/1e3 # metric tons of fertile isotope
 
@@ -204,6 +204,9 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich,temp_k, vol_m3):
                                   'tbr_stdev': tbr_stdev,
                    f'{fissile_isotope}_kg/yr': pu,
              f'{fissile_isotope}_kg/yr_stdev': pu_stdev, }
+
+        # Sort the dataframe by 'fertile_kg/m3' in ascending order before exporting
+        df_all = df_all.sort_values(by='fertile_kg/m3', ascending=True)
 
         dst = f"./Figures/Data/{blanket}_{temp_k}K_Li{breeder_enrich:04.1f}_{fertile_isotope}"
         df_all.to_csv(f"{dst}_rxns.csv", index=False)

@@ -469,18 +469,18 @@ class Reactor(ABC):
 
         df = pd.DataFrame({'cell': cell_ids,
                            'flux': flux_list,
-                           'Li6(n,t)'          : Li6_nt_list,
-                           'Li6(n,t)_stdev'    : Li6_nt_err_list,
-                           'Li7(n,t)'          : Li7_nt_list,
-                           'Li7(n,t)_stdev'    : Li7_nt_err_list,
                            'tbr'               : tbr_list,
                            'tbr_stdev'         : tbr_err_list,
-                           f'{self.fertile_isotope}(n,fis)'       : U238_fis_list,
-                           f'{self.fertile_isotope}(n,fis)_stdev' : U238_fis_err_list,
                            f'{self.fertile_isotope}(n,g)'         : U238_ng_list,
                            f'{self.fertile_isotope}(n,g)_stdev'   : U238_ng_err_list,
                            f'{self.fissile_isotope}_kg/yr'        : fissile_per_yr_list,
                            f'{self.fissile_isotope}_kg/yr_stdev'  : fissile_per_yr_err_list,
+                           'Li6(n,t)'          : Li6_nt_list,
+                           'Li6(n,t)_stdev'    : Li6_nt_err_list,
+                           'Li7(n,t)'          : Li7_nt_list,
+                           'Li7(n,t)_stdev'    : Li7_nt_err_list,
+                           f'{self.fertile_isotope}(n,fis)'       : U238_fis_list,
+                           f'{self.fertile_isotope}(n,fis)_stdev' : U238_fis_err_list,
                            'heat_eV_src'       : heat_list,
                            'heat_eV_src_stdev' : heat_err_list,   })
 
@@ -488,7 +488,7 @@ class Reactor(ABC):
         totals['cell'] = 'total'
         df = pd.concat([df, pd.DataFrame([totals])], ignore_index=True)
 
-        print(df)
+        print(df.iloc[:, :8])  # prints first 8 columns 
         
         df.to_csv(f'./{self.path}/tallies_summary.csv', index=False)
         
