@@ -19,19 +19,32 @@ AMU_UO2 = AMU_U + 2 * AMU_O
 AMU_Th232 = 232.0381
 
 # Volume fractions in HCPB blanket
-VF_LI_NOM = 0.1304
-VF_BE_NOM = 0.3790
-VF_EU_NOM = 0.1176
-VF_HE_NOM = 0.3730
+HCPB_VF_LI_NOM = 0.1304
+HCPB_VF_BE_NOM = 0.3790
+HCPB_VF_EU_NOM = 0.1176
+HCPB_VF_HE_NOM = 0.3730
+
+HCPB_BL_VOL = 520.6 # [m³] from ./OpenMC/volume_HCPB_900K_Li60.0_U000.00kgm3/volume_1.csv
+HCPB_BR_VOL = HCPB_BL_VOL * (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
 
 
 def fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope='U238'):
-    # vol_kernel = V_KERNEL # 4/3 * np.pi * 0.04**3
+    """
+    Converts given kg/m³ of fertile material to the number of BISO particles per cm³
+
+    Args:
+        fertile_kgm3  (float): kg of fertile isotope per m³ of breeder
+        fertile_isotope (str): one of ['U238', 'Th232']
+
+    Returns:
+        biso_per_cc (float): number of biso particles per m³ of breeder
+    """
     if fertile_isotope == 'U238':
         biso_per_cc = fertile_kgm3 * AMU_UO2 / AMU_U238 / KERNEL_VOLUME / DENSITY_UO2 / 100**3 * 1000
     elif fertile_isotope == 'Th232':
         biso_per_cc = fertile_kgm3 * AMU_ThO2 / AMU_Th232 / KERNEL_VOLUME / DENSITY_ThO2 / 100**3 * 1000
     return biso_per_cc
+
 
 
 def has_statepoint(directory_path):
@@ -112,7 +125,21 @@ class Wedge():
         self.fertile_kgm3 = fertile_kgm3
         self.fertile_str = f"{fertile_kgm3:06.2f}"
         self.isotope = isotope 
-        self.name = f"wedge{self.case}_hcpb_{self.isotope}_{self.fertile_str}kgm3"         
+        
+        if   fertile_kgm3 <=  1:
+            self.n_particles, self.n_batches = int(4e6), 25  # = 1e8 nps
+        elif  1 < fertile_kgm3 <= 10:
+            self.n_particles, self.n_batches = int(4e5), 25  # = 1e7 nps
+        elif 10 < fertile_kgm3 <= 100:
+            self.n_particles, self.n_batches = int(8e4), 25  # = 2e6 nps
+        elif fertile_kgm3 > 100:
+            self.n_particles, self.n_batches = int(8e3), 25  # = 2e5 nps
+
+        self.n_particles, self.n_batches = int(4e2), 25
+
+        s = f"{self.n_particles:.0e}".replace("+0", "").replace("+", "")
+
+        self.name = f"hcpb_wedge{self.case}_{self.isotope}_{self.fertile_str}kgm3_{s}x{self.n_batches}"         
         self.path = f"./OpenMC/{self.name}"
 
         os.makedirs(self.path, exist_ok=True)
@@ -181,42 +208,54 @@ class Wedge():
 
         ''' Adjust materials according to case '''
 
-        if case == 'A':
+        if self.case == 'A':
 
             biso = openmc.Material.mix_materials([self.kernel, self.sic], [KERNEL_VOLUME/BISO_VOLUME, (1-(KERNEL_VOLUME/BISO_VOLUME))], 'vo') 
 
-            breeder = openmc.Material.mix_materials([li4sio4, be, biso], [self.vf_li_bv, self.vf_be_bv, self.vf_biso_bv], 'vo') 
-            self.blanket = openmc.Material.mix_materials([breeder, self.eurofer, he], [(VF_LI_NOM+VF_BE_NOM), VF_EU_NOM, VF_HE_NOM], 'vo') 
+            breeder = openmc.Material.mix_materials([li4sio4, be, biso], [self.vf_li_br, self.vf_be_br, self.vf_biso_br], 'vo') 
+            
+            self.blanket = openmc.Material.mix_materials([breeder, self.eurofer, he], [(HCPB_VF_LI_NOM+HCPB_VF_BE_NOM), HCPB_VF_EU_NOM, HCPB_VF_HE_NOM], 'vo') 
+            
             self.blanket.name = (f"{self.fertile_str} kg/m3"
-                                 f" | {self.biso_per_cc_bv:.4f} spheres/cc = {(self.vf_biso_bv*100):.4f} vol% in breeder volume"
-                                 f" | {self.biso_per_cc_br:.4f} spheres/cc = {(self.vf_biso_br*100):.4f} vol% in breeding region")
+                              f" | {self.biso_per_cc_br:.4f} spheres/cc = {(self.vf_biso_br*100):.4f} vol% in breeder"
+                              f" | {self.biso_per_cc_bl:.4f} spheres/cc = {(self.vf_biso_bl*100):.4f} vol% in blanket")
+            
             self.blanket.temperature = TEMP_K
 
             self.materials = openmc.Materials([self.tungsten, self.eurofer, self.blanket]) 
 
-            if debug:
-                print(f"BISO materials mix")
-                print(f"  Vol frac kernel : {(KERNEL_VOLUME/BISO_VOLUME):.6f}")
-                print(f"  Vol frac coat   : {(1-(KERNEL_VOLUME/BISO_VOLUME)):.6f}")
-                print(f"")
-                print(f"Breeding material mix")
-                print(f"  Vol frac Li4SiO4: {self.vf_li_bv:.6f}")
-                print(f"  Vol frac Be(met): {self.vf_be_bv:.6f}")
-                print(f"  Vol frac BISO   : {self.vf_biso_bv:.6f}")
-                print(f"")
-                print(f"Blanket mix")
-                print(f"  Vol frac breeder: {(VF_LI_NOM+VF_BE_NOM):.6f}")
-                print(f"  Vol frac Eurofer: {VF_EU_NOM:.6f}")
-                print(f"  Vol frac He-4(g): {VF_HE_NOM:.6f}")
-                print(f"")
 
+        elif self.case in ['B','C']:
 
-        elif case in ['B','C']:
+            # Blanket material
+            self.blanket = openmc.Material.mix_materials([li4sio4,         be,              self.eurofer,    he], 
+                                                         [self.vf_li_bl_c, self.vf_be_bl_c, self.vf_eu_bl_c, self.vf_he_bl_c], 'vo') 
 
-            self.blanket = openmc.Material.mix_materials([li4sio4, be, self.eurofer, he], [VF_LI_NOM, VF_BE_NOM, VF_EU_NOM, VF_HE_NOM], 'vo') 
+            # self.blanket.set_density('atom/b-cm', _)  # Compute from OpenMC
             self.blanket.temperature = TEMP_K
 
+            self.blanket.name = (f"{self.fertile_kgm3:06.2f} kg/m3"
+                              f" | {self.biso_per_cc_br:.4f} spheres/cc = {(self.vf_biso_br*100):.4f} vol% in breeder"
+                              f" | {self.biso_per_cc_bl:.4f} spheres/cc = {(self.vf_biso_bl*100):.4f} vol% in blanket")
+
             self.materials = openmc.Materials([self.tungsten, self.eurofer, self.blanket, self.kernel, self.sic]) 
+
+
+            if debug:
+                print(f"Case C: Fixed lattice BISO placement")
+                print(f"  Inboard lattice:")
+                print(f"    Shape: {self.shape_in}")
+                print(f"    Pitch: {pitch_in} cm")
+                print(f"    Lower left: {ll_in}")
+                print(f"    Upper right: {ur_in}")
+                print(f"    Subtotal BISO particles: {np.prod(self.shape_in)}")
+                print(f"  Outboard lattice:")
+                print(f"    Shape: {self.shape_out}")
+                print(f"    Pitch: {pitch_out} cm")
+                print(f"    Lower left: {ll_out}")
+                print(f"    Upper right: {ur_out}")
+                print(f"    Subtotal BISO particles: {np.prod(self.shape_out)}")
+                print(f"  Total BISO particles: {np.prod(self.shape_in) + np.prod(self.shape_out)}")
 
 
 
@@ -278,21 +317,22 @@ class Wedge():
         c22 = openmc.Cell(cell_id=22, region= +s113 & -s114 & +s123 & -s124 & +s136 & -s137, fill=self.eurofer)
         c24 = openmc.Cell(cell_id=24, region= +s113 & -s114 & +s123 & -s124 & +s138 & -s139, fill=self.eurofer)
 
-        if case in ['A']:
+
+        if self.case in ['A']:
 
             c13 = openmc.Cell(cell_id=13, region= +s111 & -s112 & +s121 & -s122 & +s131 & -s132, fill=self.blanket)
             c23 = openmc.Cell(cell_id=23, region= +s113 & -s114 & +s123 & -s124 & +s137 & -s138, fill=self.blanket)
             
 
-        elif case in ['B', 'C']:
+        elif self.case in ['B', 'C']:
+
             # Common setup for B and C: Define the BISO Universe
             c13 = openmc.Cell(cell_id=13, region= +s111 & -s112 & +s121 & -s122 & +s131 & -s132)
             c23 = openmc.Cell(cell_id=23, region= +s113 & -s114 & +s123 & -s124 & +s137 & -s138)
 
             c31 = openmc.Cell(cell_id=31, fill=self.kernel,  region= -s150)
             c32 = openmc.Cell(cell_id=32, fill=self.sic,     region= +s150 & -s151) # 
-            # c33 = openmc.Cell(cell_id=33, fill=self.blanket, region= +s151)
-            u50 = openmc.Universe(name='BISO Universe', cells=[c31, c32]) # c33
+            u50 = openmc.Universe(name='BISO Universe', cells=[c31, c32])
 
             # Lower left (ll), upper right (ur) of inboard, outboard bounding boxes
             # Example values:
@@ -305,14 +345,11 @@ class Wedge():
             # ll_in, ur_in   = ll_in*np.array([1.01, 1.01, 0.99]), ur_in*np.array([1.01, 1.01, 1.01])
             # ll_out, ur_out = ll_out*np.array([1.01, 1.01, 0.99]), ur_out*np.array([1.01, 1.01, 1.01])
 
-            shape_in  = (2, 2, 128)  # (Nx, Ny, Nz)
-            shape_out = (2, 2, 375)
-
-            pitch_in  = (ur_in - ll_in) / shape_in
-            pitch_out = (ur_out - ll_out) / shape_out
+            pitch_in  = (ur_in  - ll_in)  / self.shape_in
+            pitch_out = (ur_out - ll_out) / self.shape_out
 
 
-            if case == 'B':
+            if self.case == 'B':
 
                 # Random packing -- NB. 'pack_spheres' returns a list of coordinates, not cell instances
                 centers_in  = openmc.model.pack_spheres(radius=0.05, region= +s111 & -s112 & +s121 & -s122 & +s131 & -s132, num_spheres=self.geom['N1'])
@@ -322,38 +359,38 @@ class Wedge():
                 biso_in  = [openmc.model.TRISO(0.05, u50, center=c) for c in centers_in]
                 biso_out = [openmc.model.TRISO(0.05, u50, center=c) for c in centers_out]
 
-                c13.fill = openmc.model.create_triso_lattice(biso_in, ll_in, pitch_in, shape_in, self.blanket)
-                c23.fill = openmc.model.create_triso_lattice(biso_out, ll_out, pitch_out, shape_out, self.blanket)
+                c13.fill = openmc.model.create_triso_lattice(biso_in, ll_in, pitch_in, self.shape_in, self.blanket)
+                c23.fill = openmc.model.create_triso_lattice(biso_out, ll_out, pitch_out, self.shape_out, self.blanket)
 
 
-            elif case == 'C':
+            elif self.case == 'C':
                 
                 # Rectangular lattice
-                centers_in  = lattice_coords(ll_in, shape_in, pitch_in)
-                centers_out = lattice_coords(ll_out, shape_out, pitch_out)
+                centers_in  = lattice_coords(ll_in, self.shape_in, pitch_in)
+                centers_out = lattice_coords(ll_out, self.shape_out, pitch_out)
                 
                 # openmc.model.TRISO(outer_radius, fill, center=(0.0, 0.0, 0.0)) -- each model.TRISO instance IS a cell
                 biso_in  = [openmc.model.TRISO(0.05, u50, center=c) for c in centers_in]
                 biso_out = [openmc.model.TRISO(0.05, u50, center=c) for c in centers_out]
 
-                c13.fill = openmc.model.create_triso_lattice(biso_in, ll_in, pitch_in, shape_in, self.blanket)
-                c23.fill = openmc.model.create_triso_lattice(biso_out, ll_out, pitch_out, shape_out, self.blanket)
+                c13.fill = openmc.model.create_triso_lattice(biso_in, ll_in, pitch_in, self.shape_in, self.blanket)
+                c23.fill = openmc.model.create_triso_lattice(biso_out, ll_out, pitch_out, self.shape_out, self.blanket)
 
                 if debug:
                     print(f"Case C: Fixed lattice BISO placement")
                     print(f"  Inboard lattice:")
-                    print(f"    Shape: {shape_in}")
+                    print(f"    Shape: {self.shape_in}")
                     print(f"    Pitch: {pitch_in} cm")
                     print(f"    Lower left: {ll_in}")
                     print(f"    Upper right: {ur_in}")
-                    print(f"    Subtotal BISO particles: {np.prod(shape_in)}")
+                    print(f"    Subtotal BISO particles: {np.prod(self.shape_in)}")
                     print(f"  Outboard lattice:")
-                    print(f"    Shape: {shape_out}")
+                    print(f"    Shape: {self.shape_out}")
                     print(f"    Pitch: {pitch_out} cm")
                     print(f"    Lower left: {ll_out}")
                     print(f"    Upper right: {ur_out}")
-                    print(f"    Subtotal BISO particles: {np.prod(shape_out)}")
-                    print(f"  Total BISO particles: {np.prod(shape_in) + np.prod(shape_out)}")
+                    print(f"    Subtotal BISO particles: {np.prod(self.shape_out)}")
+                    print(f"  Total BISO particles: {np.prod(self.shape_in) + np.prod(self.shape_out)}")
 
 
         self.cells = [c10, c11, c12, c13, c14, c21, c22, c23, c24]
@@ -362,8 +399,8 @@ class Wedge():
 
     def tallies(self, debug=False):
 
-        self.tallies = openmc.Tallies() # initialize
-        cell_filter = openmc.CellFilter([cell for cell in self.cells if cell.fill is not None])
+        self.tallies  = openmc.Tallies() # initialize
+        cell_filter   = openmc.CellFilter([cell for cell in self.cells if cell.fill is not None])
         energy_filter = openmc.EnergyFilter(logspace_per_decade(1e-5, 20e6, 100)) # './helpers/utilities.py'
 
         # Flux tally 
@@ -417,35 +454,29 @@ class Wedge():
         self.settings = openmc.Settings()
         self.settings.source = source
 
-        # Run type
-        if self.fertile_kgm3 < 0.09:
-            nps, batches = int(1e5), int(10)
-        elif 0.09 < self.fertile_kgm3 < 10.0:
-            nps, batches = int(1e5), int(10)
-        else:
-            nps, batches = int(1e5), int(10)
-
         self.settings.run_mode  = 'fixed source'
-        self.settings.particles = nps
-        self.settings.batches   = batches
+        self.settings.particles = self.n_particles
+        self.settings.batches   = self.n_batches
+        self.settings.output    = {'summary': False}
 
         # self.settings.trace = (1,1,1)
-        self.settings.max_tracks = 4
+        # self.settings.max_tracks = 4
 
 
     def prism_helpers(self, debug=True):
 
-        fertile_kgm3 = self.fertile_kgm3
+        f1, f2 = 0.34, 0.66     # fraction of fluence into inboard vs. outboard in full OpenMC HCPB model
+        target_total_biso = 16096 
+        N1, N2 = 5472, 10624    # splits into flux fractions of 0.34 and 0.66 ... comes out to 4x4x342 and 4x4x664
 
-        target_total_biso = 2012 
-        N1, N2 = 512, 1500
+        self.shape_in  = (4, 4, 342)  # (Nx, Ny, Nz)
+        self.shape_out = (4, 4, 664)
 
         # HCPB tokamak dimensions (along z in model)
         h1, h2 = 45.0, 82.0     # inboard, outboard thicknesses
         d1 = 2.5 + 0.2          # Eurofer + first wall 
         d0 = 400.0              # plasma chamber
         oo = h1 + d0 + 2 * d1   # outboard offset (where outboard starts in z)
-        f1, f2 = 0.39, 0.61     # fraction of fluence into inboard vs. outboard in full OpenMC HCPB model
 
 
         ''' 
@@ -453,12 +484,11 @@ class Wedge():
         We want to deduct the BISO volume we add from the Li4SiO4.
 
         Here I use: "breeder" = Li4SiO4, Be
-                    "breeding region" (br) = the physical blanket layer that contains the breeder
-                                             this layer usually contains breeder + structure + coolant
-                    "breeding volume" (bv) = amount of volume nominally occupied in blanket by breeder
+                    "blanket volume" (bl) = total blanket cell volume of (biso) + breeder + structure + coolant
+                    "breeder volume" (br) = real breeder volume in blanket, updated with any deductions from biso volume
 
-        That is, if the breeding region has volume 100 m³ of which 60% is (Li4SiO4 + Be) and the other 
-        40% is (Eurofer + Be), then 60 m³ is the breeding volume.
+        That is, if the blanket volume is 100 m³ of which 60% is (Li4SiO4 + Be) and the other 
+        40% is (Eurofer + Be), then 60 m³ is the breeder volume.
             
         Given fertile_kgm3 [kg U-238 / m³ breeder] we convert this to m³ of BISO.
 
@@ -470,45 +500,58 @@ class Wedge():
         below in terms of volume fractions.  --ppark
         '''
 
-        # Nominal fraction the breeding volume is in the breeding region
-        VF_BV_BR_NOM = VF_LI_NOM + VF_BE_NOM
+        # Nominal volume fractions of Li4SiO4 vs. Be in the breeder volume
+        vf_li_br_nom = HCPB_VF_LI_NOM / (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
+        vf_be_br_nom = HCPB_VF_BE_NOM / (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
 
-        # Nominal volume fractions of Li4SiO4 vs. Be in the breeding volume (bv)
-        vf_li_bv_nom = VF_LI_NOM / (VF_LI_NOM + VF_BE_NOM)
-        vf_be_bv_nom = VF_BE_NOM / (VF_LI_NOM + VF_BE_NOM)
+        # Number of BISO spheres per cc of breeder volume
+        biso_per_cc_br = fertile_kgm3_to_biso_per_cc(self.fertile_kgm3)
+        vf_biso_libe   = biso_per_cc_br * BISO_VOLUME  # (number of biso / cm3 of LiBe) * (cm3 of one biso) = (total cm3 of all biso / cm3 of LiBe) = vol frac of biso in breeder
 
-        # Number of BISO spheres per cc of breeding volume
-        biso_per_cc_bv = fertile_kgm3_to_biso_per_cc(fertile_kgm3)
-        vf_biso_bv     = biso_per_cc_bv * BISO_VOLUME
-
-        if vf_biso_bv > 1.0:
+        if vf_biso_libe > 1.0:
             print(f"Fatal. Your fertile kg/m³ exceeds what can physically fit in the breeding volume!")
             print(f"Fatal. That is, your volume of BISO per cm³ of breeding volume exceeds 1.")
 
         # New volume ratios of everything w.r.t. breeders in the breeder volume
-        vf_libe_bv   = 1 - vf_biso_bv
-        vf_li_bv     = vf_li_bv_nom * vf_libe_bv
-        vf_be_bv     = vf_be_bv_nom * vf_libe_bv
-        vf_checksum1 = vf_biso_bv + vf_li_bv + vf_be_bv  # should equal 1
+        vf_biso_br   = vf_biso_libe / (vf_biso_libe + 1)
+        vf_libe_br   = 1 / (vf_biso_libe + 1)
+        vf_li_br     = vf_libe_br * vf_li_br_nom
+        vf_be_br     = vf_libe_br * vf_be_br_nom
+        checksum1    = vf_biso_br + vf_li_br + vf_be_br  # should equal 1
 
         # New volume ratios of everyting w.r.t. everything else in the breeding region
-        vf_biso_br = vf_biso_bv * (VF_LI_NOM + VF_BE_NOM)
-        vf_li_br   = vf_li_bv * (VF_LI_NOM + VF_BE_NOM)
-        vf_be_br   = vf_be_bv * (VF_LI_NOM + VF_BE_NOM)
+        vf_biso_bl = vf_biso_br * (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
+        vf_li_bl   = vf_li_br   * (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
+        vf_be_bl   = vf_be_br   * (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
+        vf_libe_bl = vf_li_bl + vf_be_bl
+        
         # vol frac of Eurofer and He-4 doesn't change
-        vf_checksum2 = vf_biso_br + vf_li_br + vf_be_br + VF_EU_NOM + VF_HE_NOM  # should equal 1
+        checksum2 = vf_biso_bl + vf_libe_bl + HCPB_VF_EU_NOM + HCPB_VF_HE_NOM  # should equal 1
 
         # Number of BISO spheres per cc of breeding region
-        biso_per_cc_br = vf_biso_br / BISO_VOLUME
+        biso_per_cc_bl = vf_biso_bl / BISO_VOLUME
+
+        """
+        For case C, we need to deduct the equivalent BISO volume from Li4SiO4 and Be volume,
+        and then recalculate the Li4SiO4, Be, Eurofer, He volume ratios for self.blanket 
+        """
+        vf_li_bl_c = vf_li_bl  / (vf_libe_bl + HCPB_VF_EU_NOM + HCPB_VF_HE_NOM)
+        vf_be_bl_c = vf_be_bl  / (vf_libe_bl + HCPB_VF_EU_NOM + HCPB_VF_HE_NOM)
+        vf_eu_bl_c = HCPB_VF_EU_NOM / (vf_libe_bl + HCPB_VF_EU_NOM + HCPB_VF_HE_NOM)
+        vf_he_bl_c = HCPB_VF_HE_NOM / (vf_libe_bl + HCPB_VF_EU_NOM + HCPB_VF_HE_NOM)
+        vf_libe_bl_c = vf_li_bl_c + vf_be_bl_c
+        
+        # Should match total sum of blanket materials without re-normalizing
+        checksum3  = vf_biso_bl + vf_libe_bl + HCPB_VF_EU_NOM + HCPB_VF_HE_NOM
 
         '''
-        NB. Maximum possible value of vf_biso_br is (VF_LI_NOM + VF_BE_NOM) = 50.94%. 
+        NB. Maximum possible value of vf_biso_bl is (VF_LI_NOM + VF_BE_NOM) = 50.94%. 
         This means that at most 50.94% of the breeding region can be occupied by BISO
         Per 1 cm³ of breeding region, at most 0.5094 cm³ can be BISO, or 973 spheres/cm³.
         Practically, 400 spheres/cm³ = 1000 kg/m³ so the max possible fertile kg/m³ is 2432.50
         '''
 
-        A_ref = target_total_biso / biso_per_cc_br / (h1+h2) 
+        A_ref = target_total_biso / biso_per_cc_bl / (h1+h2) 
         A2 = A_ref * (h1+h2) / ( f1/f2 * h1 + h2)                    # outboard XY face area 
         A1 = A2 * f1/f2                                              # inboard XY face area
         b1, b2 = np.round(np.sqrt(A1), 6), np.round(np.sqrt(A2), 6)  # face lengths
@@ -516,11 +559,23 @@ class Wedge():
 
         # Volumes of the breeding regions (i.e. area*height)
         V1, V2 = A1*h1, A2*h2
+        Vt = V1 + V2
+
+        """
+        Checksums by scaling to real volumes in the model
+        """
+        vol_biso = target_total_biso * BISO_VOLUME
+        vol_li   = vf_li_bl_c * (Vt - vol_biso)
+        vol_be   = vf_be_bl_c * (Vt - vol_biso)
+        vol_eu   = vf_eu_bl_c * (Vt - vol_biso)
+        vol_he   = vf_he_bl_c * (Vt - vol_biso)
+        vol_libe = vol_li + vol_be
+        checksum4 = vol_biso + vol_libe + vol_eu + vol_he
 
 
         if debug:
             print(40*f"=")
-            print(f"Case: {fertile_kgm3} kg/cm³")
+            print(f"Case: {self.fertile_kgm3} kg/cm³ ({case})")
             print(f"")
             print(f"Dimensions (inboard, outboard):")
             print(f" XY face half-lengths c1, c2: {c1:.6f}, {c2:.6f} [cm]")
@@ -530,40 +585,68 @@ class Wedge():
             print(f" Fraction of fluence  f1, f2: {f1:.6f}, {f2:.6f} ")
             print(f"")
             print(f"'breeder' = Li4SiO4, Be ")
-            print(f"'breeding region' (br) = the physical blanket layer that contains the breeder ")
-            print(f"                         this layer usually contains breeder + structure + coolant ")
-            print(f"'breeding volume' (bv) = volume nominally occupied in breeding region by breeder ")
+            print(f"'blanket volume' (bl) = total blanket cell volume of (biso) + breeder + structure + coolant ")
+            print(f"'breeder volume' (br) = real breeder volume in blanket, updated with any deductions from biso volume ")
             print(f"")
-            print(f"With respect to the BREEDER material, i.e., per 1 m³ of breeder volume, we have these new volume fractions:")
-            print(f"  vf_biso_breeder_new =  {(vf_biso_bv*100):.6f} vol%")
-            print(f"  vf_li_breeder_new   =  {(vf_li_bv*100):.6f} vol%")
-            print(f"  vf_be_breeder_new   =  {(vf_be_bv*100):.6f} vol%")
-            print(f"  check they add up   = {(vf_checksum1*100):.6f} vol%")
+            print(f"With respect to the BREEDER, i.e., per 1 m³ of Li4SiO4 + Be, we have these new volume fractions:")
+            print(f"  vf_biso_breeder_new =  {(vf_biso_br*100):.6f} vol%")
+            print(f"  vf_li_breeder_new   =  {(vf_li_br*100):.6f} vol%")
+            print(f"  vf_be_breeder_new   =  {(vf_be_br*100):.6f} vol%")
+            print(f"  check they add up   = {(checksum1*100):.6f} vol%")
             print(f"")
-            print(f"With respect to the whole BREEDING REGION, we have these new volume fractions:")
-            print(f"  vf_biso_br =  {(vf_biso_br*100):.6f} vol%")
-            print(f"  vf_li_br   =  {(vf_li_br*100):.6f} vol%")
-            print(f"  vf_be_br   =  {(vf_be_br*100):.6f} vol%")
-            print(f"  VF_EU_NOM  =  {(VF_EU_NOM*100):.6f} vol%")
-            print(f"  VF_HE_NOM  =  {(VF_HE_NOM*100):.6f} vol%")
-            print(f"  check they add up   = {(vf_checksum2*100):.6f} vol%")
-            print(f"  check that BISO + Li4SiO4 + Be adds up to the nominal Li4SiO4 + Be fraction")
-            print(f"  vf_biso_br + vf_li_br + vf_be_br = {((vf_biso_br+vf_li_br+vf_be_br))*100:.6f} : VF_LI_NOM + VF_BE_NOM = {((VF_LI_NOM+VF_BE_NOM))*100:.6f}")
-            print(f"")
+
+            if self.case in ['A']:
+                print(f"With respect to the whole BLANKET, we have these new volume fractions:")
+                print(f"  vf_biso_bl =  {(vf_biso_bl*100):.6f} vol%")
+                print(f"  vf_li_bl   =  {(vf_li_bl*100):.6f} vol%")
+                print(f"  vf_be_bl   =  {(vf_be_bl*100):.6f} vol%")
+                print(f"  VF_EU_NOM  =  {(HCPB_VF_EU_NOM*100):.6f} vol%")
+                print(f"  VF_HE_NOM  =  {(HCPB_VF_HE_NOM*100):.6f} vol%")
+                print(f"  check they add up   = {(checksum2*100):.6f} vol%")
+                print(f"  check that BISO + Li4SiO4 + Be adds up to the nominal Li4SiO4 + Be fraction")
+                print(f"  vf_biso_bl + vf_li_bl + vf_be_bl = {((vf_biso_bl+vf_li_bl+vf_be_bl))*100:.6f} : VF_LI_NOM + VF_BE_NOM = {((HCPB_VF_LI_NOM+HCPB_VF_BE_NOM))*100:.6f}")
+
+            elif self.case in ['B', 'C']:
+                print(f"With respect to the whole BLANKET, we have these new volume fractions:")
+                print(f"  vf_biso_bl =  {(vf_biso_bl*100):.6f} vol%")
+                print(f"  vf_li_bl   =  {(vf_li_bl_c*100):.6f} vol%")
+                print(f"  vf_be_bl   =  {(vf_be_bl_c*100):.6f} vol%")
+                print(f"  vf_eu_bl   =  {(vf_eu_bl_c*100):.6f} vol%")
+                print(f"  vf_he_bl   =  {(vf_he_bl_c*100):.6f} vol%")
+                print(f"  check that Li4SiO4 + Be + Eurofer + He adds up to 1")
+                print(f"  vf_li_bl_c + vf_be_bl_c + vf_eu_bl_c + vf_he_bl_c  = {(vf_li_bl_c+vf_be_bl_c+vf_eu_bl_c+vf_he_bl_c):.6f}")
+                print(f"  check it matches vf_biso_bl + vf_libe_bl + EU + HE = {checksum3:.6f}")
+                print(f"")
+                print(f"With respect to real BLANKET VOLUMES:")
+                print(f"  vol_biso =  {(vol_biso):.6f} [cm³]")
+                print(f"  vol_li   =  {(vol_li):.6f} [cm³]")
+                print(f"  vol_be   =  {(vol_be):.6f} [cm³]")
+                print(f"  vol_eu   =  {(vol_eu):.6f} [cm³]")
+                print(f"  vol_he   =  {(vol_he):.6f} [cm³]")
+                print(f"  check sum of above = {(checksum4):.6f} [cm³]")
+                print(f"           equals Vt = {Vt:.6f} [cm³]")
+                print(f"")
+                print(f"With respect to BISO DENSITIES:")
+                print(f"  Check these values equal:")
+                print(f"          target_total_biso = {target_total_biso}")
+                print(f"  biso_per_cc_br * vol_libe = {(biso_per_cc_br * vol_libe):.6f}")
+                print(f"        biso_per_cc_bl * Vt = {(biso_per_cc_bl * Vt):.6f}")
+                print(f"")
+
             print(f"Check BISO volume fraction wrt breeding region is correct:")
             print(f"  Inboard : N1 * BISO_VOLUME / (b1**2 * h1) = {(N1 * BISO_VOLUME / (b1**2 * h1) * 100):.6f} vol%")
             print(f"  Outboard: N2 * BISO_VOLUME / (b2**2 * h2) = {(N2 * BISO_VOLUME / (b2**2 * h2) * 100):.6f} vol%")
             print(f"  Total   : (N1+N2) * BISO_VOLUME / (b1**2 * h1 + b2**2 * h2) = {((N1+N2) * BISO_VOLUME / (b1**2 * h1 + b2**2 * h2) * 100):.6f} vol%")
-            print(f"  ...should match                                  vf_biso_br = {(vf_biso_br*100):.6f} vol%")
+            print(f"  ...should match                                  vf_biso_bl = {(vf_biso_bl*100):.6f} vol%")
             print(f"")
-            print(f"BISO spheres per cc of breeding volume: {biso_per_cc_bv:.6f} spheres/cm³")
-            print(f"             per cc of breeding region: {biso_per_cc_br:.6f} spheres/cm³")
+            print(f"BISO spheres per cc of BREEDER: {biso_per_cc_br:.6f} spheres/cm³")
+            print(f"             per cc of BLANKET: {biso_per_cc_bl:.6f} spheres/cm³")
             print(f"")
 
 
         # Calculate surfaces for trapezoidal plasma chamber
         # NB. MCNP plane: 1.0*x + 0.0*y + plane_C*z - plane_D = 0
-        z_in_end    = 47.7
+        z_in_end    =  47.7
         z_out_start = 447.7
         dz = z_out_start - z_in_end
         dx = c2 - c1
@@ -575,34 +658,45 @@ class Wedge():
         # I moved the needed variables to these class dictionaries bc the amount of 'self.' 
         # in the arithmetic above was really screwing readability --ppark 2026-01-02
 
-        self.biso_per_cc_bv = biso_per_cc_bv
         self.biso_per_cc_br = biso_per_cc_br
-        self.vf_biso_bv = vf_biso_bv
+        self.biso_per_cc_bl = biso_per_cc_bl
         self.vf_biso_br = vf_biso_br
-        self.vf_li_bv = vf_li_bv
-        self.vf_be_bv = vf_be_bv
+        self.vf_biso_bl = vf_biso_bl
+
+        self.vf_li_br = vf_li_br
+        self.vf_be_br = vf_be_br
+
+        self.vf_li_bl   = vf_li_bl
+        self.vf_be_bl   = vf_be_bl
+        self.vf_libe_bl = vf_libe_bl
+
+        self.vf_li_bl_c = vf_li_bl_c
+        self.vf_be_bl_c = vf_be_bl_c
+        self.vf_eu_bl_c = vf_eu_bl_c
+        self.vf_he_bl_c = vf_he_bl_c
 
         self.geom = {'N1':N1, 'N2':N2, 'b1':b1, 'b2':b2, 'c1':c1, 'c2':c2, 'h1':h1, 'h2':h2, 'pC':plane_C, 'pD':plane_D}
 
 
     def openmc(self, debug=False, write=True, run=False):
 
+        
+        openmc.reset_auto_ids()
+        self.prism_helpers(debug=debug)
+        self.materials()
+        self.geometry()
+        self.settings()
+        self.tallies()
+        self.model = openmc.model.Model(self.geometry, self.materials, self.settings, self.tallies)
+
         if write:
-
-            self.prism_helpers()
-            self.materials()
-            self.geometry(debug=debug)
-            self.settings()
-            self.tallies()
-
-            self.model = openmc.model.Model(self.geometry, self.materials, self.settings, self.tallies)
             self.model.export_to_model_xml(self.path)
 
         if run:
             if has_statepoint(self.path):
                 print(f"Warning. File {self.path}/statepoint.h5 already exists, so this OpenMC run will be aborted...")
             else:
-                self.model.run(cwd=self.path, tracks=True)
+                self.model.run(cwd=self.path, tracks=False)
 
 
 if __name__ == '__main__':
@@ -610,7 +704,7 @@ if __name__ == '__main__':
     os.makedirs(f"./OpenMC/", exist_ok=True)
 
     for case in ['C','A']:
-        for isotope in ['U238', ]: # 'Th232'
-            for fertile_kgm3 in [0.001, 0.10] : #  [0.10, 0.50, 1.5, 15, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]   # [0.10,60,150]
+        for isotope in ['U238','Th232']: # 'Th232'
+            for fertile_kgm3 in [0.10, 0.50, 1.5, 10, 15, 30, 60, 90, 100, 120, 150, 250, 500, 750, 999.99]: #  [0.10, 0.50, 1.5, 10, 15, 30, 60, 90, 100, 120, 150, 250, 500, 750, 999.99]   # [0.10,60,150]
                 current_run = Wedge(case, fertile_kgm3, isotope=isotope)
                 current_run.openmc(debug=True, write=True, run=True)

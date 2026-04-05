@@ -58,13 +58,11 @@ def extract_rates(breeder, isotope):
             
             # --- Extract (n,gamma) for the specific isotope ---
             fertile_tally = sp.get_tally(name="Total fertile rxn rate")
-            f_df = fertile_tally.get_pandas_dataframe()
+            f_df = fertile_tally.get_pandas_dataframe(nuclides=[isotope], scores=['(n,gamma)'])
             
-            ng_mask = (f_df["nuclide"] == isotope) & (f_df["score"] == "(n,gamma)")
-            
-            ng_mean = float(f_df.loc[ng_mask, "mean"].sum())
+            ng_mean = float(f_df["mean"].sum())
             # Propagate error for the filtered subset
-            ng_std = float(np.sqrt((f_df.loc[ng_mask, "std. dev."]**2).sum()))
+            ng_std = float(np.sqrt((f_df["std. dev."]**2).sum()))
             
             results.append({
                 "folder": folder,
