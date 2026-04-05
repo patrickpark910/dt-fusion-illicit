@@ -94,6 +94,6 @@ def extract_rates(breeder, breeder_enrich, isotope):
         print("No data extracted.")
 
 if __name__ == "__main__":
-    for (b, e) in [('dcll', 90.0)]:
+    for (b, e) in [('dcll', 90.0), ('hcpb', 60.0)]:
         for isotope in ['U238', 'Th232']:
             extract_rates(b, e, isotope)

@@ -26,8 +26,8 @@ def rename_folders(directory="./"):
 
     # Define the target pattern and the replacement
     # We look for "U000" and replace it with "U238_000"
-    search_str = "wedgeC_dcll"
-    replace_str = "dcll_wedgeC"
+    search_str = "hcpb_"
+    replace_str = "hcpb_Li60.0_"
     count = 0
 
     # List everything in the directory
