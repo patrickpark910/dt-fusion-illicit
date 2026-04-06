@@ -584,9 +584,8 @@ if __name__ == '__main__':
 
     os.makedirs(f"./OpenMC/", exist_ok=True)
 
-    for iso in ['U238','Th232']:
+    for iso in ['Th232','U238']:
         for case in ['A','C']:
-            for fertile_kgm3 in [0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]: # [0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]
-                
+            for fertile_kgm3 in reversed([0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]): # [0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]
                 current_run = Prism(case, fertile_kgm3, isotope=iso)
                 current_run.openmc(debug=True, write=True, run=True)
