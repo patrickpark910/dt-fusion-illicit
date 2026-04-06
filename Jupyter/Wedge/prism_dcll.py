@@ -27,7 +27,7 @@ class Prism():
         elif fertile_kgm3 > 100:
             self.n_particles, self.n_batches = int(8e3), 25  # = 2e5 nps
 
-        self.n_particles, self.n_batches = int(4e2), 25
+        # self.n_particles, self.n_batches = int(4e2), 25
         s = f"{self.n_particles:.0e}x{self.n_batches}".replace("+0", "").replace("+", "")
 
         self.name = f"dcll_Li{self.breeder_enr_str}_wedge{self.case}_{self.isotope}_{self.fertile_str}kgm3_{s}"         
@@ -584,9 +584,8 @@ if __name__ == '__main__':
 
     os.makedirs(f"./OpenMC/", exist_ok=True)
 
-    for iso in ['U238','Th232']:
+    for iso in ['Th232','U238']:
         for case in ['A','C']:
-            for fertile_kgm3 in [0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]: # [0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]
-                
+            for fertile_kgm3 in reversed([0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]): # [0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]
                 current_run = Prism(case, fertile_kgm3, isotope=iso)
                 current_run.openmc(debug=True, write=True, run=True)
