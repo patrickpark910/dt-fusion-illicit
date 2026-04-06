@@ -3,6 +3,9 @@ import numpy as np
 import openmc
 
 
+from prism_utilities import *
+
+
 class Wedge():
 
     def __init__(self, case, fertile_kgm3, isotope='U238', write_openmc=True, run_openmc=False,):
@@ -23,7 +26,7 @@ class Wedge():
 
         s = f"{self.n_particles:.0e}x{self.n_batches}".replace("+0", "").replace("+", "")
 
-        self.name = f"hcpb_wedge{self.case}_{self.isotope}_{self.fertile_str}kgm3_{s}"         
+        self.name = f"hcpb_Li60.0_wedge{self.case}_{self.isotope}_{self.fertile_str}kgm3_{s}"         
         self.path = f"./OpenMC/{self.name}"
 
         os.makedirs(self.path, exist_ok=True)

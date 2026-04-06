@@ -7,6 +7,7 @@ __pycache__/
 test/
 test*
 **/summary.h5
+**/tracks.h5
 scratch*
 *.pkl
 *.pyc
