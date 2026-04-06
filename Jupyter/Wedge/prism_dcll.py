@@ -27,7 +27,7 @@ class Prism():
         elif fertile_kgm3 > 100:
             self.n_particles, self.n_batches = int(8e3), 25  # = 2e5 nps
 
-        self.n_particles, self.n_batches = int(4e2), 25
+        # self.n_particles, self.n_batches = int(4e2), 25
         s = f"{self.n_particles:.0e}x{self.n_batches}".replace("+0", "").replace("+", "")
 
         self.name = f"dcll_Li{self.breeder_enr_str}_wedge{self.case}_{self.isotope}_{self.fertile_str}kgm3_{s}"         
