@@ -6,6 +6,7 @@ venv/
 __pycache__/
 test/
 test*
+_Local/
 **/summary.h5
 **/tracks.h5
 scratch*
@@ -20,3 +21,4 @@ scratch*
 runtp*
 .gitattributes
 Jupyter/BISO_combined/*
+Jupyter/Wedge/OpenMC/
