@@ -7,6 +7,10 @@ import numpy as np
 import openmc
 
 # export OPENMC_CROSS_SECTIONS=/Users/gretali/Desktop/research2025/FissileDependence/endfb-viii.0-hdf5/cross_sections.xml
+#
+# Copy of prism_dcll.py with natural lithium: Li-6 at ~7.5 at% in the Li metal (typical natural abundance).
+# Run: python nat_prism_dcll.py   → OpenMC folders named ..._Li07.5_...
+# Extract: python extract_rates.py  (uses --nat-dcll or extract_rates(..., li6_enrichment_at=7.5))
 
 # GLOBAL PARAMETERS
 TEMP_K = 900
@@ -25,7 +29,7 @@ AMU_Th232 = 232.0381
 
 # Lead-lithium (DCLL, 83 at% Pb - 17 at% Li)
 DENSITY_DCLL    =  9.40  # [g/cm³]
-ENRICH_DCLL     = 90.00  # [at%] enrich of Li-6
+ENRICH_DCLL     = 7.5  # [at%] Li-6 in Li (natural ~7.5 at%)
 
 # Volume fractions in DCLL blanket (Glaser & Goldston 2012, Tb.1)
 DCLL_VF_FS_NOM = 0.019 
@@ -131,7 +135,7 @@ def lattice_coords(lower_left, shape, pitch):
 
 class Prism():
 
-    def __init__(self, case, fertile_kgm3, isotope='U238', breeder_enrich=90.0, write_openmc=True, run_openmc=False,):
+    def __init__(self, case, fertile_kgm3, isotope='U238', breeder_enrich=7.5, write_openmc=True, run_openmc=False,):
 
         self.case = case
         self.fertile_kgm3 = fertile_kgm3
@@ -191,7 +195,7 @@ class Prism():
         pbli = openmc.Material(name='breeder', temperature=TEMP_K)
         pbli.set_density('g/cm3', DENSITY_DCLL)
         pbli.add_element('Pb', 0.83, percent_type='ao') 
-        pbli.add_element('Li', 0.17, percent_type='ao', enrichment_target='Li6', enrichment_type='ao', enrichment=self.breeder_enrich) # Li-6 enrichment to 90 at% 
+        pbli.add_element('Li', 0.17, percent_type='ao', enrichment_target='Li6', enrichment_type='ao', enrichment=self.breeder_enrich)  # natural Li ~7.5 at% Li-6
 
         # Fertile material
         if self.isotope == 'U238':
@@ -657,7 +661,7 @@ def _run_prism_job(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Prism DCLL wedge: fast parallel sweep by default (sparse loadings, fewer particles/batches)."
+        description="Prism DCLL wedge (natural Li ~7.5 at% Li-6): same as prism_dcll.py but default enrichment is natural."
     )
     parser.add_argument(
         "--sequential",

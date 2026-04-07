@@ -7,6 +7,7 @@ __pycache__/
 test/
 test*
 scratch*
+*.pkl
 *.pyc
 *.ppm
 *.w
@@ -17,3 +18,4 @@ scratch*
 runtp*
 .gitattributes
 Jupyter/BISO_combined/*
+Jupyter/Wedge/OpenMC/
