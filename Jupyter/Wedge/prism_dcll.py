@@ -358,9 +358,9 @@ class Prism():
 
         # Multiplier reaction rates
         n2n_tally_tot   = self.make_tally('(n,2n) rxn rates total',['(n,2n)']) 
-        Pb_tally_tot    = self.make_tally('Pb rxn rates total',    ['(n,2n)'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208']) # otherwise will count all (n,2n) reactions
-        Pb_tally        = self.make_tally('Pb rxn rates by cell',  ['(n,2n)'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[cell_filter])
-        Pb_tally_energy = self.make_tally('Pb rxn rates spectrum', ['(n,2n)'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[cell_filter, energy_filter])
+        Pb_tally_tot    = self.make_tally('Pb rxn rates total',    ['(n,2n)', '(n,gamma)'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208']) # otherwise will count all (n,2n) reactions
+        Pb_tally        = self.make_tally('Pb rxn rates by cell',  ['(n,2n)', '(n,gamma)'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[cell_filter])
+        Pb_tally_energy = self.make_tally('Pb rxn rates spectrum', ['(n,2n)', '(n,gamma)'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[cell_filter, energy_filter])
 
         # Put in order you want it to print in... recommend fertile_tally's first
         self.tallies.extend([fertile_tally_tot, Li_tally_tot, Pb_tally_tot, n2n_tally_tot, fertile_tally, Li_tally, Pb_tally, flux_tally, fertile_tally_energy, flux_tally_energy, Li_tally_energy, Pb_tally_energy]) 
