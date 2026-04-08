@@ -68,7 +68,13 @@ def extract_rates(breeder, breeder_enrich, isotope):
         """
         ng_mean = f_df["mean"].values[0]
         ng_std  = f_df["std. dev."].values[0]
-        # print(ng_mean, ng_std)
+        
+        # Extract fission rate
+        fission_tally = sp.get_tally(name="Total fertile rxn rate").get_slice(nuclides=[isotope], scores=['fission'])
+        fission_df = fission_tally.get_pandas_dataframe()
+        
+        fission_mean = fission_df["mean"].values[0]
+        fission_std  = fission_df["std. dev."].values[0]
         
         results.append({
             "folder": folder,
@@ -76,8 +82,10 @@ def extract_rates(breeder, breeder_enrich, isotope):
             "loading_kg_m3": loading,
             "tbr": tbr_mean,
             "tbr_std": tbr_std,
-            f"{isotope.lower()}_n_gamma": ng_mean,
-            f"{isotope.lower()}_n_gamma_std": ng_std
+            f"{isotope.lower()}_gamma": ng_mean,
+            f"{isotope.lower()}_gamma_std": ng_std,
+            f"{isotope.lower()}_fis": fission_mean,
+            f"{isotope.lower()}_fis_std": fission_std
         })
         
         print(f"Extracted {folder}")
@@ -87,7 +95,7 @@ def extract_rates(breeder, breeder_enrich, isotope):
             
     if results:
         df = pd.DataFrame(results)
-        out_path = f"extracted_rates_{breeder}_{isotope}.csv"
+        out_path = f"./Figures/extracted_rates_{breeder}_{isotope}.csv"
         df.to_csv(out_path, index=False)
         print(f"\nSaved {len(results)} records to {os.path.abspath(out_path)}")
     else:

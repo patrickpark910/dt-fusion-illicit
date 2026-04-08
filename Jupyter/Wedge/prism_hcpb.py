@@ -19,10 +19,10 @@ class Wedge():
             self.n_particles, self.n_batches = int(4e6), 25  # = 1e8 nps
         elif  1 < fertile_kgm3 <= 10:
             self.n_particles, self.n_batches = int(4e5), 25  # = 1e7 nps
-        elif 10 < fertile_kgm3 <= 100:
-            self.n_particles, self.n_batches = int(8e4), 25  # = 2e6 nps
-        elif fertile_kgm3 > 100:
-            self.n_particles, self.n_batches = int(8e3), 25  # = 2e5 nps
+        elif 10 < fertile_kgm3:
+            self.n_particles, self.n_batches = int(4e4), 25  # = 2e6 nps
+        # elif fertile_kgm3 > 100:
+        #     self.n_particles, self.n_batches = int(8e3), 25  # = 2e5 nps
 
         s = f"{self.n_particles:.0e}x{self.n_batches}".replace("+0", "").replace("+", "")
 
@@ -292,20 +292,25 @@ class Wedge():
 
         # Flux tally 
         flux_tally        = self.make_tally('flux', ['flux'], filters=[cell_filter])
-        flux_energy_tally = self.make_tally('flux spectrum', ['flux'], filters=[cell_filter, energy_filter])
+        flux_tally_energy = self.make_tally('flux spectrum', ['flux'], filters=[cell_filter, energy_filter])
 
         # Fertile element reaction rates
-        fertile_tally_tot    = self.make_tally(f'Total fertile rxn rate',     ['(n,gamma)', 'fission', '(n,2n)', 'elastic'], nuclides=['U238', 'U235', 'Th232'])
-        fertile_tally        = self.make_tally(f'Fertile rxn rates',          ['(n,gamma)', 'fission', '(n,2n)', 'elastic'], filters=[cell_filter], nuclides=['U238', 'U235', 'Th232'])
-        fertile_energy_tally = self.make_tally(f'Fertile rxn rates spectrum', ['(n,gamma)', 'fission', '(n,2n)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['U238', 'U235', 'Th232'])
+        fertile_tally_tot    = self.make_tally(f'Fertile rxn rates total',    ['(n,gamma)', 'fission', '(n,2n)'], nuclides=['U238', 'U235', 'Th232'])
+        fertile_tally        = self.make_tally(f'Fertile rxn rates by cell',  ['(n,gamma)', 'fission', '(n,2n)'], nuclides=['U238', 'U235', 'Th232'], filters=[cell_filter])
+        fertile_tally_energy = self.make_tally(f'Fertile rxn rates spectrum', ['(n,gamma)', 'fission', '(n,2n)'], nuclides=['U238', 'U235', 'Th232'], filters=[cell_filter, energy_filter])
 
         # Lithium reaction rates
-        Li_tally_tot    = self.make_tally('Total (n,t) rxn rate',  ['(n,Xt)'])
-        Li_tally        = self.make_tally('Li rxn rates',          ['(n,Xt)', '(n,gamma)', 'elastic'], filters=[cell_filter], nuclides=['Li6', 'Li7'])
-        Li_energy_tally = self.make_tally('Li rxn rates spectrum', ['(n,Xt)', '(n,gamma)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Li6', 'Li7'])
+        Li_tally_tot    = self.make_tally('Li rxn rates total',    ['(n,Xt)', '(n,gamma)'])
+        Li_tally        = self.make_tally('Li rxn rates by cell',  ['(n,Xt)', '(n,gamma)'], nuclides=['Li6', 'Li7'], filters=[cell_filter])
+        Li_tally_energy = self.make_tally('Li rxn rates spectrum', ['(n,Xt)', '(n,gamma)'], nuclides=['Li6', 'Li7'], filters=[cell_filter, energy_filter])
+
+        # Multiplier reaction rates
+        Be_tally_tot    = self.make_tally('Be rxn rates total',    ['(n,2n)'])
+        Be_tally        = self.make_tally('Be rxn rates by cell',  ['(n,2n)'], nuclides=['Be9'], filters=[cell_filter])
+        Be_tally_energy = self.make_tally('Be rxn rates spectrum', ['(n,2n)'], nuclides=['Be9'], filters=[cell_filter, energy_filter])
 
         # Put in order you want it to print in... recommend fertile_tally's first
-        self.tallies.extend([fertile_tally_tot, Li_tally_tot, fertile_tally, Li_tally, flux_tally, fertile_energy_tally, flux_energy_tally, Li_energy_tally]) 
+        self.tallies.extend([fertile_tally_tot, Li_tally_tot, Be_tally_tot, fertile_tally, Li_tally, Be_tally, flux_tally, fertile_tally_energy, flux_tally_energy, Li_tally_energy, Be_tally_energy]) 
 
 
     def make_tally(self, name, scores, filters:list=None, nuclides:list=None):
@@ -322,19 +327,19 @@ class Wedge():
 
         # 14-MeV point source at center of plasma chamber
         source = openmc.IndependentSource()
-        # source.space = openmc.stats.Point((0,0,247.7))                                                           
-        source.space = openmc.stats.CartesianIndependent(x=openmc.stats.Uniform(a= -self.geom['c1'], b= +self.geom['c1']),
-                                                         y=openmc.stats.Uniform(a= -self.geom['c1'], b= +self.geom['c1']),
-                                                         z=openmc.stats.Discrete([247.7], [1.0]) )
+        source.space = openmc.stats.Point((0,0,247.7))                                                           
+        # source.space = openmc.stats.CartesianIndependent(x=openmc.stats.Uniform(a= -self.geom['c1'], b= +self.geom['c1']),
+        #                                                  y=openmc.stats.Uniform(a= -self.geom['c1'], b= +self.geom['c1']),
+        #                                                  z=openmc.stats.Discrete([247.7], [1.0]) )
         source.particle = 'neutron'
-        source.energy   = openmc.stats.Discrete([14.0e6], [1.0])  # 14 MeV
+        source.energy   = openmc.stats.Discrete([14.1e6], [1.0])  # 14 MeV
         
         # Define the angular distribution -- mu=1 is straight up (+z), mu=-1 is straight down (-z)
         # We give each a 50% (0.5) probability.
-        source.angle = openmc.stats.PolarAzimuthal(
-                           mu=openmc.stats.Discrete([1.0, -1.0], [0.5, 0.5]),
-                           phi=openmc.stats.Uniform(0, 2*np.pi) # azimuthal angle doesn't matter for mu=+/-1
-                           )
+        # source.angle = openmc.stats.PolarAzimuthal(
+        #                    mu=openmc.stats.Discrete([1.0, -1.0], [0.5, 0.5]),
+        #                    phi=openmc.stats.Uniform(0, 2*np.pi) # azimuthal angle doesn't matter for mu=+/-1
+        #                    )
         source.angle = openmc.stats.Isotropic()
 
         # Create settings and assign source

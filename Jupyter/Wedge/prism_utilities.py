@@ -4,6 +4,8 @@ Set of helper functions
 import os
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
 
 
 # GLOBAL PARAMETERS
@@ -36,6 +38,32 @@ HCPB_VF_LI_NOM = 0.1304
 HCPB_VF_BE_NOM = 0.3790
 HCPB_VF_EU_NOM = 0.1176
 HCPB_VF_HE_NOM = 0.3730
+
+
+font_path = './fonts/arial.ttf'
+fm.fontManager.addfont(font_path)
+prop = fm.FontProperties(fname=font_path)
+plt.rcParams['font.family'] = prop.get_name()
+plt.rcParams['mathtext.default'] = 'regular'
+
+plt.rcParams['xtick.direction']   = 'in'
+plt.rcParams['ytick.direction']   = 'in'
+plt.rcParams['xtick.major.width'] = 0.5
+plt.rcParams['ytick.major.width'] = 0.5
+plt.rcParams['xtick.major.size']  = 6
+plt.rcParams['ytick.major.size']  = 6
+plt.rcParams['xtick.minor.size']  = 3
+plt.rcParams['ytick.minor.size']  = 3
+plt.rcParams['axes.linewidth']    = 0.5
+plt.rcParams['grid.color']        = '#DBDBDB'
+
+plt.rcParams['font.size']         = 18
+plt.rcParams['axes.titlesize']    = 16
+plt.rcParams['axes.labelsize']    = 18
+plt.rcParams['xtick.labelsize']   = 14
+plt.rcParams['ytick.labelsize']   = 14
+plt.rcParams['legend.fontsize']   = 14
+plt.rcParams['figure.titlesize']  = 16
 
 
 def calc_biso_breeder_vol_fracs(fertile_kgm3, fertile_isotope='U238'):
