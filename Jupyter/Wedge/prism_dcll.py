@@ -347,9 +347,9 @@ class Prism():
         flux_tally_energy = self.make_tally('flux spectrum', ['flux'], filters=[cell_filter, energy_filter])
 
         # Fertile element reaction rates
-        fertile_tally_tot    = self.make_tally(f'Fertile rxn rates total',    ['(n,gamma)', 'fission', '(n,2n)'], nuclides=['U238', 'U235', 'Th232'])
-        fertile_tally        = self.make_tally(f'Fertile rxn rates by cell',  ['(n,gamma)', 'fission', '(n,2n)'], nuclides=['U238', 'U235', 'Th232'], filters=[cell_filter])
-        fertile_tally_energy = self.make_tally(f'Fertile rxn rates spectrum', ['(n,gamma)', 'fission', '(n,2n)'], nuclides=['U238', 'U235', 'Th232'], filters=[cell_filter, energy_filter])
+        fertile_tally_tot    = self.make_tally(f'Fertile rxn rates total',    ['(n,gamma)', 'fission', 'nu-fission', '(n,2n)'], nuclides=['U238', 'U235', 'Th232'])
+        fertile_tally        = self.make_tally(f'Fertile rxn rates by cell',  ['(n,gamma)', 'fission', 'nu-fission', '(n,2n)'], nuclides=['U238', 'U235', 'Th232'], filters=[cell_filter])
+        fertile_tally_energy = self.make_tally(f'Fertile rxn rates spectrum', ['(n,gamma)', 'fission', 'nu-fission', '(n,2n)'], nuclides=['U238', 'U235', 'Th232'], filters=[cell_filter, energy_filter])
 
         # Lithium reaction rates
         Li_tally_tot    = self.make_tally('Li rxn rates total',    ['(n,Xt)', '(n,gamma)'])
@@ -357,12 +357,13 @@ class Prism():
         Li_tally_energy = self.make_tally('Li rxn rates spectrum', ['(n,Xt)', '(n,gamma)'], nuclides=['Li6', 'Li7'], filters=[cell_filter, energy_filter])
 
         # Multiplier reaction rates
-        Pb_tally_tot    = self.make_tally('Pb rxn rates total',    ['(n,2n)'])
+        n2n_tally_tot   = self.make_tally('(n,2n) rxn rates total',['(n,2n)']) 
+        Pb_tally_tot    = self.make_tally('Pb rxn rates total',    ['(n,2n)'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208']) # otherwise will count all (n,2n) reactions
         Pb_tally        = self.make_tally('Pb rxn rates by cell',  ['(n,2n)'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[cell_filter])
         Pb_tally_energy = self.make_tally('Pb rxn rates spectrum', ['(n,2n)'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[cell_filter, energy_filter])
 
         # Put in order you want it to print in... recommend fertile_tally's first
-        self.tallies.extend([fertile_tally_tot, Li_tally_tot, Pb_tally_tot, fertile_tally, Li_tally, Pb_tally, flux_tally, fertile_tally_energy, flux_tally_energy, Li_tally_energy, Pb_tally_energy]) 
+        self.tallies.extend([fertile_tally_tot, Li_tally_tot, Pb_tally_tot, n2n_tally_tot, fertile_tally, Li_tally, Pb_tally, flux_tally, fertile_tally_energy, flux_tally_energy, Li_tally_energy, Pb_tally_energy]) 
 
 
     def make_tally(self, name, scores, filters:list=None, nuclides:list=None):
@@ -587,10 +588,37 @@ class Prism():
 
 if __name__ == '__main__':
 
+    import argparse
+
     os.makedirs(f"./OpenMC/", exist_ok=True)
 
-    for iso in ['U238','Th232']:
-        for case in ['C','A']:
-            for fertile_kgm3 in [0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]: # [0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]
-                current_run = Prism(case, fertile_kgm3, isotope=iso)
-                current_run.openmc(debug=True, write=True, run=True)
+    CASES    = ['C', 'A']
+    ISOTOPES = ['U238', 'Th232']
+    FERTILE  = [0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]
+
+    parser = argparse.ArgumentParser(description="Run Wedge OpenMC calculations")
+
+    parser.add_argument("-c", "--cases",
+                        type=str, nargs="+", default=CASES,
+                        help=f"Specify cases, separated by space (default: {CASES})")
+
+    parser.add_argument("-i", "--isotopes",
+                        type=str, nargs="+", default=ISOTOPES,
+                        help=f"Specify fertile isotopes (default: {ISOTOPES})")
+
+    parser.add_argument("-f", "--fertile",
+                        type=float, nargs="+", default=FERTILE,
+                        help=f"Specify fertile loadings in kg/m3 (default: {FERTILE})")
+
+    parser.add_argument("--no_debug", dest="debug", action="store_false")
+    parser.add_argument("--no_write", dest="write", action="store_false")
+    parser.add_argument("--no_run",   dest="run",   action="store_false")
+    parser.set_defaults(debug=True, write=True, run=True)
+
+    args = parser.parse_args()
+
+    for case in args.cases:
+        for isotope in args.isotopes:
+            for fertile_kgm3 in args.fertile:
+                current_run = Prism(case, fertile_kgm3, isotope=isotope)
+                current_run.openmc(debug=args.debug, write=args.write, run=args.run)

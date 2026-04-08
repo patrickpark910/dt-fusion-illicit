@@ -55,6 +55,7 @@ XS_BE9_PATH   = './Figures/XSPlot/Be9n2n.txt'
 XS_PB_PATH    = './Figures/XSPlot/Pbn2n.txt'
 XS_U238_FPR_PATH  = './Figures/XSPlot/U238gamma.txt'
 XS_TH232_FPR_PATH = './Figures/XSPlot/Th232gamma.txt'
+XS_U235_FIS_PATH  = './Figures/XSPlot/U235fis.txt'
 XS_U238_FIS_PATH  = './Figures/XSPlot/U238fis.txt'
 XS_TH232_FIS_PATH = './Figures/XSPlot/Th232fis.txt'
 
@@ -83,9 +84,12 @@ def read_xs_txt(filepath):
     return np.array(energy), np.array(xs)
 
 
-def shift_to_01(arr, lo=0.1, hi=0.9):
-    """Min-max scale *arr* into [lo, hi]."""
-    mn, mx = arr.min(), arr.max()
+def shift_to_01(arr, lo=0.1, hi=0.9, global_min=None, global_max=None):
+    """Min-max scale *arr* into [lo, hi].
+    If global_min / global_max are supplied they override the array's own
+    extremes, which lets two arrays be scaled on a common basis."""
+    mn = arr.min() if global_min is None else global_min
+    mx = arr.max() if global_max is None else global_max
     if mx == mn:
         return np.full_like(arr, 0.5 * (lo + hi))
     return (arr - mn) * (hi - lo) / (mx - mn) + lo
@@ -165,38 +169,55 @@ def main():
     # ── Load cross-section underlays ──────────────────────────────────────
     li6_energy,  li6_logxs  = read_xs_txt(XS_LI6_PATH)
     li7_energy,  li7_logxs  = read_xs_txt(XS_LI7_PATH)
-    li6_shifted = shift_to_01(li6_logxs)
-    li7_shifted = shift_to_01(li7_logxs)
+    # Scale Li-6 and Li-7 together so their relative magnitudes are preserved
+    li_mn = min(li6_logxs.min(), li7_logxs.min())
+    li_mx = max(li6_logxs.max(), li7_logxs.max())
+    li6_shifted = shift_to_01(li6_logxs, global_min=li_mn, global_max=li_mx)
+    li7_shifted = shift_to_01(li7_logxs, global_min=li_mn, global_max=li_mx)
 
     if ISOTOPE == 'U238':
         fert_energy, fert_logxs = read_xs_txt(XS_U238_FPR_PATH)
-        fert_label = r'U-238 (n,$\gamma$)'
+        fert_label = r'U-238(n,$\gamma$)'
         fis_energy, fis_logxs = read_xs_txt(XS_U238_FIS_PATH)
-        fis_label = r'U-238 (n,f)'
+        fis_label = r'U-238(n,fis)'
+        fis235_energy, fis235_logxs = read_xs_txt(XS_U235_FIS_PATH)
+        fis235_label = r'U-235(n,fis)'
     else:
         fert_energy, fert_logxs = read_xs_txt(XS_TH232_FPR_PATH)
-        fert_label = r'Th-232 (n,$\gamma$)'
-        fis_energy, fis_logxs = read_xs_txt(XS_TH232_FIS_PATH)
-        fis_label = r'Th-232 (n,f)'
+        fert_label = r'Th-232(n,$\gamma$)'
+        fis_energy, fis_logxs = read_xs_txt(XS_U238_FIS_PATH)
+        fis_label = r'U-233(n,fis)'
+        fis235_energy, fis235_logxs = read_xs_txt(XS_U235_FIS_PATH)
+        fis235_label = r'U-235 (n,f)'
     fert_shifted = shift_to_01(fert_logxs)
-    fis_shifted = shift_to_01(fis_logxs)
-
-    # ── Line style map ────────────────────────────────────────────────────
-    # Lines are now blanket × case (4 per panel)
-    line_styles = {
-        ('HCPB', 'A'): {'color': '#ff1f5b', 'label': 'HCPB - homog.'},
-        ('HCPB', 'C'): {'color': '#f48628', 'label': 'HCPB - lattice'},
-        ('DCLL', 'A'): {'color': '#04cc6c', 'label': 'DCLL - homog.'},
-        ('DCLL', 'C'): {'color': '#0c9edd', 'label': 'DCLL - lattice'},
-    }
+    # Scale U-235 and U-238 fission together so relative magnitudes are preserved
+    fis_mn = min(fis_logxs.min(), fis235_logxs.min())
+    fis_mx = max(fis_logxs.max(), fis235_logxs.max())
+    fis_shifted = shift_to_01(fis_logxs, global_min=fis_mn, global_max=fis_mx)
+    fis235_shifted = shift_to_01(fis235_logxs, global_min=fis_mn, global_max=fis_mx)
 
     # ── Nuclide / score config ────────────────────────────────────────────
     if ISOTOPE == 'U238':
         fpr_nuclides = ['U238']
-        iso_label    = r'UO$_2$'
+        fis_nuclides = ['U235', 'U238']
+        XO2    = r'UO$_2$'
+        X      = r'U'
+        X_iso  = r'U-238'
     else:
         fpr_nuclides = ['Th232']
-        iso_label    = r'ThO$_2$'
+        fis_nuclides = ['Th232']
+        XO2    = r'ThO$_2$'
+        X      = r'Th'
+        X_iso  = r'Th-232'
+
+    # ── Line style map ────────────────────────────────────────────────────
+    # Lines are now blanket × case (4 per panel)
+    line_styles = {
+        ('HCPB', 'A'): {'color': '#ff1f5b', 'label': rf'HCPB-{XO2} - homog.'},
+        ('HCPB', 'C'): {'color': '#f48628', 'label': rf'HCPB-{XO2} - lattice'},
+        ('DCLL', 'A'): {'color': '#04cc6c', 'label': rf'DCLL-{XO2} - homog.'},
+        ('DCLL', 'C'): {'color': '#0c9edd', 'label': rf'DCLL-{XO2} - lattice'},
+    }
 
     tbr_nuclides = ['Li6', 'Li7']
     tbr_score    = '(n,Xt)'
@@ -213,15 +234,15 @@ def main():
 
     # row config: (row, qty_key, tally_name, score, nuclides, title_suffix)
     row_config = [
-        (0, 'TBR', TALLY_TBR,     tbr_score,     tbr_nuclides, 'TBR'),
-        (1, 'FPR', TALLY_FPR,     fpr_score,     fpr_nuclides, 'FPR'),
-        (2, 'FIS', TALLY_FISSION, fission_score, fpr_nuclides, 'fis.'),
+        (0, 'TBR', TALLY_TBR,     tbr_score,     tbr_nuclides, rf'Li(n,Xt)'),
+        (1, 'FPR', TALLY_FPR,     fpr_score,     fpr_nuclides, rf'{X}(n,$\gamma$)'),
+        (2, 'FIS', TALLY_FISSION, fission_score, fis_nuclides, rf'{X}(n,fis)'),
     ]
 
     for row, qty, tally_name, score, nuclides, title_suffix in row_config:
         for col, loading in col_loadings.items():
             ax = axes[row, col]
-            title = rf'{iso_label} {title_suffix} — {col_labels[col]}'
+            title = rf'{title_suffix} — {col_labels[col]}'
 
             # ── Gray cross-section underlay on twin y-axis ────────────────
             ax2 = ax.twinx()
@@ -230,15 +251,18 @@ def main():
 
             if qty == 'TBR':
                 ax2.plot(li6_energy, li6_shifted, linewidth=1.0, color='gray',
-                         alpha=0.25, label=r'Li-6 (n,t)')
+                         alpha=0.25, label=r'Li-6(n,t)')
                 ax2.plot(li7_energy, li7_shifted, linewidth=1.0, color='gray',
-                         alpha=0.25, linestyle='--', label=r'Li-7 (n,t)')
+                         alpha=0.25, linestyle='--', label=r'Li-7(n,Xt)')
             elif qty == 'FPR':
                 ax2.plot(fert_energy, fert_shifted, linewidth=1.0, color='gray',
                          alpha=0.25, label=fert_label)
             elif qty == 'FIS':
+                ax2.plot(fis235_energy, fis235_shifted, linewidth=1.0, color='gray',
+                         alpha=0.25, linestyle='-', label=fis235_label)
                 ax2.plot(fis_energy, fis_shifted, linewidth=1.0, color='gray',
-                         alpha=0.25, label=fis_label)
+                         alpha=0.25, linestyle='--', label=fis_label)
+
 
             ax.set_zorder(ax2.get_zorder() + 1)
             ax.patch.set_visible(False)
@@ -286,7 +310,7 @@ def main():
     for ax in axes[2, :]:
         ax.set_xlabel('Incident neutron energy [eV]', fontsize=14)
     for ax in axes[:, 0]:
-        ax.set_ylabel('Cumulative reaction rate [rxn / source neutron]', fontsize=14)
+        ax.set_ylabel(r'Cumulative reaction rate [rxn$/$src-n]', fontsize=14)
 
     fig.tight_layout()
 

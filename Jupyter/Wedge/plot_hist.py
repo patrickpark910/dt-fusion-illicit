@@ -52,6 +52,7 @@ XS_BE9_PATH   = './Figures/XSPlot/Be9n2n.txt'
 XS_PB_PATH    = './Figures/XSPlot/Pbn2n.txt'
 XS_U238_FPR_PATH  = './Figures/XSPlot/U238gamma.txt'
 XS_TH232_FPR_PATH = './Figures/XSPlot/Th232gamma.txt'
+XS_U235_FIS_PATH  = './Figures/XSPlot/U235fis.txt'
 XS_U238_FIS_PATH  = './Figures/XSPlot/U238fis.txt'
 XS_TH232_FIS_PATH = './Figures/XSPlot/Th232fis.txt'
 
@@ -81,9 +82,12 @@ def read_xs_txt(filepath):
     return np.array(energy), np.array(xs)
 
 
-def shift_to_01(arr, lo=0.1, hi=0.9):
-    """Min-max scale *arr* into [lo, hi]."""
-    mn, mx = arr.min(), arr.max()
+def shift_to_01(arr, lo=0.1, hi=0.9, global_min=None, global_max=None):
+    """Min-max scale *arr* into [lo, hi].
+    If global_min / global_max are supplied they override the array's own
+    extremes, which lets two arrays be scaled on a common basis."""
+    mn = arr.min() if global_min is None else global_min
+    mx = arr.max() if global_max is None else global_max
     if mx == mn:
         return np.full_like(arr, 0.5 * (lo + hi))
     return (arr - mn) * (hi - lo) / (mx - mn) + lo
@@ -163,21 +167,32 @@ def main():
     # ── Load cross-section underlays ──────────────────────────────────────
     li6_energy,  li6_logxs  = read_xs_txt(XS_LI6_PATH)
     li7_energy,  li7_logxs  = read_xs_txt(XS_LI7_PATH)
-    li6_shifted = shift_to_01(li6_logxs)
-    li7_shifted = shift_to_01(li7_logxs)
+    # Scale Li-6 and Li-7 together so their relative magnitudes are preserved
+    li_mn = min(li6_logxs.min(), li7_logxs.min())
+    li_mx = max(li6_logxs.max(), li7_logxs.max())
+    li6_shifted = shift_to_01(li6_logxs, global_min=li_mn, global_max=li_mx)
+    li7_shifted = shift_to_01(li7_logxs, global_min=li_mn, global_max=li_mx)
 
     if ISOTOPE == 'U238':
         fert_energy, fert_logxs = read_xs_txt(XS_U238_FPR_PATH)
         fert_label = r'U-238 (n,$\gamma$)'
         fis_energy, fis_logxs = read_xs_txt(XS_U238_FIS_PATH)
         fis_label = r'U-238 (n,f)'
+        fis235_energy, fis235_logxs = read_xs_txt(XS_U235_FIS_PATH)
+        fis235_label = r'U-235 (n,f)'
     else:
         fert_energy, fert_logxs = read_xs_txt(XS_TH232_FPR_PATH)
         fert_label = r'Th-232 (n,$\gamma$)'
-        fis_energy, fis_logxs = read_xs_txt(XS_TH232_FIS_PATH)
-        fis_label = r'Th-232 (n,f)'
+        fis_energy, fis_logxs = read_xs_txt(XS_U238_FIS_PATH)
+        fis_label = r'U-238 (n,f)'
+        fis235_energy, fis235_logxs = read_xs_txt(XS_U235_FIS_PATH)
+        fis235_label = r'U-235 (n,f)'
     fert_shifted = shift_to_01(fert_logxs)
-    fis_shifted = shift_to_01(fis_logxs)
+    # Scale U-235 and U-238 (or Th-232) fission together so relative magnitudes are preserved
+    fis_mn = min(fis_logxs.min(), fis235_logxs.min())
+    fis_mx = max(fis_logxs.max(), fis235_logxs.max())
+    fis_shifted = shift_to_01(fis_logxs, global_min=fis_mn, global_max=fis_mx)
+    fis235_shifted = shift_to_01(fis235_logxs, global_min=fis_mn, global_max=fis_mx)
 
 
     # ── Line style map ────────────────────────────────────────────────────
@@ -191,9 +206,11 @@ def main():
     # ── Nuclide / score config ────────────────────────────────────────────
     if ISOTOPE == 'U238':
         fpr_nuclides = ['U238']
+        fis_nuclides = ['U235', 'U238']
         iso_label    = r'UO$_2$'
     else:
         fpr_nuclides = ['Th232']
+        fis_nuclides = ['Th232']
         iso_label    = r'ThO$_2$'
 
     tbr_nuclides = ['Li6', 'Li7']
@@ -210,8 +227,8 @@ def main():
         (0, 1, 'DCLL', 'TBR', TALLY_TBR, tbr_score, tbr_nuclides, rf'DCLL-{iso_label} TBR'),
         (1, 0, 'HCPB', 'FPR', TALLY_FPR, fpr_score, fpr_nuclides, rf'HCPB-{iso_label} FPR'),
         (1, 1, 'DCLL', 'FPR', TALLY_FPR, fpr_score, fpr_nuclides, rf'DCLL-{iso_label} FPR'),
-        (2, 0, 'HCPB', 'FIS', TALLY_FISSION, fission_score, fpr_nuclides, rf'HCPB-{iso_label} fis.'),
-        (2, 1, 'DCLL', 'FIS', TALLY_FISSION, fission_score, fpr_nuclides, rf'DCLL-{iso_label} fis.'),
+        (2, 0, 'HCPB', 'FIS', TALLY_FISSION, fission_score, fis_nuclides, rf'HCPB-{iso_label} fis.'),
+        (2, 1, 'DCLL', 'FIS', TALLY_FISSION, fission_score, fis_nuclides, rf'DCLL-{iso_label} fis.'),
     ]
 
     for row, col, blanket_key, qty, tally_name, score, nuclides, title in panel_config:
@@ -227,8 +244,11 @@ def main():
             ax.plot(fert_energy, fert_shifted, linewidth=1.0, color='gray',
                     alpha=0.25, label=fert_label)
         elif qty == 'FIS':
+            ax.plot(fis235_energy, fis235_shifted, linewidth=1.0, color='gray',
+                    alpha=0.25, linestyle='-', label=fis235_label)
             ax.plot(fis_energy, fis_shifted, linewidth=1.0, color='gray',
-                    alpha=0.25, label=fis_label)
+                    alpha=0.25, linestyle='--', label=fis_label)
+
 
         # ── Histograms ────────────────────────────────────────────────────
         bins = None
@@ -278,8 +298,8 @@ def main():
     # ── Save ──────────────────────────────────────────────────────────────
     os.makedirs('./Figures/PDF', exist_ok=True)
     os.makedirs('./Figures/PNG', exist_ok=True)
-    plt.savefig(f'./Figures/PDF/fig_hist_{ISOTOPE}.pdf', bbox_inches='tight')
-    plt.savefig(f'./Figures/PNG/fig_hist_{ISOTOPE}.png', bbox_inches='tight')
+    plt.savefig(f'./Figures/PDF/fig_hist3_{ISOTOPE}.pdf', bbox_inches='tight')
+    plt.savefig(f'./Figures/PNG/fig_hist3_{ISOTOPE}.png', bbox_inches='tight')
     print("\nSaved to ./Figures/PDF/ and ./Figures/PNG/")
     plt.show()
 
