@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 import openmc
 
@@ -8,11 +9,13 @@ from prism_utilities import *
 
 class Prism():
 
-    def __init__(self, case, fertile_kgm3, isotope='U238', write_openmc=True, run_openmc=False,):
+    def __init__(self, case, fertile_kgm3, isotope='U238', breeder_enrich=60.0, write_openmc=True, run_openmc=False,):
 
         self.case = case
         self.fertile_kgm3 = fertile_kgm3
         self.fertile_str = f"{fertile_kgm3:06.2f}"
+        self.breeder_enrich = breeder_enrich
+        self.breeder_enr_str = f"{breeder_enrich:04.1f}"
         self.isotope = isotope 
         
         if fertile_kgm3 <=  1:
@@ -26,7 +29,7 @@ class Prism():
 
         s = f"{self.n_particles:.0e}x{self.n_batches}".replace("+0", "").replace("+", "")
 
-        self.name = f"hcpb_Li60.0_wedge{self.case}_{self.isotope}_{self.fertile_str}kgm3_{s}"         
+        self.name = f"hcpb_Li{self.breeder_enr_str}_wedge{self.case}_{self.isotope}_{self.fertile_str}kgm3_{s}"         
         self.path = f"./OpenMC/{self.name}"
 
         os.makedirs(self.path, exist_ok=True)
@@ -63,7 +66,7 @@ class Prism():
         # Li4SiO4 | Tritium breeder
         li4sio4 = openmc.Material(name='Li4SiO4', temperature=TEMP_K) 
         li4sio4.set_density('g/cm3', 2.42)
-        li4sio4.add_elements_from_formula('Li4SiO4', enrichment_target='Li6', enrichment_type='ao', enrichment=60.0)
+        li4sio4.add_elements_from_formula('Li4SiO4', enrichment_target='Li6', enrichment_type='ao', enrichment=self.breeder_enrich)
 
         # Beryllium | Neutron multiplier
         be = openmc.Material(name='Beryllium', temperature=TEMP_K) 
@@ -571,8 +574,8 @@ class Prism():
 
         openmc.reset_auto_ids()
         self.prism_helpers(debug=debug)
-        self.materials()
-        self.geometry()
+        self.materials(debug=debug)
+        self.geometry(debug=debug)
         self.settings()
         self.tallies()
         self.model = openmc.model.Model(self.geometry, self.materials, self.settings, self.tallies)
@@ -596,6 +599,7 @@ if __name__ == '__main__':
     CASES    = ['C', 'A']
     ISOTOPES = ['U238', 'Th232']
     FERTILE  = [0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]
+    ENRICH   = [60.0]
 
     parser = argparse.ArgumentParser(description="Run Wedge OpenMC calculations")
 
@@ -611,6 +615,10 @@ if __name__ == '__main__':
                         type=float, nargs="+", default=FERTILE,
                         help=f"Specify fertile loadings in kg/m3 (default: {FERTILE})")
 
+    parser.add_argument("-e", "--enrich",
+                        type=float, nargs="+", default=ENRICH,
+                        help=f"Li-6 enrichment in at%% (default: {ENRICH})")
+
     parser.add_argument("--no_debug", dest="debug", action="store_false")
     parser.add_argument("--no_write", dest="write", action="store_false")
     parser.add_argument("--no_run",   dest="run",   action="store_false")
@@ -618,8 +626,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    for case in args.cases:
+    for enrich in args.enrich:
         for isotope in args.isotopes:
-            for fertile_kgm3 in args.fertile:
-                current_run = Prism(case, fertile_kgm3, isotope=isotope)
-                current_run.openmc(debug=args.debug, write=args.write, run=args.run)
+            for case in args.cases:
+                for fertile_kgm3 in args.fertile:
+                    current_run = Prism(case, fertile_kgm3, isotope=isotope, breeder_enrich=enrich)
+                    current_run.openmc(debug=args.debug, write=args.write, run=args.run)

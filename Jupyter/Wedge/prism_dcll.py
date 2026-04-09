@@ -3,9 +3,9 @@ import sys
 import numpy as np
 import openmc
 
+
 from prism_utilities import *
 
-# export OPENMC_CROSS_SECTIONS=/Users/gretali/Desktop/research2025/FissileDependence/endfb-viii.0-hdf5/cross_sections.xml
 
 class Prism():
 
@@ -27,7 +27,6 @@ class Prism():
         # elif fertile_kgm3 > 100:
         #     self.n_particles, self.n_batches = int(8e3), 25  # = 2e5 nps
 
-        # self.n_particles, self.n_batches = int(4e2), 25
         s = f"{self.n_particles:.0e}x{self.n_batches}".replace("+0", "").replace("+", "")
 
         self.name = f"dcll_Li{self.breeder_enr_str}_wedge{self.case}_{self.isotope}_{self.fertile_str}kgm3_{s}"         
@@ -595,6 +594,7 @@ if __name__ == '__main__':
     CASES    = ['C', 'A']
     ISOTOPES = ['U238', 'Th232']
     FERTILE  = [0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]
+    ENRICH   = [90.0]
 
     parser = argparse.ArgumentParser(description="Run Wedge OpenMC calculations")
 
@@ -610,6 +610,10 @@ if __name__ == '__main__':
                         type=float, nargs="+", default=FERTILE,
                         help=f"Specify fertile loadings in kg/m3 (default: {FERTILE})")
 
+    parser.add_argument("-e", "--enrich",
+                        type=float, nargs="+", default=ENRICH,
+                        help=f"Li-6 enrichment in at%% (default: {ENRICH})")
+
     parser.add_argument("--no_debug", dest="debug", action="store_false")
     parser.add_argument("--no_write", dest="write", action="store_false")
     parser.add_argument("--no_run",   dest="run",   action="store_false")
@@ -617,8 +621,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    for case in args.cases:
+    for enrich in args.enrich:
         for isotope in args.isotopes:
-            for fertile_kgm3 in args.fertile:
-                current_run = Prism(case, fertile_kgm3, isotope=isotope)
-                current_run.openmc(debug=args.debug, write=args.write, run=args.run)
+            for case in args.cases:
+                for fertile_kgm3 in args.fertile:
+                    current_run = Prism(case, fertile_kgm3, isotope=isotope, breeder_enrich=enrich)
+                    current_run.openmc(debug=args.debug, write=args.write, run=args.run)
