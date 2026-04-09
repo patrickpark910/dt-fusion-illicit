@@ -131,24 +131,6 @@ class Prism():
             self.materials = openmc.Materials([self.tungsten, self.eurofer, self.blanket, self.kernel, self.sic]) 
 
 
-            if debug:
-                print(f"Case C: Fixed lattice BISO placement")
-                print(f"  Inboard lattice:")
-                print(f"    Shape: {self.shape_in}")
-                print(f"    Pitch: {pitch_in} cm")
-                print(f"    Lower left: {ll_in}")
-                print(f"    Upper right: {ur_in}")
-                print(f"    Subtotal BISO particles: {np.prod(self.shape_in)}")
-                print(f"  Outboard lattice:")
-                print(f"    Shape: {self.shape_out}")
-                print(f"    Pitch: {pitch_out} cm")
-                print(f"    Lower left: {ll_out}")
-                print(f"    Upper right: {ur_out}")
-                print(f"    Subtotal BISO particles: {np.prod(self.shape_out)}")
-                print(f"  Total BISO particles: {np.prod(self.shape_in) + np.prod(self.shape_out)}")
-
-
-
     def geometry(self, debug=False):
 
         # -----------------------------------
@@ -313,8 +295,11 @@ class Prism():
         Be_tally        = self.make_tally('Be rxn rates by cell',  ['(n,2n)'], nuclides=['Be9'], filters=[cell_filter])
         Be_tally_energy = self.make_tally('Be rxn rates spectrum', ['(n,2n)'], nuclides=['Be9'], filters=[cell_filter, energy_filter])
 
+        # k-infinite tally
+        kinf_tally = self.make_tally('k-inf by cell', ['nu-fission', '(n,2n)', '(n,3n)', 'absorption'], filters=[cell_filter])
+
         # Put in order you want it to print in... recommend fertile_tally's first
-        self.tallies.extend([fertile_tally_tot, Li_tally_tot, Be_tally_tot, n2n_tally_tot, fertile_tally, Li_tally, Be_tally, flux_tally, fertile_tally_energy, flux_tally_energy, Li_tally_energy, Be_tally_energy]) 
+        self.tallies.extend([fertile_tally_tot, Li_tally_tot, Be_tally_tot, n2n_tally_tot, kinf_tally, fertile_tally, Li_tally, Be_tally, flux_tally, fertile_tally_energy, flux_tally_energy, Li_tally_energy, Be_tally_energy]) 
 
 
     def make_tally(self, name, scores, filters:list=None, nuclides:list=None):
