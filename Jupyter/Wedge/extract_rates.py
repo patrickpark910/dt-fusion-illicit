@@ -47,51 +47,56 @@ def extract_rates(breeder, breeder_enrich, isotope):
         
         sp_path = os.path.join(path, max(sp_files, key=lambda x: int(x.split('.')[1])))
             
-        # try:
-        sp = openmc.StatePoint(sp_path)
-        
-        # Extract (n,t)
-        li_tally = sp.get_tally(name="Total (n,t) rxn rate")
-        li_df = li_tally.get_pandas_dataframe()
-        
-        tbr_mean = li_df["mean"].values[0]
-        tbr_std  = li_df["std. dev."].values[0]
-        
-        # Extract (n,gamma)
-        fertile_tally = sp.get_tally(name="Total fertile rxn rate").get_slice(nuclides=[isotope], scores=['(n,gamma)'])
-        f_df = fertile_tally.get_pandas_dataframe()
-        
-        """
-        >>> print(f_df)
-            nuclide      score     mean  std. dev.
-        0   Th232  (n,gamma) 2.62e-01   3.16e-04
-        """
-        ng_mean = f_df["mean"].values[0]
-        ng_std  = f_df["std. dev."].values[0]
-        
-        # Extract fission rate
-        fission_tally = sp.get_tally(name="Total fertile rxn rate").get_slice(nuclides=[isotope], scores=['fission'])
-        fission_df = fission_tally.get_pandas_dataframe()
-        
-        fission_mean = fission_df["mean"].values[0]
-        fission_std  = fission_df["std. dev."].values[0]
-        
-        results.append({
-            "folder": folder,
-            "case": case,
-            "loading_kg_m3": loading,
-            "tbr": tbr_mean,
-            "tbr_std": tbr_std,
-            f"{isotope.lower()}_gamma": ng_mean,
-            f"{isotope.lower()}_gamma_std": ng_std,
-            f"{isotope.lower()}_fis": fission_mean,
-            f"{isotope.lower()}_fis_std": fission_std
-        })
-        
-        print(f"Extracted {folder}")
+        try:
+            sp = openmc.StatePoint(sp_path)
             
-    #     except Exception as e:
-    #         print(f"Error processing {folder}: {e}")
+            # Extract (n,Xt) / (n,t) — tritium production
+            # Try new tally names first, fall back to old names
+            try:
+                li_tally = sp.get_tally(name="Li rxn rates total")
+                li_df = li_tally.get_pandas_dataframe()
+                li_xt = li_df[li_df["score"] == "(n,Xt)"]
+                tbr_mean = li_xt["mean"].sum()
+                tbr_std  = np.sqrt((li_xt["std. dev."]**2).sum())
+            except LookupError:
+                li_tally = sp.get_tally(name="Total (n,t) rxn rate")
+                li_df = li_tally.get_pandas_dataframe()
+                tbr_mean = li_df["mean"].values[0]
+                tbr_std  = li_df["std. dev."].values[0]
+            
+            # Extract (n,gamma) for the fertile isotope
+            try:
+                fertile_tally = sp.get_tally(name="Fertile rxn rates total")
+            except LookupError:
+                fertile_tally = sp.get_tally(name="Total fertile rxn rate")
+            
+            fertile_slice = fertile_tally.get_slice(nuclides=[isotope], scores=['(n,gamma)'])
+            f_df = fertile_slice.get_pandas_dataframe()
+            ng_mean = f_df["mean"].values[0]
+            ng_std  = f_df["std. dev."].values[0]
+            
+            # Extract fission rate for the fertile isotope
+            fission_slice = fertile_tally.get_slice(nuclides=[isotope], scores=['fission'])
+            fission_df = fission_slice.get_pandas_dataframe()
+            fission_mean = fission_df["mean"].values[0]
+            fission_std  = fission_df["std. dev."].values[0]
+            
+            results.append({
+                "folder": folder,
+                "case": case,
+                "loading_kg_m3": loading,
+                "tbr": tbr_mean,
+                "tbr_std": tbr_std,
+                f"{isotope.lower()}_gamma": ng_mean,
+                f"{isotope.lower()}_gamma_std": ng_std,
+                f"{isotope.lower()}_fis": fission_mean,
+                f"{isotope.lower()}_fis_std": fission_std
+            })
+            
+            print(f"Extracted {folder}")
+                
+        except Exception as e:
+            print(f"Error processing {folder}: {e}")
             
     if results:
         df = pd.DataFrame(results)
