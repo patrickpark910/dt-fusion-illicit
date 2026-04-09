@@ -283,7 +283,7 @@
     </tally>
     <tally id="10" name="Pb rxn rates total">
       <nuclides>Pb204 Pb206 Pb207 Pb208</nuclides>
-      <scores>(n,2n)</scores>
+      <scores>(n,2n) (n,gamma)</scores>
     </tally>
     <tally id="9" name="(n,2n) rxn rates total">
       <scores>(n,2n)</scores>
@@ -301,7 +301,7 @@
     <tally id="11" name="Pb rxn rates by cell">
       <filters>1</filters>
       <nuclides>Pb204 Pb206 Pb207 Pb208</nuclides>
-      <scores>(n,2n)</scores>
+      <scores>(n,2n) (n,gamma)</scores>
     </tally>
     <tally id="1" name="flux">
       <filters>1</filters>
@@ -324,7 +324,7 @@
     <tally id="12" name="Pb rxn rates spectrum">
       <filters>1 2</filters>
       <nuclides>Pb204 Pb206 Pb207 Pb208</nuclides>
-      <scores>(n,2n)</scores>
+      <scores>(n,2n) (n,gamma)</scores>
     </tally>
   </tallies>
 </model>

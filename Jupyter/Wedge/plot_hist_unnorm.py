@@ -289,7 +289,7 @@ def main():
 
             # ── Axis formatting ───────────────────────────────────────────
             ax.set_xscale('log')
-            ax.set_xlim(0.5e1, 1.5e7)
+            ax.set_xlim(0.5e1, 5e7)
 
             ax.xaxis.set_ticks_position('both')
             ax.yaxis.set_ticks_position('both')
