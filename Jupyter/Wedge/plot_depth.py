@@ -218,8 +218,8 @@ def main():
     # ── Save ──────────────────────────────────────────────────────────────
     os.makedirs('./Figures/PDF', exist_ok=True)
     os.makedirs('./Figures/PNG', exist_ok=True)
-    plt.savefig(f'./Figures/PDF/fig_depth_profile_{ISOTOPE}.pdf', bbox_inches='tight')
-    plt.savefig(f'./Figures/PNG/fig_depth_profile_{ISOTOPE}.png', bbox_inches='tight')
+    plt.savefig(f'./Figures/PDF/fig_depth_{ISOTOPE}.pdf', bbox_inches='tight')
+    plt.savefig(f'./Figures/PNG/fig_depth_{ISOTOPE}.png', bbox_inches='tight')
     print(f"\nSaved to ./Figures/PDF/ and ./Figures/PNG/")
     plt.show()
 
