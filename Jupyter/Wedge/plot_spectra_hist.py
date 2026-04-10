@@ -12,9 +12,9 @@ Each panel overlays five spectra (both 0.1 and 1000 kg/m³ plotted together):
   4. U-235 + U-238 fission
   5. U-235 + U-238 (n,2n)
 
-Cell selection:
-  HCPB  ->  cell 23  (outboard breeding channel)
-  DCLL  ->  cell 34  (first outboard breeding channel)
+Cell selection (summed over all breeding channels):
+  HCPB  ->  cells 13, 23  (inboard + outboard)
+  DCLL  ->  cells 23, 25, 34, 36, 38  (2 inboard + 3 outboard)
 
 Usage:
     python plot_spectra_2x2.py
@@ -47,12 +47,12 @@ BLANKETS = {
     'HCPB': {'prefix': 'hcpb', 'enrich': '60.0'},
 }
 
-# Cell IDs to filter on for each blanket type
-#   HCPB: cell 23 = outboard breeding channel
-#   DCLL: cell 34 = first outboard breeding channel
-TARGET_CELL_ID = {
-    'HCPB': 23,
-    'DCLL': 34,
+# Breeding channel cell IDs to sum over
+#   HCPB: cell 13 (inboard), cell 23 (outboard)
+#   DCLL: cells 23, 25 (inboard), cells 34, 36, 38 (outboard)
+BREEDING_CELL_IDS = {
+    'HCPB': [13, 23],
+    'DCLL': [23, 25, 34, 36, 38],
 }
 
 # Tally names
@@ -109,9 +109,9 @@ def find_statepoint(blanket_key, case, fertile_kgm3):
     return matches[-1]
 
 
-def extract_spectrum_cell(sp_path, tally_name, score, nuclides, target_cell_id):
+def extract_spectrum_cells(sp_path, tally_name, score, nuclides, cell_ids):
     """
-    Extract energy-binned reaction rate from a single cell.
+    Extract energy-binned reaction rate summed over specified breeding cells.
 
     Returns energy_lo, energy_hi, energy_mid, mean  (1-D arrays).
     """
@@ -120,7 +120,6 @@ def extract_spectrum_cell(sp_path, tally_name, score, nuclides, target_cell_id):
     sp = openmc.StatePoint(sp_path)
     tally = sp.get_tally(name=tally_name)
 
-    # Identify filters
     energy_filter = None
     cell_filter = None
     for f in tally.filters:
@@ -131,15 +130,8 @@ def extract_spectrum_cell(sp_path, tally_name, score, nuclides, target_cell_id):
 
     n_ebins = len(energy_filter.bins)
 
-    # Find the index of target_cell_id inside the CellFilter
-    cell_ids = [int(c) if isinstance(c, (int, np.integer)) else c.id for c in cell_filter.bins]
-    if target_cell_id not in cell_ids:
-        sp.close()
-        raise ValueError(
-            f"Cell {target_cell_id} not in CellFilter bins {cell_ids} "
-            f"for tally '{tally_name}'"
-        )
-    cell_idx = cell_ids.index(target_cell_id)
+    all_cell_ids = [int(c) if isinstance(c, (int, np.integer)) else c.id
+                    for c in cell_filter.bins]
 
     total = np.zeros(n_ebins)
     for nuc in nuclides:
@@ -147,7 +139,9 @@ def extract_spectrum_cell(sp_path, tally_name, score, nuclides, target_cell_id):
         vals = sl.mean.flatten()
         n_cells = len(vals) // n_ebins
         vals_2d = vals.reshape(n_cells, n_ebins)
-        total += vals_2d[cell_idx, :]
+        for cid in cell_ids:
+            if cid in all_cell_ids:
+                total += vals_2d[all_cell_ids.index(cid), :]
 
     edges = energy_filter.bins
     energy_lo  = edges[:, 0]
@@ -158,8 +152,8 @@ def extract_spectrum_cell(sp_path, tally_name, score, nuclides, target_cell_id):
     return energy_lo, energy_hi, energy_mid, total
 
 
-def extract_flux_cell(sp_path, target_cell_id):
-    """Extract flux spectrum from a single cell."""
+def extract_flux_cells(sp_path, cell_ids):
+    """Extract flux spectrum summed over specified breeding cells."""
     import openmc
 
     sp = openmc.StatePoint(sp_path)
@@ -175,13 +169,17 @@ def extract_flux_cell(sp_path, target_cell_id):
 
     n_ebins = len(energy_filter.bins)
 
-    cell_ids = [int(c) if isinstance(c, (int, np.integer)) else c.id for c in cell_filter.bins]
-    cell_idx = cell_ids.index(target_cell_id)
+    all_cell_ids = [int(c) if isinstance(c, (int, np.integer)) else c.id
+                    for c in cell_filter.bins]
 
     vals = tally.mean.flatten()
     n_cells = len(vals) // n_ebins
     vals_2d = vals.reshape(n_cells, n_ebins)
-    flux = vals_2d[cell_idx, :]
+
+    flux = np.zeros(n_ebins)
+    for cid in cell_ids:
+        if cid in all_cell_ids:
+            flux += vals_2d[all_cell_ids.index(cid), :]
 
     edges = energy_filter.bins
     energy_lo  = edges[:, 0]
@@ -238,10 +236,10 @@ def main():
     # Each panel overlays Case A (homog., solid) vs Case C (lattice, dashed)
     # (row, col, blanket_key, loading, title)
     panels = [
-        (0, 0, 'HCPB',   0.1, r'HCPB — 0.1 kg/m³ (cell 23)'),
-        (0, 1, 'HCPB', 999.99, r'HCPB — 1000 kg/m³ (cell 23)'),
-        (1, 0, 'DCLL',   0.1, r'DCLL — 0.1 kg/m³ (cell 34)'),
-        (1, 1, 'DCLL', 999.99, r'DCLL — 1000 kg/m³ (cell 34)'),
+        (0, 0, 'HCPB',   0.1, r'HCPB — 0.1 kg/m³ (breeding channels)'),
+        (0, 1, 'HCPB', 999.99, r'HCPB — 1000 kg/m³ (breeding channels)'),
+        (1, 0, 'DCLL',   0.1, r'DCLL — 0.1 kg/m³ (breeding channels)'),
+        (1, 1, 'DCLL', 999.99, r'DCLL — 1000 kg/m³ (breeding channels)'),
     ]
 
     CASES = [
@@ -253,7 +251,7 @@ def main():
 
     for row, col, blanket_key, loading, title in panels:
         ax = axes[row, col]
-        cell_id = TARGET_CELL_ID[blanket_key]
+        cell_ids = BREEDING_CELL_IDS[blanket_key]
 
         # ── Gray XS underlays ────────────────────────────────────────────
         # ax.plot(li6_energy,   li6_shifted,   lw=0.8, color='gray', alpha=0.20, label=r'Li-6 (n,t) xs')
@@ -272,10 +270,10 @@ def main():
 
                 # Flux is special (no nuclide filter)
                 if score == 'flux':
-                    elo, ehi, emid, mean = extract_flux_cell(sp_path, cell_id)
+                    elo, ehi, emid, mean = extract_flux_cells(sp_path, cell_ids)
                 else:
-                    elo, ehi, emid, mean = extract_spectrum_cell(
-                        sp_path, tally_name, score, nuclides, cell_id
+                    elo, ehi, emid, mean = extract_spectrum_cells(
+                        sp_path, tally_name, score, nuclides, cell_ids
                     )
 
                 if bins is None:

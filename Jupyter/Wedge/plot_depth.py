@@ -27,7 +27,7 @@ from prism_utilities import *
 ISOTOPE = 'U238'
 FERTILE_LOADINGS = [0.1, 999.99]
 CASES = ['A', 'C']
-OPENMC_BASE = './OpenMC'
+OPENMC_BASE = './OpenMC_test'
 
 BLANKETS = {
     'DCLL': {'prefix': 'dcll', 'enrich': '90.0'},
@@ -218,8 +218,8 @@ def main():
     # ── Save ──────────────────────────────────────────────────────────────
     os.makedirs('./Figures/PDF', exist_ok=True)
     os.makedirs('./Figures/PNG', exist_ok=True)
-    plt.savefig(f'./Figures/PDF/fig_depth_profile_{ISOTOPE}.pdf', bbox_inches='tight')
-    plt.savefig(f'./Figures/PNG/fig_depth_profile_{ISOTOPE}.png', bbox_inches='tight')
+    plt.savefig(f'./Figures/PDF/fig_depth_{ISOTOPE}.pdf', bbox_inches='tight')
+    plt.savefig(f'./Figures/PNG/fig_depth_{ISOTOPE}.png', bbox_inches='tight')
     print(f"\nSaved to ./Figures/PDF/ and ./Figures/PNG/")
     plt.show()
 
