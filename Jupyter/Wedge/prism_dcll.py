@@ -428,12 +428,12 @@ class Prism():
         self.settings.run_mode  = 'fixed source'
         self.settings.particles = self.n_particles
         self.settings.batches   = self.n_batches
-        self.settings.output    = {'summary': False}
+        self.settings.output    = {'summary': False, 'tallies': False}
 
         # note to self 2026-01-22: change to 20 or 50 batches
 
         # self.settings.trace = (1,1,1)
-        self.settings.max_tracks = 4
+        # self.settings.max_tracks = 4
 
 
     def prism_helpers(self, debug=False):
