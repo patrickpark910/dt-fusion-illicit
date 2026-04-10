@@ -643,7 +643,7 @@ if __name__ == '__main__':
                     if isotope == 'U':
                         isotope_temp_fix = 'U238'
                     else:
-                        isotope_temp_fix = isotope.copy()
+                        isotope_temp_fix = isotope
                     #### TEMP FIX ####
 
                     current_run = Prism(case, fertile_kgm3, isotope=isotope_temp_fix, breeder_enrich=enrich)
