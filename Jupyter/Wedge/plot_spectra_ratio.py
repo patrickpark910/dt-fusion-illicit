@@ -36,7 +36,7 @@ from prism_utilities import *
 
 ISOTOPE = 'U238'
 FERTILE_LOADINGS = [0.1, 999.99]
-OPENMC_BASE = './OpenMC'
+OPENMC_BASE = './OpenMC_test'
 LINEWIDTH = 1.25
 PLOT_FLUX = True           # Set to True to include flux ratio
 N_COARSE_BINS = 100        # Number of log-uniform coarse energy bins, or None to skip rebinning

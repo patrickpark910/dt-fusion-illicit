@@ -31,7 +31,7 @@ FERTILE_LOADINGS = [0.1, 999.99]   # kg/m3 values to compare
 CASES = ['A', 'C']
 
 # Base directory where OpenMC run folders live
-OPENMC_BASE = './OpenMC'
+OPENMC_BASE = './OpenMC_test'
 
 # Naming convention from prism_dcll.py:
 #   {prefix}_Li{enrich}_wedge{case}_{isotope}_{fertile:06.2f}kgm3_{nps_str}/

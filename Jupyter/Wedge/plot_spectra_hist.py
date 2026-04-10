@@ -39,7 +39,7 @@ from prism_utilities import *
 
 ISOTOPE = 'U238'
 FERTILE_LOADINGS = [0.1, 999.99]
-OPENMC_BASE = './OpenMC'
+OPENMC_BASE = './OpenMC_test'
 LINEWIDTH = 0.8
 
 BLANKETS = {

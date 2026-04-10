@@ -23,11 +23,8 @@ class Prism():
         elif  1 < fertile_kgm3 <= 10:
             self.n_particles, self.n_batches = int(4e5), 25  # = 1e7 nps
         elif 10 < fertile_kgm3:
-            self.n_particles, self.n_batches = int(4e4), 25  # = 2e6 nps
-        # elif fertile_kgm3 > 100:
-        #     self.n_particles, self.n_batches = int(8e3), 25  # = 2e5 nps
+            self.n_particles, self.n_batches = int(4e4), 25  # = 1e6 nps
         
-        self.n_particles, self.n_batches = int(4e2), 25  # = 2e5 nps
         s = f"{self.n_particles:.0e}x{self.n_batches}".replace("+0", "").replace("+", "")
 
         self.name = f"hcpb_Li{self.breeder_enr_str}_wedge{self.case}_{self.isotope}_{self.fertile_str}kgm3_{s}"         
@@ -372,12 +369,12 @@ class Prism():
 
     def prism_helpers(self, debug=True):
 
-        f1, f2 = 0.34, 0.66     # fraction of fluence into inboard vs. outboard in full OpenMC HCPB model
+        f1, f2 = 0.34, 0.66      # fraction of fluence into inboard vs. outboard in full OpenMC HCPB model
         target_total_biso = 16096 
-        N1, N2 = 5472, 10624    # splits into flux fractions of 0.34 and 0.66 ... comes out to 4x4x342 and 4x4x664
+        N1, N2 = 3552, 12544     # proportional to volume
 
-        self.shape_in  = (4, 4, 342)  # (Nx, Ny, Nz)
-        self.shape_out = (4, 4, 664)
+        self.shape_in  = (4, 4, 222)  # (Nx, Ny, Nz)
+        self.shape_out = (4, 4, 784)
 
         # HCPB tokamak dimensions (along z in model)
         h1, h2 = 45.0, 82.0     # inboard, outboard thicknesses

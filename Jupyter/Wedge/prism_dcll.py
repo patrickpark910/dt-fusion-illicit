@@ -23,11 +23,8 @@ class Prism():
         elif  1 < fertile_kgm3 <= 10:
             self.n_particles, self.n_batches = int(4e5), 25  # = 1e7 nps
         elif 10 < fertile_kgm3:
-            self.n_particles, self.n_batches = int(4e4), 25  # = 2e6 nps
-        # elif fertile_kgm3 > 100:
-        #     self.n_particles, self.n_batches = int(8e3), 25  # = 2e5 nps
+            self.n_particles, self.n_batches = int(4e4), 25  # = 1e6 nps
         
-        self.n_particles, self.n_batches = int(4e2), 25  # = 2e5 nps
         s = f"{self.n_particles:.0e}x{self.n_batches}".replace("+0", "").replace("+", "")
 
         self.name = f"dcll_Li{self.breeder_enr_str}_wedge{self.case}_{self.isotope}_{self.fertile_str}kgm3_{s}"         
@@ -442,12 +439,12 @@ class Prism():
         target_total_biso = 16096 # maybe change, maybe it's not 2012 particles. 
 
         # N_in/N_out = breeder_length_in/breeder_length_out * f1/f2
-        N_in, N_out = 6240, 9856      # inboard is 39% of total blanket volume, just like the fluence fraction
+        N_in, N_out = 4800, 11250     # proportional to volume
         N_in_per    = int(N_in)  / 2  # per single breeding inboard region
         N_out_per   = int(N_out) / 3  # per single breeding outboard region
 
-        shape_in_per  = (4, 4, int(N_in_per/16))  # per inboard breeding region
-        shape_out_per = (4, 4, int(N_out_per/16)) # per outboard breeding region
+        shape_in_per  = (5, 5, int(N_in_per/25))  # per inboard breeding region
+        shape_out_per = (5, 5, int(N_out_per/25)) # per outboard breeding region
 
         # DCLL tokamak dimensions (along z in model)
         f1, f2        = 0.39, 0.61  # fraction of fluence into inboard vs. outboard in full OpenMC DCLL model

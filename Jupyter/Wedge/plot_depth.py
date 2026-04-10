@@ -27,7 +27,7 @@ from prism_utilities import *
 ISOTOPE = 'U238'
 FERTILE_LOADINGS = [0.1, 999.99]
 CASES = ['A', 'C']
-OPENMC_BASE = './OpenMC'
+OPENMC_BASE = './OpenMC_test'
 
 BLANKETS = {
     'DCLL': {'prefix': 'dcll', 'enrich': '90.0'},
