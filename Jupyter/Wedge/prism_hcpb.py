@@ -281,8 +281,8 @@ class Prism():
         N_DEPTH_BINS = round(550.1 - 480.7)  # 1 cm bins, with some extra room on either side to capture first/last bin reactions
         depth_mesh = openmc.RegularMesh(mesh_id=100)
         depth_mesh.dimension = [1, 1, N_DEPTH_BINS]
-        depth_mesh.lower_left  = [-self.geom['c_out'], -self.geom['c_out'], 450.4]
-        depth_mesh.upper_right = [+self.geom['c_out'], +self.geom['c_out'], 532.4]
+        depth_mesh.lower_left  = [-self.geom['c2'], -self.geom['c2'], 450.4]
+        depth_mesh.upper_right = [+self.geom['c2'], +self.geom['c2'], 532.4]
         depth_mesh_filter = openmc.MeshFilter(depth_mesh)
 
 
@@ -364,7 +364,7 @@ class Prism():
         self.settings.run_mode  = 'fixed source'
         self.settings.particles = self.n_particles
         self.settings.batches   = self.n_batches
-        self.settings.output    = {'summary': False}
+        self.settings.output    = {'summary': False, 'tallies': False}
 
         # self.settings.trace = (1,1,1)
         # self.settings.max_tracks = 4
