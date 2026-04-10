@@ -15,8 +15,7 @@ Each panel overlays the C/A ratio for:
   5. U-235 + U-238 (n,2n)
 
 Cell selection:
-  HCPB  ->  cell 23  (outboard breeding channel)
-  DCLL  ->  cell 34  (first outboard breeding channel)
+  Summed over all cells in the tally.
 
 Usage:
     python plot_spectra_ratio_2x2.py
@@ -45,11 +44,6 @@ N_COARSE_BINS = 100        # Number of log-uniform coarse energy bins, or None t
 BLANKETS = {
     'DCLL': {'prefix': 'dcll', 'enrich': '90.0'},
     'HCPB': {'prefix': 'hcpb', 'enrich': '60.0'},
-}
-
-TARGET_CELL_ID = {
-    'HCPB': 23,
-    'DCLL': 34,
 }
 
 # Per-panel y-axis limits: (blanket_key, loading) -> (ymin, ymax)
@@ -94,9 +88,9 @@ def find_statepoint(blanket_key, case, fertile_kgm3):
     return matches[-1]
 
 
-def extract_spectrum_cell(sp_path, tally_name, score, nuclides, target_cell_id):
+def extract_spectrum(sp_path, tally_name, score, nuclides):
     """
-    Extract energy-binned reaction rate from a single cell.
+    Extract energy-binned reaction rate summed over all cells and listed nuclides.
 
     Returns energy_lo, energy_hi, energy_mid, mean  (1-D arrays).
     """
@@ -106,31 +100,19 @@ def extract_spectrum_cell(sp_path, tally_name, score, nuclides, target_cell_id):
     tally = sp.get_tally(name=tally_name)
 
     energy_filter = None
-    cell_filter = None
     for f in tally.filters:
         if isinstance(f, openmc.EnergyFilter):
             energy_filter = f
-        elif isinstance(f, openmc.CellFilter):
-            cell_filter = f
+            break
 
     n_ebins = len(energy_filter.bins)
-
-    cell_ids = [int(c) if isinstance(c, (int, np.integer)) else c.id for c in cell_filter.bins]
-    if target_cell_id not in cell_ids:
-        sp.close()
-        raise ValueError(
-            f"Cell {target_cell_id} not in CellFilter bins {cell_ids} "
-            f"for tally '{tally_name}'"
-        )
-    cell_idx = cell_ids.index(target_cell_id)
 
     total = np.zeros(n_ebins)
     for nuc in nuclides:
         sl = tally.get_slice(scores=[score], nuclides=[nuc])
         vals = sl.mean.flatten()
         n_cells = len(vals) // n_ebins
-        vals_2d = vals.reshape(n_cells, n_ebins)
-        total += vals_2d[cell_idx, :]
+        total += vals.reshape(n_cells, n_ebins).sum(axis=0)
 
     edges = energy_filter.bins
     energy_lo  = edges[:, 0]
@@ -141,30 +123,25 @@ def extract_spectrum_cell(sp_path, tally_name, score, nuclides, target_cell_id):
     return energy_lo, energy_hi, energy_mid, total
 
 
-def extract_flux_cell(sp_path, target_cell_id):
-    """Extract flux spectrum from a single cell."""
+def extract_flux(sp_path):
+    """Extract flux spectrum summed over all cells."""
     import openmc
 
     sp = openmc.StatePoint(sp_path)
     tally = sp.get_tally(name=TALLY_FLUX)
 
     energy_filter = None
-    cell_filter = None
     for f in tally.filters:
         if isinstance(f, openmc.EnergyFilter):
             energy_filter = f
-        elif isinstance(f, openmc.CellFilter):
-            cell_filter = f
+            break
 
     n_ebins = len(energy_filter.bins)
 
-    cell_ids = [int(c) if isinstance(c, (int, np.integer)) else c.id for c in cell_filter.bins]
-    cell_idx = cell_ids.index(target_cell_id)
-
-    vals = tally.mean.flatten()
+    sl = tally.get_slice(scores=['flux'])
+    vals = sl.mean.flatten()
     n_cells = len(vals) // n_ebins
-    vals_2d = vals.reshape(n_cells, n_ebins)
-    flux = vals_2d[cell_idx, :]
+    flux = vals.reshape(n_cells, n_ebins).sum(axis=0)
 
     edges = energy_filter.bins
     energy_lo  = edges[:, 0]
@@ -236,7 +213,6 @@ def main():
 
     for row, col, blanket_key, loading, title in panels:
         ax = axes[row, col]
-        cell_id = TARGET_CELL_ID[blanket_key]
 
         loading_tag = f'{loading:.1f}' if loading < 1 else f'{loading:.0f}'
 
@@ -255,14 +231,14 @@ def main():
 
             # Extract spectra for Case A and Case C
             if score == 'flux':
-                elo, ehi, emid, mean_A = extract_flux_cell(sp_path_A, cell_id)
-                _,   _,   _,    mean_C = extract_flux_cell(sp_path_C, cell_id)
+                elo, ehi, emid, mean_A = extract_flux(sp_path_A)
+                _,   _,   _,    mean_C = extract_flux(sp_path_C)
             else:
-                elo, ehi, emid, mean_A = extract_spectrum_cell(
-                    sp_path_A, tally_name, score, nuclides, cell_id
+                elo, ehi, emid, mean_A = extract_spectrum(
+                    sp_path_A, tally_name, score, nuclides
                 )
-                _, _, _, mean_C = extract_spectrum_cell(
-                    sp_path_C, tally_name, score, nuclides, cell_id
+                _, _, _, mean_C = extract_spectrum(
+                    sp_path_C, tally_name, score, nuclides
                 )
 
             # Rebin into coarse log-uniform groups (or use fine bins if None)

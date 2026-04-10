@@ -26,11 +26,12 @@ class Prism():
             self.n_particles, self.n_batches = int(4e4), 25  # = 2e6 nps
         # elif fertile_kgm3 > 100:
         #     self.n_particles, self.n_batches = int(8e3), 25  # = 2e5 nps
-
+        
+        self.n_particles, self.n_batches = int(4e2), 25  # = 2e5 nps
         s = f"{self.n_particles:.0e}x{self.n_batches}".replace("+0", "").replace("+", "")
 
         self.name = f"hcpb_Li{self.breeder_enr_str}_wedge{self.case}_{self.isotope}_{self.fertile_str}kgm3_{s}"         
-        self.path = f"./OpenMC/{self.name}"
+        self.path = f"./OpenMC_test/{self.name}"
 
         os.makedirs(self.path, exist_ok=True)
 
@@ -275,6 +276,16 @@ class Prism():
         cell_filter   = openmc.CellFilter([cell for cell in self.cells if cell.fill is not None])
         energy_filter = openmc.EnergyFilter(logspace_per_decade(1e-5, 20e6, 100)) # './helpers/utilities.py'
 
+        # Depth mesh through outboard breeding region
+        # z = 450.4 cm (s137, inner Eurofer) to 532.4 cm (s138, breeding region end)
+        N_DEPTH_BINS = round(550.1 - 480.7)  # 1 cm bins, with some extra room on either side to capture first/last bin reactions
+        depth_mesh = openmc.RegularMesh(mesh_id=100)
+        depth_mesh.dimension = [1, 1, N_DEPTH_BINS]
+        depth_mesh.lower_left  = [-self.geom['c_out'], -self.geom['c_out'], 450.4]
+        depth_mesh.upper_right = [+self.geom['c_out'], +self.geom['c_out'], 532.4]
+        depth_mesh_filter = openmc.MeshFilter(depth_mesh)
+
+
         # Flux tally 
         flux_tally        = self.make_tally('flux', ['flux'], filters=[cell_filter])
         flux_tally_energy = self.make_tally('flux spectrum', ['flux'], filters=[cell_filter, energy_filter])
@@ -301,8 +312,20 @@ class Prism():
         # k-infinite tally
         kinf_tally = self.make_tally('k-inf by cell', ['nu-fission', '(n,2n)', '(n,3n)', 'absorption'], filters=[cell_filter])
 
+        # Depth tally
+        depth_ngamma_tot        = self.make_tally('Reactions per depth',                ['(n,gamma)','fission','nu-fission','(n,2n)','(n,Xt)'], filters=[depth_mesh_filter])
+        depth_ngamma_tot_energy = self.make_tally('Reactions per depth',                ['(n,gamma)','fission','nu-fission','(n,2n)','(n,Xt)'], filters=[depth_mesh_filter, energy_filter])
+        depth_ngamma            = self.make_tally('Reactions per nuclide-depth',        ['(n,gamma)','nu-fission','(n,2n)'],                    nuclides=['U238', 'U235', 'Th232', 'Li6', 'Li7', 'Be9'], filters=[depth_mesh_filter])
+        depth_ngamma_energy     = self.make_tally('Reactions per nuclide-energy-depth', ['(n,gamma)','fission','nu-fission','(n,2n)','(n,Xt)'], nuclides=['U238', 'U235', 'Th232', 'Li6', 'Li7', 'Be9'], filters=[depth_mesh_filter, energy_filter])
+
+        depth_flux_energy = self.make_tally('Flux spectrum per depth', ['flux'], filters=[depth_mesh_filter, energy_filter])
+
         # Put in order you want it to print in... recommend fertile_tally's first
-        self.tallies.extend([fertile_tally_tot, Li_tally_tot, Be_tally_tot, n2n_tally_tot, kinf_tally, fertile_tally, Li_tally, Be_tally, n2n_tally, flux_tally, fertile_tally_energy, flux_tally_energy, Li_tally_energy, Be_tally_energy, n2n_tally_energy]) 
+        self.tallies.extend([fertile_tally_tot, Li_tally_tot, Be_tally_tot, n2n_tally_tot, 
+                             fertile_tally, Li_tally, Be_tally, n2n_tally, flux_tally, kinf_tally, 
+                             fertile_tally_energy, flux_tally_energy, Li_tally_energy, Be_tally_energy, n2n_tally_energy, 
+                             depth_ngamma_tot, depth_ngamma_tot_energy, depth_ngamma, depth_ngamma_energy,
+                             depth_flux_energy]) 
 
 
     def make_tally(self, name, scores, filters:list=None, nuclides:list=None):

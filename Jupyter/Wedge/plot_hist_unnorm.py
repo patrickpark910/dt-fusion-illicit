@@ -1,12 +1,12 @@
 """
 plot_hist_unnorm.py
 
-3x2 cumulative (unnormalized) energy histogram of (n,Xt) for TBR, (n,gamma) for FPR,
-and fission for FIS.
+4x2 cumulative (unnormalized) energy histogram of (n,Xt) for TBR, (n,gamma) for FPR,
+fission for FIS, and total (n,2n) for neutron multiplication.
 
 Layout:
     Columns : 0.1 kg/m³ (left)  |  1000 kg/m³ (right)
-    Rows    : TBR  |  FPR  |  fission
+    Rows    : TBR  |  FPR  |  fission  |  (n,2n)
     Lines   : HCPB homog., HCPB lattice, DCLL homog., DCLL lattice
 
 Gray cross-section underlays are drawn on a secondary y-axis so they
@@ -47,6 +47,14 @@ BLANKETS = {
 TALLY_TBR = 'Li rxn rates spectrum'       # scores: (n,Xt); nuclides: Li6, Li7
 TALLY_FPR = 'Fertile rxn rates spectrum'   # scores: (n,gamma); nuclides: U238 or Th232
 TALLY_FISSION = 'Fertile rxn rates spectrum'  # scores: fission; nuclides: U238 or Th232
+TALLY_N2N = {
+    'DCLL': 'Pb rxn rates spectrum',   # nuclides: Pb204, Pb206, Pb207, Pb208
+    'HCPB': 'Be rxn rates spectrum',   # nuclides: Be9
+}
+N2N_NUCLIDES = {
+    'DCLL': ['Pb204', 'Pb206', 'Pb207', 'Pb208'],
+    'HCPB': ['Be9'],
+}
 
 # Cross-section text files for the gray underlay
 XS_LI6_PATH   = './Figures/XSPlot/Li6nt.txt'
@@ -196,6 +204,14 @@ def main():
     fis_shifted = shift_to_01(fis_logxs, global_min=fis_mn, global_max=fis_mx)
     fis235_shifted = shift_to_01(fis235_logxs, global_min=fis_mn, global_max=fis_mx)
 
+    # Load Be-9 and Pb (n,2n) cross-section underlays
+    be9_energy, be9_logxs = read_xs_txt(XS_BE9_PATH)
+    pb_energy,  pb_logxs  = read_xs_txt(XS_PB_PATH)
+    n2n_mn = min(be9_logxs.min(), pb_logxs.min())
+    n2n_mx = max(be9_logxs.max(), pb_logxs.max())
+    be9_shifted = shift_to_01(be9_logxs, global_min=n2n_mn, global_max=n2n_mx)
+    pb_shifted  = shift_to_01(pb_logxs,  global_min=n2n_mn, global_max=n2n_mx)
+
     # ── Nuclide / score config ────────────────────────────────────────────
     if ISOTOPE == 'U238':
         fpr_nuclides = ['U238']
@@ -223,20 +239,23 @@ def main():
     tbr_score    = '(n,Xt)'
     fpr_score    = '(n,gamma)'
     fission_score = 'fission'
+    n2n_score    = '(n,2n)'
 
-    # ── Create 3×2 figure ─────────────────────────────────────────────────
+    # ── Create 4×2 figure ─────────────────────────────────────────────────
     # Columns = fertile loading;  Rows = reaction type
-    fig, axes = plt.subplots(3, 2, figsize=(16, 18), sharex=True, sharey=False)
+    fig, axes = plt.subplots(4, 2, figsize=(16, 24), sharex=True, sharey=False)
 
     # column index → fertile loading
     col_loadings = {0: 0.1, 1: 999.99}
     col_labels   = {0: r'0.1 kg$/$m³', 1: r'1000 kg$/$m³'}
 
     # row config: (row, qty_key, tally_name, score, nuclides, title_suffix)
+    # For N2N, tally_name and nuclides are resolved per-blanket below
     row_config = [
         (0, 'TBR', TALLY_TBR,     tbr_score,     tbr_nuclides, rf'Li(n,Xt)'),
         (1, 'FPR', TALLY_FPR,     fpr_score,     fpr_nuclides, rf'{X}(n,$\gamma$)'),
         (2, 'FIS', TALLY_FISSION, fission_score, fis_nuclides, rf'{X}(n,fis)'),
+        (3, 'N2N', None,          n2n_score,     None,          r'Total (n,2n)'),
     ]
 
     for row, qty, tally_name, score, nuclides, title_suffix in row_config:
@@ -262,6 +281,11 @@ def main():
                          alpha=0.25, linestyle='-', label=fis235_label)
                 ax2.plot(fis_energy, fis_shifted, linewidth=1.0, color='gray',
                          alpha=0.25, linestyle='--', label=fis_label)
+            elif qty == 'N2N':
+                ax2.plot(pb_energy, pb_shifted, linewidth=1.0, color='gray',
+                         alpha=0.25, linestyle='-', label=r'Pb(n,2n)')
+                ax2.plot(be9_energy, be9_shifted, linewidth=1.0, color='gray',
+                         alpha=0.25, linestyle='--', label=r'Be-9(n,2n)')
 
 
             ax.set_zorder(ax2.get_zorder() + 1)
@@ -270,13 +294,21 @@ def main():
             # ── Histograms: loop over blanket × case ──────────────────────
             bins = None
             for blanket_key in ['HCPB', 'DCLL']:
+                # Resolve per-blanket tally/nuclides for N2N row
+                if qty == 'N2N':
+                    tn = TALLY_N2N[blanket_key]
+                    nucs = N2N_NUCLIDES[blanket_key]
+                else:
+                    tn = tally_name
+                    nucs = nuclides
+
                 for case in CASES:
                     sp_path = find_statepoint(blanket_key, case, loading)
                     print(f"  Loading {blanket_key} {qty} | case {case} | "
                           f"{loading} kg/m³ → {sp_path}")
 
                     energy_lo, energy_hi, energy_mid, mean = extract_spectrum(
-                        sp_path, tally_name, score, nuclides
+                        sp_path, tn, score, nucs
                     )
 
                     if bins is None:
@@ -307,7 +339,7 @@ def main():
             leg.get_frame().set_linewidth(0.5)
 
     # ── Shared axis labels ────────────────────────────────────────────────
-    for ax in axes[2, :]:
+    for ax in axes[3, :]:
         ax.set_xlabel('Incident neutron energy [eV]', fontsize=14)
     for ax in axes[:, 0]:
         ax.set_ylabel(r'Cumulative reaction rate [rxn$/$src-n]', fontsize=14)
