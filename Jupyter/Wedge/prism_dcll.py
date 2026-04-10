@@ -378,8 +378,8 @@ class Prism():
 
         # Depth tallies
         depth_ngamma_tot        = self.make_tally('Reactions per depth',                ['(n,gamma)','fission','nu-fission','(n,2n)','(n,Xt)'], filters=[depth_mesh_filter])
-        depth_ngamma_tot_energy = self.make_tally('Reactions per depth',                ['(n,gamma)','fission','nu-fission','(n,2n)','(n,Xt)'], filters=[depth_mesh_filter, energy_filter])
-        depth_ngamma            = self.make_tally('Reactions per nuclide-depth',        ['(n,gamma)','nu-fission','(n,2n)'],                    nuclides=['U238', 'U235', 'Th232', 'Li6', 'Li7', 'Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[depth_mesh_filter])
+        depth_ngamma_tot_energy = self.make_tally('Reactions per depth-energy',         ['(n,gamma)','fission','nu-fission','(n,2n)','(n,Xt)'], filters=[depth_mesh_filter, energy_filter])
+        depth_ngamma            = self.make_tally('Reactions per nuclide-depth',        ['(n,gamma)','nu-fission','(n,2n)','(n,Xt)'],           nuclides=['U238', 'U235', 'Th232', 'Li6', 'Li7', 'Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[depth_mesh_filter])
         depth_ngamma_energy     = self.make_tally('Reactions per nuclide-energy-depth', ['(n,gamma)','fission','nu-fission','(n,2n)','(n,Xt)'], nuclides=['U238', 'U235', 'Th232', 'Li6', 'Li7', 'Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[depth_mesh_filter, energy_filter])
 
         depth_flux_energy = self.make_tally('Flux spectrum per depth', ['flux'], filters=[depth_mesh_filter, energy_filter])
