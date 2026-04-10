@@ -28,7 +28,7 @@ class Prism():
         s = f"{self.n_particles:.0e}x{self.n_batches}".replace("+0", "").replace("+", "")
 
         self.name = f"hcpb_Li{self.breeder_enr_str}_wedge{self.case}_{self.isotope}_{self.fertile_str}kgm3_{s}"         
-        self.path = f"./OpenMC_test/{self.name}"
+        self.path = f"./OpenMC/{self.name}"
 
         os.makedirs(self.path, exist_ok=True)
 
@@ -638,5 +638,13 @@ if __name__ == '__main__':
         for isotope in args.isotopes:
             for case in args.cases:
                 for fertile_kgm3 in args.fertile:
-                    current_run = Prism(case, fertile_kgm3, isotope=isotope, breeder_enrich=enrich)
+                    
+                    #### TEMP FIX ####
+                    if isotope == 'U':
+                        isotope_temp_fix = 'U238'
+                    else:
+                        isotope_temp_fix = isotope.copy()
+                    #### TEMP FIX ####
+
+                    current_run = Prism(case, fertile_kgm3, isotope=isotope_temp_fix, breeder_enrich=enrich)
                     current_run.openmc(debug=args.debug, write=args.write, run=args.run)
