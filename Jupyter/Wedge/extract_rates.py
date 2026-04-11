@@ -8,7 +8,7 @@ def extract_rates(breeder, breeder_enrich, isotope):
     Extracts the TBR and (n,gamma) reaction rates along with their 
     standard deviations from OpenMC statepoint files.
     """
-    base_dir = "./OpenMC_test"
+    base_dir = "./OpenMC"
     results = []
     breeder = breeder.lower()
     
