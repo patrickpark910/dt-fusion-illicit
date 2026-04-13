@@ -100,7 +100,7 @@ def extract_rates(breeder, breeder_enrich, isotope):
             
     if results:
         df = pd.DataFrame(results)
-        out_path = f"./Figures_test/extracted_rates_{breeder}_{isotope}.csv"
+        out_path = f"./Figures/extracted_rates_{breeder}_{isotope}.csv"
         df.to_csv(out_path, index=False)
         print(f"\nSaved {len(results)} records to {os.path.abspath(out_path)}")
     else:
