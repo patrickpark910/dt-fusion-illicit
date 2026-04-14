@@ -1631,7 +1631,7 @@
   </geometry>
   <settings>
     <run_mode>fixed source</run_mode>
-    <particles>4000000</particles>
+    <particles>400000</particles>
     <batches>25</batches>
     <source type="independent" strength="1.0" particle="neutron">
       <space type="cylindrical" origin="0.0 0.0 0.0">
@@ -1648,6 +1648,10 @@
         <parameters>14000000.0 1.0</parameters>
       </energy>
     </source>
+    <output>
+      <summary>false</summary>
+      <tallies>false</tallies>
+    </output>
     <state_point>
       <batches>5 10 15 20 25</batches>
     </state_point>

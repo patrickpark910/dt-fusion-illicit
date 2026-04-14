@@ -28,15 +28,15 @@
       <nuclide name="V50" wo="0.0022551070895674248"/>
       <nuclide name="V51" wo="0.9177448929104326"/>
     </material>
-    <material id="6" name="tallies_FLiBe_900K_Li07.5_U238_000.10kgm3" depletable="true" temperature="900">
-      <density value="1.950594516055671" units="g/cm3"/>
-      <nuclide name="F19" ao="0.5714320485685866"/>
-      <nuclide name="Li6" ao="0.021428245446695"/>
-      <nuclide name="Li7" ao="0.26428169384257166"/>
-      <nuclide name="Be9" ao="0.14285496964463332"/>
-      <nuclide name="U234" ao="1.642948657204234e-10"/>
-      <nuclide name="U235" ao="2.191815208610982e-08"/>
-      <nuclide name="U238" ao="3.020415066389344e-06"/>
+    <material id="6" name="tallies_FLiBe_900K_Li07.5_U238_001.00kgm3" depletable="true" temperature="900">
+      <density value="1.9514451605567174" units="g/cm3"/>
+      <nuclide name="F19" ao="0.5714633440683797"/>
+      <nuclide name="Li6" ao="0.02142531149358941"/>
+      <nuclide name="Li7" ao="0.2642455084209361"/>
+      <nuclide name="Be9" ao="0.14283540995726277"/>
+      <nuclide name="U234" ao="1.6430072309381105e-09"/>
+      <nuclide name="U235" ao="2.1918933503107683e-07"/>
+      <nuclide name="U238" ao="3.020522748992522e-05"/>
     </material>
   </materials>
   <geometry>
