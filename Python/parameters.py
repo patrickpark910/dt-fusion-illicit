@@ -14,8 +14,8 @@ N_PARTICLES, N_CYCLES = int(4e6), 25
 # FLiBe (2(LiF)-BeF2)
 DENSITY_FLIBE   =  1.9505  # [g/cm³] from EOS at 900 K and 101 kPa, calculated in Jupyter/FLiBe/flibe_mats.py, ref. Humrickhouse 17 (INL-44148) --ppark 2026-02-13
 ENRICH_FLIBE    =  7.50    # [at%] enrich of Li-6
-LIMIT_UF4_FLIBE  = 768.0   # [kg/m³]
-LIMIT_THF4_FLIBE = 768.0   # [kg/m³]
+LIMIT_UF4_FLIBE  = 1000    # 768.0   # [kg/m³]
+LIMIT_THF4_FLIBE = 1000    # [kg/m³]
 
 # Lead-lithium (DCLL, 83 at% Pb - 17 at% Li)
 DENSITY_DCLL    =  9.40  # [g/cm³]
@@ -129,41 +129,6 @@ DCLL_VF_HE_NOM = 0.097
 DCLL_BL_VOL = 427.3   # [m³] from ./OpenMC/volume_DCLL_900K_Li90.0_U000.00kgm3/volume_1.csv
 DCLL_BR_VOL = DCLL_BL_VOL * DCLL_VF_LL_NOM  
 
-DCLL_CONV_U_TBR = [ (0.0 , 1.000000),    # tie intercept at 1 and linear fit to all points
-                    (250 , 1.003143),    # -- see /Jupyter/Wedge/wedge_data_2026-03-25.xlsx for details
-                    (500 , 1.007732),    # -- ppark 2026-03-25
-                    (750 , 1.011847),
-                    (1000, 1.016612), ]  # updated with 4e4x25 runs 2026-03-25 --ppark
-
-DCLL_CONV_U_FPR = [ (0.1 , 1.0),    # interpolate piecewise linear! 
-                    (15  , 1.0),    # -- see wedge_data_2026-03-25.xlsx for details
-                    (30  , 1.0),    # -- ppark 2026-03-02
-                    (60  , 1.0), 
-                    (90  , 1.0), 
-                    (120 , 1.0),  
-                    (150 , 1.0),  
-                    (250 , 1.0),  
-                    (500 , 1.0),  
-                    (750 , 1.0),  
-                    (1000, 1.0), ]  # updated with 4e4x25 runs 2026-03-02 --ppark
-
-DCLL_CONV_TH_TBR = [ (0.0 , 1.000000),
-                     (250 , 1.002089),    # tie intercept at 1 and linear fit to all points 
-                     (500 , 1.006744),    # see /Jupyter/Wedge/wedge_data_2026-03-25.xlsx for details
-                     (750 , 1.010088),    # updated with 4e4x25 runs 2026-03-25 --ppark 
-                     (1000, 1.014491), ]  
-
-DCLL_CONV_TH_FPR = [ (0.1 , 1.0),    # interpolate piecewise linear! 
-                     (15  , 1.0),    # -- see wedge_data_2026-03-02.xlsx for details
-                     (30  , 1.0),    # -- ppark 2026-03-02
-                     (60  , 1.0), 
-                     (90  , 1.0), 
-                     (120 , 1.0),  
-                     (150 , 1.0),  
-                     (250 , 1.0),  
-                     (500 , 1.0),  
-                     (750 , 1.0),  
-                     (1000, 1.0), ]  # updated with 4e4x25 runs 2026-03-02 --ppark
 
 # --------------------------------------------
 # HELIUM-COOLED PEBBLE BED BLANKET
@@ -189,53 +154,34 @@ HCPB_VF_HE_NOM = 0.3730  # He-4 (gas)
 HCPB_BL_VOL = 520.6 # [m³] from ./OpenMC/volume_HCPB_900K_Li60.0_U000.00kgm3/volume_1.csv
 HCPB_BR_VOL = HCPB_BL_VOL * (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
 
-HCPB_CONV_U_TBR = [ (0.0 , 1.000000),    # tie intercept at 1 and linear fit to all points
-                    (15  , 1.002585),    # -- see wedge_data_2026-03-02.xlsx for details
-                    (30  , 1.004769),    # -- ppark 2026-03-02
-                    (60  , 1.005142),
-                    (90  , 1.007954),
-                    (120 , 1.009000),
-                    (150 , 1.008096),
-                    (250 , 1.014159),
-                    (500 , 1.024346),
-                    (750 , 1.036454),
-                    (1000, 1.053860), ]  # updated with 4e4x25 runs 2026-03-02 --ppark
 
-HCPB_CONV_U_FPR = [ (0.1 , 0.621527),    # interpolate piecewise linear! 
-                    (15  , 0.658516),    # -- see wedge_data_2026-03-02.xlsx for details
-                    (30  , 0.686023),    # -- ppark 2026-03-02
-                    (60  , 0.711563), 
-                    (90  , 0.750919), 
-                    (120 , 0.775424),  
-                    (150 , 0.785075),  
-                    (250 , 0.839986),  
-                    (500 , 0.879656),  
-                    (750 , 0.893032),  
-                    (1000, 0.896262), ]  # updated with 4e4x25 runs 2026-03-02 --ppark
+HCPB_CONV_U_FPR = [ (   0.1, 0.6092),   # see wedge_data_2026-04-102.xlsx for details  
+                    (   0.5, 0.6203),   # -- ppark 2026-04-14
+                    (     1, 0.6175),   
+                    (    10, 0.6376),
+                    (    25, 0.6620),
+                    (    50, 0.7051),
+                    (    75, 0.7294),
+                    (   100, 0.7588),
+                    (   150, 0.7955),
+                    (   250, 0.8438),
+                    (   500, 0.9047),
+                    (   750, 0.9343),
+                    (999.99, 0.9446), ]
 
-HCPB_CONV_TH_TBR = [ (0.0 , 1.000000),    # tie intercept at 1 and linear fit to all points
-                     (15  , 1.002133),    # -- see wedge_data_2026-03-02.xlsx for details
-                     (30  , 1.002733),    # -- ppark 2026-03-02
-                     (60  , 1.004473),
-                     (90  , 1.007394),
-                     (120 , 1.008155),
-                     (150 , 1.010818),
-                     (250 , 1.012987),
-                     (500 , 1.028692),
-                     (750 , 1.041010),
-                     (1000, 1.057434), ]  # updated with 4e4x25 runs 2026-03-02 --ppark
-
-HCPB_CONV_TH_FPR = [ (0.1 , 0.775196),    # interpolate piecewise linear! 
-                     (15  , 0.800833),    # -- see wedge_data_2026-03-02.xlsx for details
-                     (30  , 0.819147),    # -- ppark 2026-03-02
-                     (60  , 0.826557), 
-                     (90  , 0.844662), 
-                     (120 , 0.850961),  
-                     (150 , 0.863309),  
-                     (250 , 0.882049),  
-                     (500 , 0.902653),  
-                     (750 , 0.906310),  
-                     (1000, 0.903355), ]  # updated with 4e4x25 runs 2026-03-02 --ppark
+HCPB_CONV_TH_FPR = [(   0.1, 0.7950),
+                    (   0.5, 0.7987),
+                    (     1, 0.7952),
+                    (    10, 0.8035),
+                    (    25, 0.8109),
+                    (    50, 0.8290),
+                    (    75, 0.8369),
+                    (   100, 0.8543),
+                    (   150, 0.8711),
+                    (   250, 0.8976),
+                    (   500, 0.9356),
+                    (   750, 0.9494),
+                    (999.99, 0.9553), ]
 
 
 
@@ -259,22 +205,22 @@ plt.rcParams['font.family'] = prop.get_name()
 plt.rcParams['mathtext.default'] = 'regular'
 
 # Ticks
-plt.rcParams['xtick.direction'] = 'in'
-plt.rcParams['ytick.direction'] = 'in'
-plt.rcParams['xtick.major.width'] = 0.5   # major x‐tick line width
-plt.rcParams['ytick.major.width'] = 0.5   # major y‐tick line width
-plt.rcParams['xtick.major.size']  = 6     # major x‐tick line length
-plt.rcParams['ytick.major.size']  = 6     # major y‐tick line length
-plt.rcParams['xtick.minor.size']  = 3     # minor x‐tick line length
-plt.rcParams['ytick.minor.size']  = 3     # minor y‐tick line length
-plt.rcParams['axes.linewidth']    = 0.5   # axes spines linewidth (use this instead of messing with spine.set_linewidth(1) )
+plt.rcParams['xtick.direction']   = 'in'
+plt.rcParams['ytick.direction']   = 'in'
+plt.rcParams['xtick.major.width'] = 0.6  # major x‐tick line width
+plt.rcParams['ytick.major.width'] = 0.6  # major y‐tick line width
+plt.rcParams['xtick.major.size']  = 3.5  # major x‐tick line length
+plt.rcParams['ytick.major.size']  = 3.5  # major y‐tick line length
+plt.rcParams['xtick.minor.size']  = 2.0  # minor x‐tick line length
+plt.rcParams['ytick.minor.size']  = 2.0  # minor y‐tick line length
+plt.rcParams['axes.linewidth']    = 0.6  # axes spines linewidth (use this instead of messing with spine.set_linewidth(1) )
 plt.rcParams['grid.color'] = '#DBDBDB'
 
 # Font sizes
-plt.rcParams['font.size']         = 18   # default text size for labels, legends, etc.
-plt.rcParams['axes.titlesize']    = 16   # axes title
-plt.rcParams['axes.labelsize']    = 18   # x- and y-axis labels
-plt.rcParams['xtick.labelsize']   = 14   # x-tick labels
-plt.rcParams['ytick.labelsize']   = 14   # y-tick labels
-plt.rcParams['legend.fontsize']   = 12   # legend text
-plt.rcParams['figure.titlesize']  = 16   # figure title
+plt.rcParams['font.size']        =  8   # default text size for labels, legends, etc.
+plt.rcParams['axes.titlesize']   =  9   # axes title
+plt.rcParams['axes.labelsize']   =  8   # x- and y-axis labels
+plt.rcParams['xtick.labelsize']  =  7   # x-tick labels
+plt.rcParams['ytick.labelsize']  =  7   # y-tick labels
+plt.rcParams['legend.fontsize']  =  7   # legend text
+plt.rcParams['figure.titlesize'] = 10   # figure title

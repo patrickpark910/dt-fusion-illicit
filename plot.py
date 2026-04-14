@@ -12,55 +12,6 @@ from scipy.optimize import curve_fit
 from Python.utilities import *
 from Python.parameters import *
 
-
-def plot_all():
-
-    for sd in ['PNG','PDF','Data']:
-        sd_path = f'./Figures/{sd}/'
-        print(f"Comment. <plot.py/plot_all()> Ensuring directory exists: {sd_path}")
-        os.makedirs(sd_path, exist_ok=True)
-
-
-    plot_types = ['tbr','fpr','hist','dfis','fisn']
-
-    parser = argparse.ArgumentParser(description=f"Choose plots with -p flag, multiple separated by spaces: {plot_types}")
-
-    parser.add_argument("-p", "--plot_type", 
-                        type=str, nargs="+", default=plot_types, 
-                        help=f"Specify plot, multiple separated by spaces: {plot_types}. Defaults to all plots." )
-      
-    parser.add_argument("--no_show", 
-                        dest="show", action="store_false",
-                        help="Disable showing the plots.")
-    
-    parser.add_argument("--no_save", 
-                        dest="save", action="store_false",
-                        help="Disable saving the plots. ")
-
-    parser.set_defaults(show=True, save=True)
-
-    plot_type  = [p.lower() if isinstance(p, str) else p for p in parser.parse_args().plot_type]  # parser.parse_args().plot_type 
-    plot_show  = parser.parse_args().show   
-    plot_save  = parser.parse_args().save
-
-    combined_plot = Plot(show=plot_show, save=plot_save)
-
-
-    for p in plot_type:
-        if p == 'tbr':
-            combined_plot.plot_tbr()
-        elif p == 'fpr':
-            combined_plot.plot_fpr()
-        elif p == 'hist':
-            combined_plot.plot_cum_norm_histogram()
-        elif p == 'dfis':
-            combined_plot.plot_dfisdfer()
-        elif p == 'fisn':
-            combined_plot.plot_fisovern()
-
-    print("\nComment. <plot.py/plot_all()> All plotting commands completed.")
-
-
 class Plot:
 
     def __init__(self, show=True, save=False, ):
@@ -105,123 +56,17 @@ class Plot:
         self.dcll_u_rr_df_corr  = self.dcll_u_rr_df.copy()
         self.dcll_th_rr_df_corr = self.dcll_th_rr_df.copy()
 
-        self.hcpb_u_rr_df_corr['tbr']  *= get_ratio(self.hcpb_u_rr_df_corr['fertile_kg/m3'],  HCPB_CONV_U_TBR)
-        self.hcpb_th_rr_df_corr['tbr'] *= get_ratio(self.hcpb_th_rr_df_corr['fertile_kg/m3'], HCPB_CONV_TH_TBR)
-        self.dcll_u_rr_df_corr['tbr']  *= get_ratio(self.dcll_u_rr_df_corr['fertile_kg/m3'],  DCLL_CONV_U_TBR)
-        self.dcll_th_rr_df_corr['tbr'] *= get_ratio(self.dcll_th_rr_df_corr['fertile_kg/m3'], DCLL_CONV_TH_TBR)
+        # self.hcpb_u_rr_df_corr['tbr']  *= get_ratio(self.hcpb_u_rr_df_corr['fertile_kg/m3'],  HCPB_CONV_U_TBR)
+        # self.hcpb_th_rr_df_corr['tbr'] *= get_ratio(self.hcpb_th_rr_df_corr['fertile_kg/m3'], HCPB_CONV_TH_TBR)
+        # self.dcll_u_rr_df_corr['tbr']  *= get_ratio(self.dcll_u_rr_df_corr['fertile_kg/m3'],  DCLL_CONV_U_TBR)
+        # self.dcll_th_rr_df_corr['tbr'] *= get_ratio(self.dcll_th_rr_df_corr['fertile_kg/m3'], DCLL_CONV_TH_TBR)
 
         self.hcpb_u_rr_df_corr['U238(n,g)']   *= get_ratio(self.hcpb_u_rr_df_corr['fertile_kg/m3'],  HCPB_CONV_U_FPR)
         self.hcpb_th_rr_df_corr['Th232(n,g)'] *= get_ratio(self.hcpb_th_rr_df_corr['fertile_kg/m3'], HCPB_CONV_TH_FPR)        
-        self.dcll_u_rr_df_corr['U238(n,g)']   *= get_ratio(self.dcll_u_rr_df_corr['fertile_kg/m3'],  DCLL_CONV_U_FPR)
-        self.dcll_th_rr_df_corr['Th232(n,g)'] *= get_ratio(self.dcll_th_rr_df_corr['fertile_kg/m3'], DCLL_CONV_TH_FPR)
+        # self.dcll_u_rr_df_corr['U238(n,g)']   *= get_ratio(self.dcll_u_rr_df_corr['fertile_kg/m3'],  DCLL_CONV_U_FPR)
+        # self.dcll_th_rr_df_corr['Th232(n,g)'] *= get_ratio(self.dcll_th_rr_df_corr['fertile_kg/m3'], DCLL_CONV_TH_FPR)
 
         self.show, self.save = show, save
-
-
-    def plot_flux(self):
-        
-        # Create figure with 2x2 subplots
-        fig, axes = plt.subplots(2, 2, figsize=(18, 14))
-        
-        # Define formatter for scientific notation on each tick
-        def sci_notation(x, pos):
-            return f'{x:.0e}'
-    
-        # Row 0: FLiBe-U
-        # Plot 0,0: FLiBe-U Log-log plot (full range)
-        df1 = self.flibe_u_flux_df
-        df2 = self.dcll_u_flux_df
-
-        loadings = [0.0, 15.0, 150.0, 1000.0]
-        for loading in loadings:
-            df_subset = df1[df1['fertile_kg/m3'] == loading]
-            # df_zoom = df_subset[(df_subset['energy mid [eV]'] >= energy_min) & 
-            #                    (df_subset['energy mid [eV]'] <= energy_max)]
-            axes[0,0].plot(df_subset['energy mid [eV]'], df_subset['mean'], 
-                    label=f'{int(loading)} kg/m³', linewidth=2, alpha=0.8)
-        
-        axes[0,0].set_xlim(1e0, 2e7)
-        axes[0,0].set_ylim(1e-5, 1e2)
-        axes[0,0].set_xscale('log')
-        axes[0,0].set_yscale('log')
-        axes[0,0].set_xlabel('Energy [eV]', fontsize=12)
-        axes[0,0].set_ylabel('Flux [n/cm²-s]', fontsize=12)
-        axes[0,0].set_title('Neutron flux spectrum, log-log (FLiBe-U)', fontsize=16)
-        axes[0,0].legend(title='U238/breeder [kg/m³]', fontsize=12, loc='best')
-        axes[0,0].grid(True, which='both', alpha=0.3)
-        
-        # Plot 0,1: FLiBe-U Linear-linear plot (0-10 MeV range)
-        for loading in loadings:
-            df_subset = df1[df1['fertile_kg/m3'] == loading]
-
-            # df_zoom = df_subset[(df_subset['energy mid [eV]'] >= energy_min) & 
-            #                     (df_subset['energy mid [eV]'] <= energy_max)]
-
-            axes[0,1].plot(df_subset['energy mid [eV]'], df_subset['mean'], 
-                    label=f'{int(loading)} kg/m³', linewidth=2, alpha=0.8)
-        
-        axes[0,1].set_xlim(1e5, 5e6)
-        axes[0,1].xaxis.set_major_formatter(FuncFormatter(sci_notation))
-        axes[0,1].set_ylim(0,0.6)
-        axes[0,1].set_xlabel('Energy [eV]', fontsize=12)
-        axes[0,1].set_ylabel('Flux [n/cm²-s]', fontsize=12)
-        axes[0,1].set_title(r'Neutron flux spectrum, lin-lin, 0.1$-$5 MeV (FLiBe-U)', fontsize=16)
-        axes[0,1].legend(title='U238/breeder [kg/m³]', fontsize=12, loc='best')
-        axes[0,1].grid(True, alpha=0.3)
-        
-        # Row 1: DCLL-U
-        # Plot 1,0: DCLL-U Log-log plot (full range)
-
-        for loading in loadings:
-            df_subset = df2[df2['fertile_kg/m3'] == loading]
-
-            axes[1,0].plot(df_subset['energy mid [eV]'], df_subset['mean'], 
-                    label=f'{int(loading)} kg/m³', linewidth=2, alpha=0.8)
-        
-        axes[1,0].set_xlim(1e0,2e7)
-        axes[1,0].set_ylim(1e-5,1e2)
-        axes[1,0].set_xscale('log')
-        axes[1,0].set_yscale('log')
-        axes[1,0].set_xlabel('Energy [eV]', fontsize=12)
-        axes[1,0].set_ylabel('Flux [n/cm²-s]', fontsize=12)
-        axes[1,0].set_title('Neutron flux spectrum, log-log (DCLL-U)', fontsize=16)
-        axes[1,0].legend(title='U238/breeder [kg/m³]', fontsize=12, loc='best')
-        axes[1,0].grid(True, which='both', alpha=0.3)
-        
-        # Plot 1,1: DCLL-U Linear-linear plot (0-10 MeV range)
-        for loading in loadings:
-            df_subset = df2[df2['fertile_kg/m3'] == loading]
-
-            # df_zoom = df_subset[(df_subset['energy mid [eV]'] >= energy_min) & 
-            #                    (df_subset['energy mid [eV]'] <= energy_max)]
-
-            axes[1,1].plot(df_subset['energy mid [eV]'], df_subset['mean'], 
-                    label=f'{int(loading)} kg/m³', linewidth=2, alpha=0.8)
-        
-        axes[1,1].set_xlim(1e3, 5e6)
-        axes[1,1].xaxis.set_major_formatter(FuncFormatter(sci_notation))
-        axes[1,1].set_ylim(0,3.5)
-        axes[1,1].set_xlabel('Energy [eV]', fontsize=12)
-        axes[1,1].set_ylabel('Flux [n/cm²-s]', fontsize=12)
-        axes[1,1].set_title(r'Neutron flux spectrum, lin-lin, 0.1$-$5 MeV (DCLL-U)', fontsize=16)
-        axes[1,1].legend(title='U238/breeder [kg/m³]', fontsize=12, loc='best')
-        axes[1,1].grid(True, alpha=0.3)
-        
-        plt.tight_layout()
-        
-        if self.save:
-            plt.savefig(f'./Figures/PDF/fig_flux_comparison.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/PNG/fig_flux_comparison.png', bbox_inches='tight', format='png')
-            print(f"Exported flux spectrum plots.")
-            print(f"Plot saved with {len(loadings)} different fertile loadings")
-            print(f"Fertile loadings: {loadings} kg/m³")
-        else:
-            print(f"Did not export flux spectrum plots.")
-        
-        if self.show: 
-            plt.show()
-        
-        plt.close('all')
 
 
     def plot_tbr(self):
@@ -233,23 +78,23 @@ class Plot:
         # -------------------------------------------------------------
 
         # Load the dataframes to plot, label, color, marker, markersize, linestyle, and polynomial fit
-        datasets = [ (self.flibe_u_rr_df,       r'FLiBe-UF$_4$',  '#66b420', 'o',  5,  '-',  'makima'),
-                     (self.flibe_th_rr_df,      r'FLiBe-ThF$_4$', '#66b420', '+', 12, '--',  'makima'),
-                     (self.hcpb_u_rr_df_corr,   r'HCPB-UO$_2$',   '#b41f24', 's',  6,  '-',  2),
-                     (self.hcpb_th_rr_df_corr,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, '--',  2),
-                     (self.dcll_u_rr_df_corr,   r'DCLL-UO$_2$',   '#0047ba', '^',  8,  '-',  2),
-                     (self.dcll_th_rr_df_corr,  r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, '--',  2),
+        datasets = [ (self.flibe_u_rr_df,  r'FLiBe-UF$_4$',  '#66b420', 'o',  5,  '-',  'makima'),
+                     (self.flibe_th_rr_df, r'FLiBe-ThF$_4$', '#66b420', '+', 12, '--',  'makima'),
+                     (self.hcpb_u_rr_df,   r'HCPB-UO$_2$',   '#b41f24', 's',  6,  '-',  2),
+                     (self.hcpb_th_rr_df,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, '--',  2),
+                     (self.dcll_u_rr_df,   r'DCLL-UO$_2$',   '#0047ba', '^',  8,  '-',  2),
+                     (self.dcll_th_rr_df,  r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, '--',  2),
                    ]
 
         # Select a subset of fertile kg/m3 to SHOW to avoid cluttering the low end with markers
-        selected1 = [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150,]  # [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99]
-        selected2 = [0, 30, 60, 90, 120, 150, 250, 500, 750, 999.99]  # [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99]
+        selected1 = [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150,]  # [0.0, 0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99] 
+        selected2 = [0, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]  # [0.0, 0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99] 
 
         # Settings for each of the plots
-        view_limits = [ # Zoomed in on (0, 155) fertile kg/m3
-                        {'xlim': (-4, 154),   'xmax': 150, 'x_major': 15,  'x_minor': 5,  
-                         'ylim': (1.04, 1.46), 'suffix': '0150kgm3', 'fertile_kgm3': selected1,   # 'ylim': (0.94, 1.26)
-                         'leg_loc': 'center right',}, # leg_loc options: best or upper/center/lower left/right/center
+        view_limits = [ # # Zoomed in on (0, 155) fertile kg/m3
+                        # {'xlim': (-4, 154),   'xmax': 150, 'x_major': 15,  'x_minor': 5,  
+                        #  'ylim': (1.04, 1.46), 'suffix': '0150kgm3', 'fertile_kgm3': selected1,   # 'ylim': (0.94, 1.26)
+                        #  'leg_loc': 'center right',}, # leg_loc options: best or upper/center/lower left/right/center
                         # Zoomed out to (0, 1000) fertile kg/m3
                         {'xlim': (-25, 1025), 'xmax':1000, 'x_major': 100, 'x_minor': 50, 
                          'ylim': (0.83, 1.47), 'suffix': '1000kgm3', 'fertile_kgm3': selected2,
@@ -258,7 +103,7 @@ class Plot:
 
         for v in view_limits:
 
-            plt.figure(figsize=(8, 6))
+            plt.figure(figsize=(3.5, 2.75))
             ax = plt.gca()
             ax.axhspan(0, 1.00, color='#F0F0F0')            
 
@@ -272,7 +117,7 @@ class Plot:
                 y_filtered = BLANKET_COVERAGE * df_filtered['tbr']
 
                 # Plot filtered data
-                # plt.scatter(x_filtered, y_filtered, marker=marker, s=markersize*5, color=color, zorder=3)
+                plt.scatter(x_filtered, y_filtered, marker=marker, s=markersize*5, color=color, zorder=3)
 
                 # But still fit the polynomial to all of the data you did compute
                 x_fit = df['fertile_kg/m3']
@@ -728,4 +573,48 @@ class Plot:
 
     
 if __name__ == "__main__":
-    plot_all()
+
+    for sd in ['PNG','PDF','Data']:
+        sd_path = f'./Figures/{sd}/'
+        print(f"Comment. <plot.py/plot_all()> Ensuring directory exists: {sd_path}")
+        os.makedirs(sd_path, exist_ok=True)
+
+
+    plot_types = ['tbr','fpr','hist','dfis','fisn']
+
+    parser = argparse.ArgumentParser(description=f"Choose plots with -p flag, multiple separated by spaces: {plot_types}")
+
+    parser.add_argument("-p", "--plot_type", 
+                        type=str, nargs="+", default=plot_types, 
+                        help=f"Specify plot, multiple separated by spaces: {plot_types}. Defaults to all plots." )
+      
+    parser.add_argument("--no_show", 
+                        dest="show", action="store_false",
+                        help="Disable showing the plots.")
+    
+    parser.add_argument("--no_save", 
+                        dest="save", action="store_false",
+                        help="Disable saving the plots. ")
+
+    parser.set_defaults(show=True, save=True)
+
+    plot_type  = [p.lower() if isinstance(p, str) else p for p in parser.parse_args().plot_type]  # parser.parse_args().plot_type 
+    plot_show  = parser.parse_args().show   
+    plot_save  = parser.parse_args().save
+
+    combined_plot = Plot(show=plot_show, save=plot_save)
+
+
+    for p in plot_type:
+        if   p == 'tbr':
+            combined_plot.plot_tbr()
+        elif p == 'fpr':
+            combined_plot.plot_fpr()
+        elif p == 'hist':
+            combined_plot.plot_cum_norm_histogram()
+        elif p == 'dfis':
+            combined_plot.plot_dfisdfer()
+        elif p == 'fisn':
+            combined_plot.plot_fisovern()
+
+    print("\nComment. <plot.py/plot_all()> All plotting commands completed.")
