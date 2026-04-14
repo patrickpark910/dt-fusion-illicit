@@ -17,7 +17,6 @@ class HCPB(Reactor):
         self.breeder_enrich  = ENRICH_HCPB   # [at%]
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
-        self.n_particles, self.n_cycles = int(4e3), 25
         s = f"{self.n_particles:.0e}x{self.n_cycles}".replace("+0", "").replace("+", "")
         self.name = f"{self.run_type}_{self.blanket_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_kgm3:06.2f}kgm3_{s}"         
         self.path = f"./OpenMC/{self.name}"
