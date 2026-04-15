@@ -7,7 +7,7 @@ ISOTOPES = ['U238', 'Th232']
 BLANKET_COVERAGE = 1.00 # Assume blanket covers 88% of plasma surface, rest for divertor -- removed as irrelevant for our conclusions --ppark 2026-02-11
 TEMP_K = 900 # [K] ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
 
-N_PARTICLES, N_CYCLES = int(4e5), 25
+N_PARTICLES, N_CYCLES = int(4e7), 25
 
 """ Material parameters of breeders """
 
