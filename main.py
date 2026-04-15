@@ -35,6 +35,10 @@ def main():
                         type=str, nargs="+", default=ISOTOPES,
                         help=f"Specify fertile isotopes, separated by space, among this list: {ISOTOPES}" )
     
+    parser.add_argument("-f", "--fertile",
+                        type=float, nargs="+", default=FERTILE_KGM3,
+                        help=f"Specify fertile loadings in kg/m3 (default: {FERTILE_KGM3})")
+    
     parser.add_argument("-l", "--lithium", 
                         type=str, nargs="+", default=ISOTOPES,
                         help=f"Specify lithium enrichments, separated by space, among this list: {ISOTOPES}" )
@@ -57,6 +61,7 @@ def main():
     run_type   = parser.parse_args().run_type
     blankets   = parser.parse_args().blankets   # [b.upper() if isinstance(b, str) else b for b in args.blankets]  # too extra to make exception for FLiBe, just type it right yourself :D --ppark
     isotopes   = parser.parse_args().isotopes
+    densities  = parser.parse_args().fertile
     print_xml  = parser.parse_args().print_xml
     run_openmc = parser.parse_args().run_openmc 
     run_debug  = parser.parse_args().run_debug
@@ -88,7 +93,7 @@ def main():
 
         for blanket in blankets:  # ['FLiBe', 'DCLL', 'HCPB', 'ARC', 'ARCB']  # make each blanket str match class name
             for fertile_isotope in isotopes:
-                for fertile_kgm3 in FERTILE_KGM3: 
+                for fertile_kgm3 in densities: 
                     
                     current_run = build_reactor(blanket,
                                                 blanket_name=blanket,
