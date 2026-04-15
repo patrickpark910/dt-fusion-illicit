@@ -56,15 +56,8 @@ class Plot:
         self.dcll_u_rr_df_corr  = self.dcll_u_rr_df.copy()
         self.dcll_th_rr_df_corr = self.dcll_th_rr_df.copy()
 
-        # self.hcpb_u_rr_df_corr['tbr']  *= get_ratio(self.hcpb_u_rr_df_corr['fertile_kg/m3'],  HCPB_CONV_U_TBR)
-        # self.hcpb_th_rr_df_corr['tbr'] *= get_ratio(self.hcpb_th_rr_df_corr['fertile_kg/m3'], HCPB_CONV_TH_TBR)
-        # self.dcll_u_rr_df_corr['tbr']  *= get_ratio(self.dcll_u_rr_df_corr['fertile_kg/m3'],  DCLL_CONV_U_TBR)
-        # self.dcll_th_rr_df_corr['tbr'] *= get_ratio(self.dcll_th_rr_df_corr['fertile_kg/m3'], DCLL_CONV_TH_TBR)
-
         self.hcpb_u_rr_df_corr['U238(n,g)']   *= get_ratio(self.hcpb_u_rr_df_corr['fertile_kg/m3'],  HCPB_CONV_U_FPR)
         self.hcpb_th_rr_df_corr['Th232(n,g)'] *= get_ratio(self.hcpb_th_rr_df_corr['fertile_kg/m3'], HCPB_CONV_TH_FPR)        
-        # self.dcll_u_rr_df_corr['U238(n,g)']   *= get_ratio(self.dcll_u_rr_df_corr['fertile_kg/m3'],  DCLL_CONV_U_FPR)
-        # self.dcll_th_rr_df_corr['Th232(n,g)'] *= get_ratio(self.dcll_th_rr_df_corr['fertile_kg/m3'], DCLL_CONV_TH_FPR)
 
         self.show, self.save = show, save
 
@@ -87,91 +80,83 @@ class Plot:
                    ]
 
         # Select a subset of fertile kg/m3 to SHOW to avoid cluttering the low end with markers
-        selected1 = [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150,]  # [0.0, 0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99] 
-        selected2 = [0, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]  # [0.0, 0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99] 
+        selected = [0, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]  # [0.0, 0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99] 
 
-        # Settings for each of the plots
-        view_limits = [ # # Zoomed in on (0, 155) fertile kg/m3
-                        # {'xlim': (-4, 154),   'xmax': 150, 'x_major': 15,  'x_minor': 5,  
-                        #  'ylim': (1.04, 1.46), 'suffix': '0150kgm3', 'fertile_kgm3': selected1,   # 'ylim': (0.94, 1.26)
-                        #  'leg_loc': 'center right',}, # leg_loc options: best or upper/center/lower left/right/center
-                        # Zoomed out to (0, 1000) fertile kg/m3
-                        {'xlim': (-25, 1025), 'xmax':1000, 'x_major': 100, 'x_minor': 50, 
-                         'ylim': (0.83, 1.47), 'suffix': '1000kgm3', 'fertile_kgm3': selected2,
-                         'leg_loc': 'upper right'} ] 
+        # Settings
+
+        v = {'xlim': (-25, 1025), 'xmax':1000, 'x_major': 100, 'x_minor': 50, 
+             'ylim': (0.83, 1.47), 'suffix': '1000kgm3', 'fertile_kgm3': selected,
+             'leg_loc': 'upper right'}
   
+        plt.figure(figsize=(3.5, 2.75))
+        ax = plt.gca()
+        ax.axhspan(0, 1.00, color='#F0F0F0')            
 
-        for v in view_limits:
+        for df, label, color, marker, markersize, linestyle, degree in datasets:
 
-            plt.figure(figsize=(3.5, 2.75))
-            ax = plt.gca()
-            ax.axhspan(0, 1.00, color='#F0F0F0')            
+            # selected = v['fertile_kgm3']
+            mask = df['fertile_kg/m3'].apply(lambda d: any(np.isclose(d, s) for s in selected))
+            df_filtered = df[mask]
 
-            for df, label, color, marker, markersize, linestyle, degree in datasets:
+            x_filtered = df_filtered['fertile_kg/m3']
+            y_filtered = BLANKET_COVERAGE * df_filtered['tbr']
 
-                selected = v['fertile_kgm3']
-                mask = df['fertile_kg/m3'].apply(lambda d: any(np.isclose(d, s) for s in selected))
-                df_filtered = df[mask]
+            # Plot filtered data
+            plt.scatter(x_filtered, y_filtered, marker=marker, s=markersize*5, color=color, zorder=3)
 
-                x_filtered = df_filtered['fertile_kg/m3']
-                y_filtered = BLANKET_COVERAGE * df_filtered['tbr']
+            # But still fit the polynomial to all of the data you did compute
+            x_fit = df['fertile_kg/m3']
+            y_fit = BLANKET_COVERAGE * df['tbr']
 
-                # Plot filtered data
-                plt.scatter(x_filtered, y_filtered, marker=marker, s=markersize*5, color=color, zorder=3)
+            if degree == 'makima':
+                x_fine = np.linspace(0, v['xmax'], 500)
+                y_fine = Akima1DInterpolator(x_fit, y_fit, method='makima')(x_fine) # poly_func(x_fine)
 
-                # But still fit the polynomial to all of the data you did compute
-                x_fit = df['fertile_kg/m3']
-                y_fit = BLANKET_COVERAGE * df['tbr']
-
-                if degree == 'makima':
-                    x_fine = np.linspace(0, v['xmax'], 500)
-                    y_fine = Akima1DInterpolator(x_fit, y_fit, method='makima')(x_fine) # poly_func(x_fine)
-
-                else:
-                    coeffs = np.polyfit(x_fit, y_fit, degree)
-                    y_fine = np.poly1d(coeffs)(x_fine)
-
-                # Plot interpolation
-                plt.plot(x_fine, y_fine, linestyle, linewidth=1, color=color)
-
-                # Dummy plots for legend -- bit of a hack lmao -- ppark
-                plt.plot([9e8,9e9], [9e8,9e9], marker+linestyle, markersize=markersize, linewidth=1, color=color, label=label)
-
-            # Labeling
-            plt.xlabel(r'Fertile isotope density [kg$/$m³]')  # specifically use unicode superscript m³ and not m$^3$
-            plt.ylabel('Tritium breeding ratio')
-
-            # Set Dynamic Limits and Locators
-            plt.xlim(v['xlim'])
-            plt.ylim(v['ylim']) 
-            
-            ax.xaxis.set_ticks_position('both')
-            ax.xaxis.set_major_locator(MultipleLocator(v['x_major']))
-            ax.xaxis.set_minor_locator(MultipleLocator(v['x_minor']))
-            
-            ax.yaxis.set_ticks_position('both')
-            ax.yaxis.set_major_locator(MultipleLocator(0.05))
-            ax.yaxis.set_minor_locator(MultipleLocator(0.01))
-            
-            ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
-            ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
-
-            plt.tight_layout()
-            # leg = plt.legend(loc=v['leg_loc'], fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=3)
-            # leg = plt.legend(loc=v['leg_loc'], fancybox=False, edgecolor='none', frameon=True, framealpha=1.0, ncol=3)
-            # leg.get_frame().set_linewidth(0.5) 
-
-            if self.save:
-                plt.savefig(f'./Figures/PDF/fig_tbr_{v["suffix"]}.pdf', bbox_inches='tight', format='pdf')
-                plt.savefig(f'./Figures/PNG/fig_tbr_{v["suffix"]}.png', bbox_inches='tight', format='png')
-                print(f"Comment. <plot.py/plot_tbr()> Exported TBR plot: fig_tbr_{v['suffix']}")
             else:
-                print(f"{C.YELLOW}Comment.{C.END} <plot.py/plot_tbr()> Did NOT export TBR plot due to user setting: fig_tbr_{v['suffix']}")
+                coeffs = np.polyfit(x_fit, y_fit, degree)
+                y_fine = np.poly1d(coeffs)(x_fine)
 
-            if self.show: 
-                plt.show()
-            else:
-                print(f"{C.YELLOW}Comment.{C.END} <plot.py/plot_tbr()> Did NOT show TBR plot due to user setting: fig_tbr_{v['suffix']}")
+            # Plot interpolation
+            plt.plot(x_fine, y_fine, linestyle, linewidth=1, color=color)
+
+            # Dummy plots for legend -- bit of a hack lmao -- ppark
+            plt.plot([9e8,9e9], [9e8,9e9], marker+linestyle, markersize=markersize, linewidth=1, color=color, label=label)
+
+        # Labeling
+        plt.xlabel(r'Fertile isotope density [kg$/$m³]')  # specifically use unicode superscript m³ and not m$^3$
+        plt.ylabel('Tritium breeding ratio')
+
+        # Set Dynamic Limits and Locators
+        plt.xlim(v['xlim'])
+        plt.ylim(v['ylim']) 
+        
+        ax.xaxis.set_ticks_position('both')
+        ax.xaxis.set_major_locator(MultipleLocator(v['x_major']))
+        ax.xaxis.set_minor_locator(MultipleLocator(v['x_minor']))
+        
+        ax.yaxis.set_ticks_position('both')
+        ax.yaxis.set_major_locator(MultipleLocator(0.05))
+        ax.yaxis.set_minor_locator(MultipleLocator(0.01))
+        
+        ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
+        ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
+
+        plt.tight_layout()
+        # leg = plt.legend(loc=v['leg_loc'], fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=3)
+        # leg = plt.legend(loc=v['leg_loc'], fancybox=False, edgecolor='none', frameon=True, framealpha=1.0, ncol=3)
+        # leg.get_frame().set_linewidth(0.5) 
+
+        if self.save:
+            plt.savefig(f'./Figures/PDF/fig_tbr_{v["suffix"]}.pdf', bbox_inches='tight', format='pdf')
+            plt.savefig(f'./Figures/PNG/fig_tbr_{v["suffix"]}.png', bbox_inches='tight', format='png')
+            print(f"Comment. <plot.py/plot_tbr()> Exported TBR plot: fig_tbr_{v['suffix']}")
+        else:
+            print(f"{C.YELLOW}Comment.{C.END} <plot.py/plot_tbr()> Did NOT export TBR plot due to user setting: fig_tbr_{v['suffix']}")
+
+        if self.show: 
+            plt.show()
+        else:
+            print(f"{C.YELLOW}Comment.{C.END} <plot.py/plot_tbr()> Did NOT show TBR plot due to user setting: fig_tbr_{v['suffix']}")
 
         plt.close('all')
 
