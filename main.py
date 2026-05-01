@@ -40,8 +40,8 @@ def main():
                         help=f"Specify fertile loadings in kg/m3 (default: {FERTILE_KGM3})")
     
     parser.add_argument("-l", "--lithium", 
-                        type=float, nargs="+", default=None,
-                        help=f"Specify lithium enrichments, separated by space, among this list: {ISOTOPES}" )
+                        type=float, default=None,
+                        help=f"Specify lithium enrichment. Only one value allowed" )
     
     parser.add_argument("-p", "--n_particles", 
                         type=lambda x: int(float(x)), default=N_PARTICLES,
@@ -70,7 +70,7 @@ def main():
     blankets   = parser.parse_args().blankets   # [b.upper() if isinstance(b, str) else b for b in args.blankets]  # too extra to make exception for FLiBe, just type it right yourself :D --ppark
     isotopes   = parser.parse_args().isotopes
     densities  = parser.parse_args().fertile
-    lithiums   = parser.parse_args().lithium
+    lithium    = parser.parse_args().lithium
     print_xml  = parser.parse_args().print_xml
     run_openmc = parser.parse_args().run_openmc 
     run_debug  = parser.parse_args().run_debug
@@ -103,29 +103,28 @@ def main():
     elif run_type == 'tallies':
 
         for blanket in blankets:  # ['FLiBe', 'DCLL', 'HCPB', 'ARC', 'ARCB']  # make each blanket str match class name
-            for lithium in lithiums:
-                for fertile_isotope in isotopes:
-                    for fertile_kgm3 in densities: 
-                        current_run = build_reactor(blanket,
-                                                    blanket_name=blanket,
-                                                    fertile_isotope=fertile_isotope,
-                                                    fertile_kgm3=fertile_kgm3, 
-                                                    lithium_enrich=lithium,
-                                                    run_type='tallies',
-                                                    n_particles=n_particles,
-                                                    n_cycles=n_cycles,
-                                                    print_xml=print_xml,
-                                                    run_openmc=run_openmc,
-                                                    run_debug=run_debug)
+            for fertile_isotope in isotopes:
+                for fertile_kgm3 in densities: 
+                    current_run = build_reactor(blanket,
+                                                blanket_name=blanket,
+                                                fertile_isotope=fertile_isotope,
+                                                fertile_kgm3=fertile_kgm3, 
+                                                lithium_enrich=lithium,
+                                                run_type='tallies',
+                                                n_particles=n_particles,
+                                                n_cycles=n_cycles,
+                                                print_xml=print_xml,
+                                                run_openmc=run_openmc,
+                                                run_debug=run_debug)
 
-                        print(f"Check if '{current_run.path}' exists: {os.path.isdir(current_run.path)}")
+                    print(f"Check if '{current_run.path}' exists: {os.path.isdir(current_run.path)}")
 
-                        current_run.compile()
-                        current_run.openmc()
-                        current_run.extract_tallies()
-                        
-                    print(f"Collating tallies for {blanket} {fertile_isotope} at {current_run.temp_k}")
-                    collate_tallies(blanket, fertile_isotope, current_run.breeder_enrich, current_run.temp_k, current_run.breeder_volume)
+                    current_run.compile()
+                    current_run.openmc()
+                    current_run.extract_tallies()
+                    
+                print(f"Collating tallies for {blanket} {fertile_isotope} at {current_run.temp_k}")
+                collate_tallies(blanket, fertile_isotope, current_run.breeder_enrich, current_run.temp_k, current_run.breeder_volume)
 
 
 def build_reactor(blanket:str, **kwargs):
