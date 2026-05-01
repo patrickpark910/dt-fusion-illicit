@@ -69,7 +69,6 @@ class Reactor(ABC):
         #   by defining cell_filter and cellfrom_filter per docs below
         # 
         # cf. Misc scores > current > description @ docs.openmc.org/en/stable/usersguide/tallies.html 
-        # 
         # ---------------------------------------------------------------
 
         # Current tally
@@ -82,32 +81,46 @@ class Reactor(ABC):
 
 
         # ---------------------------------------------------------------
+        # Power tallies
+        # - Tally heating-local throughout the blanket, then tally fission-q-recoverable to isolate fission power contribution
+        # ---------------------------------------------------------------
+        heating_tally        = self.make_tally('heating', ['heating-local'], filters=[cell_filter])
+        heating_energy_tally = self.make_tally('heating spectrum', ['heating-local'], filters=[energy_filter])  # not having cell_filter on purpose
+
+        fisq_tally = self.make_tally('fission-q recoverable', ['fission-q-recoverable'], filters=[cell_filter])
+        fisq_energy_tally = self.make_tally('fission-q recoverable spectrum', ['fission-q-recoverable'], filters=[energy_filter])  # not having cell_filter on purpose
+
+
+        # ---------------------------------------------------------------
         # Reaction rate tallies 
         # ---------------------------------------------------------------
 
         # Fertile element reaction rates
         fertile_tally_tot    = self.make_tally(f'Total fertile rxn rate',     ['(n,gamma)', 'fission', 'elastic'], nuclides=['U238', 'U235', 'Th232'])
         fertile_tally        = self.make_tally(f'Fertile rxn rates',          ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter], nuclides=['U238', 'U235', 'Th232'])
-        fertile_energy_tally = self.make_tally(f'Fertile rxn rates spectrum', ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['U238', 'U235', 'Th232'])
+        fertile_energy_tally = self.make_tally(f'Fertile rxn rates spectrum', ['(n,gamma)', 'fission', 'elastic'], filters=[energy_filter], nuclides=['U238', 'U235', 'Th232'])
 
         # Lithium reaction rates
         Li_tally_tot    = self.make_tally('Total Li rxn rate',     ['(n,gamma)', '(n,Xt)', 'elastic'], nuclides=['Li6', 'Li7'])
         Li_tally        = self.make_tally('Li rxn rates',          ['(n,gamma)', '(n,Xt)', 'elastic'], filters=[cell_filter], nuclides=['Li6', 'Li7'])
-        Li_energy_tally = self.make_tally('Li rxn rates spectrum', ['(n,gamma)', '(n,Xt)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Li6', 'Li7'])
+        Li_energy_tally = self.make_tally('Li rxn rates spectrum', ['(n,gamma)', '(n,Xt)', 'elastic'], filters=[energy_filter], nuclides=['Li6', 'Li7'])
 
         # Fluorine reaction rates
-        F_tally        = self.make_tally('F rxn rates', ['(n,gamma)', 'elastic'], filters=[cell_filter], nuclides=['F19'])
-        F_energy_tally = self.make_tally('F rxn rates spectrum', ['(n,gamma)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['F19'])
+        # F_tally        = self.make_tally('F rxn rates', ['(n,gamma)', 'elastic'], filters=[cell_filter], nuclides=['F19'])
+        # F_energy_tally = self.make_tally('F rxn rates spectrum', ['(n,gamma)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['F19'])
 
         # Beryllium reaction rates
         Be_tally        = self.make_tally('Be rxn rates', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter], nuclides=['Be9'])
-        Be_energy_tally = self.make_tally('Be rxn rates spectrum', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Be9'])
+        Be_energy_tally = self.make_tally('Be rxn rates spectrum', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[energy_filter], nuclides=['Be9'])
 
 
         self.tallies.extend([fertile_tally_tot, Li_tally_tot])
-        self.tallies.extend([fertile_tally, Li_tally, F_tally, Be_tally])
-        self.tallies.extend([fertile_energy_tally, Li_energy_tally, F_energy_tally, Be_energy_tally])
-        self.tallies.extend([current_tally, flux_tally, flux_energy_tally]) # current_energy_tally
+        self.tallies.extend([fertile_tally, Li_tally, Be_tally])
+        self.tallies.extend([current_tally, flux_tally])
+        self.tallies.extend([heating_tally, fisq_tally])
+        self.tallies.extend([fertile_energy_tally, Li_energy_tally, Be_energy_tally])
+        self.tallies.extend([flux_energy_tally]) 
+        self.tallies.extend([heating_energy_tally, fisq_energy_tally])y
 
 
     def make_tally(self, name, scores, filters:list=None, nuclides:list=None):

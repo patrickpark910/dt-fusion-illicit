@@ -14,6 +14,11 @@ SECTOR            = 1/10
 SECTOR_DEG        = SECTOR * 360
 SECTOR_TALLY_MULT = 1/SECTOR
 
+# Fusion power parameters - from JL Ball 24
+N_PER_MJ = 3.546e17 # 17.6 MeV
+P_FUS_MW = 1000
+NPS_FUS  = P_FUS_MW * N_PER_MJ # n/s
+
 """ Material parameters of breeders """
 
 # FLiBe (2(LiF)-BeF2)
