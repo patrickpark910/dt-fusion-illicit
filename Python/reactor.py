@@ -381,14 +381,6 @@ class Reactor(ABC):
         fertile_spec = sp.get_tally(name=f'Fertile rxn rates spectrum').get_pandas_dataframe()
         current_df   = sp.get_tally(name='current').get_pandas_dataframe()
 
-        # =====================================================================
-        # MULTIPLY ALL BASE DATAFRAMES BY SECTOR_TALLY_MULT (10x)
-        # Both mean and std. dev. scale linearly by this constant.
-        # =====================================================================
-        for df in [flux, flux_spec, Li, Li_spec, fertile, fertile_spec, current_df]:
-            df['mean']      *= SECTOR_TALLY_MULT
-            df['std. dev.'] *= SECTOR_TALLY_MULT
-
         # Add new column for energy bin midpoint (for plotting)
         for df in [flux_spec, fertile_spec, Li_spec]:
             df['energy mid [eV]'] = (df['energy low [eV]'] + df['energy high [eV]'])/ 2
