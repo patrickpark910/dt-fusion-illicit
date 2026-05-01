@@ -12,7 +12,7 @@ from Python.utilities import *
 
 class Reactor(ABC):
 
-    def __init__(self, blanket_name, fertile_kgm3=0.0, fertile_isotope='U238', run_type='tallies', n_particles=N_PARTICLES, n_cycles=N_CYCLES, print_xml=True, run_openmc=True, run_debug=True):
+    def __init__(self, blanket_name, fertile_kgm3=0.0, fertile_isotope='U238', lithium_enrich=None, run_type='tallies', n_particles=N_PARTICLES, n_cycles=N_CYCLES, print_xml=True, run_openmc=True, run_debug=True):
 
         self.fertile_kgm3 = fertile_kgm3
         self.fertile_isotope = fertile_isotope
@@ -30,11 +30,11 @@ class Reactor(ABC):
         self.n_cycles    = n_cycles
 
         # All class templates must define these variables:
-        self.temp_k          = None # TEMP_K
-        self.blanket_name    = None # 'ARC'
-        self.blanket_volume  = None # ARC_BL_VOL    # m³
-        self.breeder_density = None # DENSITY_FLIBE # g/cm³
-        self.breeder_enrich  = None # ENRICH_FLIBE  # wt%
+        self.temp_k          = None           # TEMP_K
+        self.blanket_name    = None           # 'ARC'
+        self.blanket_volume  = None           # ARC_BL_VOL    # m³
+        self.breeder_density = None           # DENSITY_FLIBE # g/cm³
+        self.breeder_enrich  = lithium_enrich # ENRICH_FLIBE  # wt%
         self.name = None # f"{self.run_type}_{self.blanket_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}{self.fertile_kgm3:06.2f}kgm3"
         self.path = None # f"./OpenMC/{self.name}"
 
