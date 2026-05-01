@@ -57,29 +57,10 @@ class Reactor(ABC):
 
         # Filters
         cellfrom_filter = openmc.CellFromFilter([cell for cell in self.cells if cell.fill is not None])
+        cellwithvoid_filter = openmc.CellFilter(self.cells)
         cell_filter = openmc.CellFilter([cell for cell in self.cells if cell.fill is not None])
         energy_filter = openmc.EnergyFilter(logspace_per_decade(1e-5, 20e6, 100)) # './helpers/utilities.py'
-        
-
-        # ---------------------------------------------------------------
-        # Neutron wall loading and heating tallies 
-        # ---------------------------------------------------------------
-        """
-        nwl_surface_filter = openmc.SurfaceFilter([self.surface_vc.id]) # Surface filter for the plasma-facing surface (inner surface of first wall)
-        nwl_tally        = self.make_tally('neutron wall loading',          ['current'], filters=[nwl_surface_filter])
-        nwl_energy_tally = self.make_tally('neutron wall loading spectrum', ['current'], filters=[nwl_surface_filter, energy_filter])
-        # NWL = neutron current through surface, Using 'current' gives net current, 'partial-current' gives directional
-        self.tallies.extend([nwl_tally, nwl_energy_tally])
-        # I omit these bc our surfaces are openmc.model.Polygon's which SurfaceFilter can NOT read --ppark 2025-09-21
-        """
-
-        # -----------------------------------------------------------------------
-        # Heating tallies (heating-local estimates n+gamma heating using only n)
-        # -----------------------------------------------------------------------
-
-        heat_tally        = self.make_tally('volumetric heating',          ['heating-local'], filters=[cell_filter])
-        heat_energy_tally = self.make_tally('volumetric heating spectrum', ['heating-local'], filters=[cell_filter, energy_filter])
-        
+                
 
         # ---------------------------------------------------------------
         # Flux and current tallies 
@@ -92,7 +73,7 @@ class Reactor(ABC):
         # ---------------------------------------------------------------
 
         # Current tally
-        current_tally        = self.make_tally('current', ['current'], filters=[cell_filter, cellfrom_filter])
+        current_tally        = self.make_tally('current', ['current'], filters=[cellwithvoid_filter, cellfrom_filter])
         # current_energy_tally = self.make_tally('current spectrum', ['current'], filters=[energy_filter]) # this might make output too big
 
         # Flux tally 
@@ -127,7 +108,6 @@ class Reactor(ABC):
         self.tallies.extend([fertile_tally, Li_tally, F_tally, Be_tally])
         self.tallies.extend([fertile_energy_tally, Li_energy_tally, F_energy_tally, Be_energy_tally])
         self.tallies.extend([current_tally, flux_tally, flux_energy_tally]) # current_energy_tally
-        self.tallies.extend([heat_tally, heat_energy_tally])
 
 
     def make_tally(self, name, scores, filters:list=None, nuclides:list=None):
@@ -376,54 +356,52 @@ class Reactor(ABC):
         cell  energy low [eV]  energy high [eV] nuclide score     mean  std. dev.  energy mid [eV]
         """
 
-        flux      = sp.get_tally(name='flux').get_pandas_dataframe()
-        flux_spec = sp.get_tally(name='flux spectrum').get_pandas_dataframe()
-        Li        = sp.get_tally(name='Li rxn rates').get_pandas_dataframe()
-        Li_spec   = sp.get_tally(name='Li rxn rates spectrum').get_pandas_dataframe()
+        flux         = sp.get_tally(name='flux').get_pandas_dataframe()
+        flux_spec    = sp.get_tally(name='flux spectrum').get_pandas_dataframe()
+        Li           = sp.get_tally(name='Li rxn rates').get_pandas_dataframe()
+        Li_spec      = sp.get_tally(name='Li rxn rates spectrum').get_pandas_dataframe()
         fertile      = sp.get_tally(name=f'Fertile rxn rates').get_pandas_dataframe()
         fertile_spec = sp.get_tally(name=f'Fertile rxn rates spectrum').get_pandas_dataframe()
+        current_df   = sp.get_tally(name='current').get_pandas_dataframe()
 
-        # Volumetric heating [eV per source] per cell (optional; may be missing in old statepoints)
-        heat_list = []
-        heat_err_list = []
-        try:
-            heat_df = sp.get_tally(name='volumetric heating').get_pandas_dataframe()
-            if 'score' in heat_df.columns:
-                heat_df = heat_df[heat_df['score'] == 'heating-local']
-            cell_ids_raw = flux['cell'].unique().tolist()
-            for cid in cell_ids_raw:
-                row = heat_df[heat_df['cell'] == cid]
-                if len(row) > 0:
-                    heat_list.append(row['mean'].values[0])
-                    heat_err_list.append(row['std. dev.'].values[0])
-                else:
-                    heat_list.append(np.nan)
-                    heat_err_list.append(np.nan)
-        except (KeyError, ValueError):
-            n_cells = len(flux['cell'].unique())
-            heat_list = [np.nan] * n_cells
-            heat_err_list = [np.nan] * n_cells
+        # =====================================================================
+        # MULTIPLY ALL BASE DATAFRAMES BY SECTOR_TALLY_MULT (10x)
+        # Both mean and std. dev. scale linearly by this constant.
+        # =====================================================================
+        for df in [flux, flux_spec, Li, Li_spec, fertile, fertile_spec, current_df]:
+            df['mean']      *= SECTOR_TALLY_MULT
+            df['std. dev.'] *= SECTOR_TALLY_MULT
 
         # Add new column for energy bin midpoint (for plotting)
         for df in [flux_spec, fertile_spec, Li_spec]:
             df['energy mid [eV]'] = (df['energy low [eV]'] + df['energy high [eV]'])/ 2
 
-        """
-        flux, U, and Li dataframes should have column headers: 
-            (index), cell, nuclide, score, mean, std. dev.
-        flux_spec, U_spec, and Li_spec should have column headers: 
-            (index), cell, energy low [eV], energy high [eV], nuclide, score, mean, std. dev., energy mid [eV]
-        """
 
-        """
-        Reaction rates for every fertile loading and for every energy bin 
+        # =====================================================================
+        # PROCESS LEAKAGE CURRENT INTO VOID (CELL 99)
+        # =====================================================================
+        # Filter for particles where the destination cell is 99 (the void)
+        void_current_df = current_df[current_df['cell'] == 99].copy()
+        
+        # Sum the currents leaking into 99 from any adjacent cell
+        total_leakage_current = void_current_df['mean'].sum()
+        
+        # Standard deviation sums in quadrature for independent variables
+        total_leakage_err = np.sqrt((void_current_df['std. dev.']**2).sum())
+        
+        # Create a dedicated dataframe for this density's leakage
+        leakage_df = pd.DataFrame({
+            'fertile_kgm3': [self.fertile_kgm3],
+            'leakage': [total_leakage_current],
+            'leakage_stdev': [total_leakage_err]
+        })
 
 
-        """
-        # print(flux_spec)
+        # =====================================================================
+        # PROCESS STANDARD REACTION RATES
+        # =====================================================================
         # Flux spectrum dataframe
-        flux_Ebin_df     = flux_spec[flux_spec['cell'].between(30, 39, inclusive='both')]  # extract the breeding region cells (30-39)
-        # flux_Ebin_df     = flux_Ebin_df.groupby('energy mid [eV]', as_index=False)['mean'].sum() # add 'mean' for matching 'energy mid [eV]' for each unique cell (31, 32...)
+        flux_Ebin_df     = flux_spec[flux_spec['cell'].between(30, 39, inclusive='both')]  
 
         U238_ng_Ebin_df  = fertile_spec[(fertile_spec['nuclide'] == self.fertile_isotope) & (fertile_spec['score'] == '(n,gamma)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
         U238_fis_Ebin_df = fertile_spec[(fertile_spec['nuclide'] == self.fertile_isotope) & (fertile_spec['score'] == 'fission')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
@@ -435,7 +413,7 @@ class Reactor(ABC):
         flux_list = flux['mean'].tolist()
 
         # Lithium reaction rates 
-        Li6_nt = Li[(Li['nuclide']=='Li6') & (Li['score']=='(n,Xt)')][['cell','score','mean','std. dev.']] # Li6_rr.get_pandas_dataframe()
+        Li6_nt = Li[(Li['nuclide']=='Li6') & (Li['score']=='(n,Xt)')][['cell','score','mean','std. dev.']] 
         Li7_nt = Li[(Li['nuclide']=='Li7') & (Li['score']=='(n,Xt)')][['cell','score','mean','std. dev.']] 
         
         Li6_nt_list     = Li6_nt['mean'].tolist()
@@ -443,10 +421,10 @@ class Reactor(ABC):
         Li6_nt_err_list = Li6_nt['std. dev.'].tolist()
         Li7_nt_err_list = Li7_nt['std. dev.'].tolist()
         
-        tbr_list = [x + y for x, y in zip(Li6_nt_list, Li7_nt_list)] # will look like: [0.0, 0.0, 0.094, 0.0, 1.074, 0.0]
+        tbr_list = [x + y for x, y in zip(Li6_nt_list, Li7_nt_list)] 
         tbr_err_list = [x + y for x, y in zip(Li6_nt_err_list, Li7_nt_err_list)]
 
-        # U-238 or Th-232 reaction rates for each mtu loading summed over all energies
+        # U-238 or Th-232 reaction rates 
         U238              = fertile[(fertile['nuclide']==self.fertile_isotope)][['cell','score','mean','std. dev.']]
         U238_fis_list     = U238[U238['score'] == 'fission'][['mean']]['mean'].tolist()
         U238_fis_err_list = U238[U238['score'] == 'fission'][['std. dev.']]['std. dev.'].tolist()
@@ -466,7 +444,6 @@ class Reactor(ABC):
 
         """Create list of cell IDs randomly assigned by OpenMC to match mtu loading to cell ID"""
         cell_ids = [str(x) for x in flux['cell'].unique().tolist()] 
-        # turn into str to add 'total' at end -- otherwise gets pandas error for type mismatch -- ppark 2025-10-07
 
         df = pd.DataFrame({'cell': cell_ids,
                            'flux': flux_list,
@@ -481,9 +458,7 @@ class Reactor(ABC):
                            'Li7(n,t)'          : Li7_nt_list,
                            'Li7(n,t)_stdev'    : Li7_nt_err_list,
                            f'{self.fertile_isotope}(n,fis)'       : U238_fis_list,
-                           f'{self.fertile_isotope}(n,fis)_stdev' : U238_fis_err_list,
-                           'heat_eV_src'       : heat_list,
-                           'heat_eV_src_stdev' : heat_err_list,   })
+                           f'{self.fertile_isotope}(n,fis)_stdev' : U238_fis_err_list })
 
         totals = df.sum(numeric_only=True)
         totals['cell'] = 'total'
@@ -491,7 +466,8 @@ class Reactor(ABC):
 
         print(df.iloc[:, :8])  # prints first 8 columns 
         
+        # Export the Dataframes
         df.to_csv(f'./{self.path}/tallies_summary.csv', index=False)
-        
+        leakage_df.to_csv(f'./{self.path}/leakage_void_current.csv', index=False)
         U238_ng_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_n-gamma_Ebins.csv', index=False)
         flux_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_flux_Ebins.csv', index=False)

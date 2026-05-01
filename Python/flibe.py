@@ -190,6 +190,7 @@ class FLiBe(Reactor):
         self.extent_z = (self.kappa*self.a + d_st2)*1.05
 
 
+
         # ------------------------------------------------------------------
         # Surfaces 
         # ------------------------------------------------------------------
@@ -205,14 +206,20 @@ class FLiBe(Reactor):
         points_st2 = miller_model(self.R0, self.a, self.kappa, self.delta, extrude=d_st2)  # outer coords around structural region 2
 
         # Create OpenMC surfaces and STORE THEM AS CLASS ATTRIBUTES
-        self.surface_vc  = openmc.model.Polygon(points_vc , basis='rz')  # Plasma-facing surface (inner FW)
-        self.surface_fw  = openmc.model.Polygon(points_fw , basis='rz')  # Outer surface of first wall
-        self.surface_be  = openmc.model.Polygon(points_be , basis='rz')  # Outer surface of beryllium layer
-        self.surface_st0 = openmc.model.Polygon(points_st0, basis='rz')
-        self.surface_br0 = openmc.model.Polygon(points_br0, basis='rz')
-        self.surface_st1 = openmc.model.Polygon(points_st1, basis='rz')
-        self.surface_br1 = openmc.model.Polygon(points_br1, basis='rz')
-        self.surface_st2 = openmc.model.Polygon(points_st2, basis='rz')
+        surface_vc  = openmc.model.Polygon(points_vc , basis='rz')  # Plasma-facing surface (inner FW)
+        surface_fw  = openmc.model.Polygon(points_fw , basis='rz')  # Outer surface of first wall
+        surface_be  = openmc.model.Polygon(points_be , basis='rz')  # Outer surface of beryllium layer
+        surface_st0 = openmc.model.Polygon(points_st0, basis='rz')
+        surface_br0 = openmc.model.Polygon(points_br0, basis='rz')
+        surface_st1 = openmc.model.Polygon(points_st1, basis='rz')
+        surface_br1 = openmc.model.Polygon(points_br1, basis='rz')
+        surface_st2 = openmc.model.Polygon(points_st2, basis='rz')
+
+        # Toroidal sector with reflective boundaries
+        self.sector_angle = np.radians(SECTOR_DEG)
+        wedge_plane_a  = openmc.YPlane(y0=0, boundary_type='reflective')
+        wedge_plane_b = openmc.Plane(a=-np.sin(self.sector_angle), b=np.cos(self.sector_angle), c=0, d=0, boundary_type='reflective')
+        wedge = +wedge_plane_a & -wedge_plane_b
 
         # Add boundary surfaces
         outer_cylinder = openmc.ZCylinder(r=self.extent_r, boundary_type='vacuum')
@@ -223,20 +230,32 @@ class FLiBe(Reactor):
         # ------------------------------------------------------------------
         # Cells | 10: vc | 11: fw | 41: be | 2X: structure | 3X: breeding
         # ------------------------------------------------------------------
-        cell_vc   = openmc.Cell(cell_id=10, region= -self.surface_vc)
+        cell_vc   = openmc.Cell(cell_id=10, region= -surface_vc & wedge)
         cell_vc.importance = {'neutron':1}
-        cell_fw   = openmc.Cell(cell_id=11, region= +self.surface_vc  & -self.surface_fw  , fill=self.firstwall) 
-        cell_be   = openmc.Cell(cell_id=41, region= +self.surface_fw  & -self.surface_be  , fill=self.beryllium)
-        cell_st0  = openmc.Cell(cell_id=21, region= +self.surface_be  & -self.surface_st0 , fill=self.structure)
-        cell_br0  = openmc.Cell(cell_id=31, region= +self.surface_st0 & -self.surface_br0 , fill=self.blanket)
-        cell_st1  = openmc.Cell(cell_id=22, region= +self.surface_br0 & -self.surface_st1 , fill=self.structure)
-        cell_br1  = openmc.Cell(cell_id=32, region= +self.surface_st1 & -self.surface_br1 , fill=self.blanket)
-        cell_st2  = openmc.Cell(cell_id=23, region= +self.surface_br1 & -self.surface_st2 , fill=self.structure) 
+        cell_fw   = openmc.Cell(cell_id=11, region= +surface_vc  & -surface_fw  & wedge, fill=self.firstwall) 
+        cell_be   = openmc.Cell(cell_id=41, region= +surface_fw  & -surface_be  & wedge, fill=self.beryllium)
+        cell_st0  = openmc.Cell(cell_id=21, region= +surface_be  & -surface_st0 & wedge, fill=self.structure)
+        cell_br0  = openmc.Cell(cell_id=31, region= +surface_st0 & -surface_br0 & wedge, fill=self.blanket)
+        cell_st1  = openmc.Cell(cell_id=22, region= +surface_br0 & -surface_st1 & wedge, fill=self.structure)
+        cell_br1  = openmc.Cell(cell_id=32, region= +surface_st1 & -surface_br1 & wedge, fill=self.blanket)
+        cell_st2  = openmc.Cell(cell_id=23, region= +surface_br1 & -surface_st2 & wedge, fill=self.structure) 
 
         # Surrounding air cell with proper boundaries (otherwise causes error with just Polygons)
-        cell_void = openmc.Cell(cell_id=99, region= +self.surface_st2 & -outer_cylinder & +bottom_plane & -top_plane) # fill=self.air
+        cell_void = openmc.Cell(cell_id=99, region= +surface_st2 & -outer_cylinder & +bottom_plane & -top_plane & wedge) # fill=self.air
         cell_void.importance = {'neutron':0}
 
         self.cells = [cell_vc, cell_fw, cell_be, cell_st0, cell_br0, cell_st1, cell_br1, cell_st2, cell_void]
         self.geometry = openmc.Geometry(openmc.Universe(cells=self.cells))
         # self.geometry.export_to_xml(self.path)
+
+    def settings(self):
+        super().settings()  # calls the settings() method from the parent class Reactor
+        source = openmc.IndependentSource()
+        source.space = openmc.stats.CylindricalIndependent(
+                                    r=openmc.stats.Discrete([self.R0], [1.0]),
+                                    phi=openmc.stats.Uniform(0.0, self.sector_angle),
+                                    z=openmc.stats.Discrete([0.0], [1.0]))
+        source.particle = 'neutron'
+        source.energy   = openmc.stats.Discrete([14.0e6], [1.0])
+        source.angle    = openmc.stats.Isotropic()
+        self.settings.source = [source]

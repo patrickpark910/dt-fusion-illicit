@@ -9,6 +9,11 @@ TEMP_K = 900 # [K] ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
 
 N_PARTICLES, N_CYCLES = int(4e7), 25
 
+# Geometry is split into 1/10 sector ... so multiply all tallies by 10x !! -- ppark 2026-05-01
+SECTOR            = 1/10        
+SECTOR_DEG        = SECTOR * 360
+SECTOR_TALLY_MULT = 1/SECTOR
+
 """ Material parameters of breeders """
 
 # FLiBe (2(LiF)-BeF2)
