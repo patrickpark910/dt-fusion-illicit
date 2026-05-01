@@ -43,6 +43,14 @@ def main():
                         type=str, nargs="+", default=ISOTOPES,
                         help=f"Specify lithium enrichments, separated by space, among this list: {ISOTOPES}" )
     
+    parser.add_argument("-p", "--n_particles", 
+                        type=lambda x: int(float(x)), default=N_PARTICLES,
+                        help=f"Specify number of particles in integer scientific notation, e.g. 1e6" )
+    
+    parser.add_argument("-c", "--n_cycles", 
+                        type=lambda x: int(float(x)), default=N_CYCLES,
+                        help=f"Specify number of cycles in integers, e.g. 25" )
+    
     parser.add_argument("--no_xml", 
                         dest="print_xml", action="store_false",
                         help="Disable printing model.xml files")
@@ -65,6 +73,8 @@ def main():
     print_xml  = parser.parse_args().print_xml
     run_openmc = parser.parse_args().run_openmc 
     run_debug  = parser.parse_args().run_debug
+    n_particles = parser.parse_args().n_particles
+    n_cycles    = parser.parse_args().n_cycles
 
 
     if run_type == 'plot':
@@ -100,6 +110,8 @@ def main():
                                                 fertile_isotope=fertile_isotope,
                                                 fertile_kgm3=fertile_kgm3, 
                                                 run_type='tallies',
+                                                n_particles=n_particles,
+                                                n_cycles=n_cycles,
                                                 print_xml=print_xml,
                                                 run_openmc=run_openmc,
                                                 run_debug=run_debug)

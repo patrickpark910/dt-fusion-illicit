@@ -12,7 +12,7 @@ from Python.utilities import *
 
 class Reactor(ABC):
 
-    def __init__(self, blanket_name, fertile_kgm3=0.0, fertile_isotope='U238', run_type='tallies', print_xml=True, run_openmc=True, run_debug=True):
+    def __init__(self, blanket_name, fertile_kgm3=0.0, fertile_isotope='U238', run_type='tallies', n_particles=N_PARTICLES, n_cycles=N_CYCLES, print_xml=True, run_openmc=True, run_debug=True):
 
         self.fertile_kgm3 = fertile_kgm3
         self.fertile_isotope = fertile_isotope
@@ -26,8 +26,8 @@ class Reactor(ABC):
         self.print_xml   = print_xml
         self.run_openmc  = run_openmc
         self.run_debug   = run_debug
-        self.n_particles = N_PARTICLES # int(1e6)
-        self.n_cycles    = N_CYCLES    # 10
+        self.n_particles = n_particles
+        self.n_cycles    = n_cycles
 
         # All class templates must define these variables:
         self.temp_k          = None # TEMP_K
