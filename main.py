@@ -40,7 +40,7 @@ def main():
                         help=f"Specify fertile loadings in kg/m3 (default: {FERTILE_KGM3})")
     
     parser.add_argument("-l", "--lithium", 
-                        type=str, nargs="+", default=None,
+                        type=float, nargs="+", default=None,
                         help=f"Specify lithium enrichments, separated by space, among this list: {ISOTOPES}" )
     
     parser.add_argument("-p", "--n_particles", 
@@ -106,7 +106,6 @@ def main():
             for lithium in lithiums:
                 for fertile_isotope in isotopes:
                     for fertile_kgm3 in densities: 
-                        
                         current_run = build_reactor(blanket,
                                                     blanket_name=blanket,
                                                     fertile_isotope=fertile_isotope,

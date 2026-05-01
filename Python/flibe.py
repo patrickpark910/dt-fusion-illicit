@@ -15,9 +15,10 @@ class FLiBe(Reactor):
         self.blanket_volume  = FLIBE_BL_VOL         # [m³] total breeding region (FLiBe + XF4)
         self.breeder_volume  = FLIBE_BL_VOL         # [m³] FLiBe volume, deducted by adding XF4 in materials()
         self.breeder_density = DENSITY_FLIBE        # [g/cm³]
-        self.breeder_enrich  = ENRICH_FLIBE         # [at%]
+        if self.breeder_enrich is None:
+            self.breeder_enrich  = ENRICH_FLIBE         # [at%]
 
-
+        print(self.breeder_enrich)
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
         s = f"{self.n_particles:.0e}x{self.n_cycles}".replace("+0", "").replace("+", "")
         self.name = f"{self.run_type}_{self.blanket_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_kgm3:06.2f}kgm3_{s}"           

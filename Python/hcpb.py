@@ -14,7 +14,8 @@ class HCPB(Reactor):
         self.blanket_name    = 'HCPB'
         self.blanket_volume  = HCPB_BL_VOL   # [m³] physical volume of the blanket geometry
         self.breeder_volume  = HCPB_BR_VOL   # [m³] volume of breeder material
-        self.breeder_enrich  = ENRICH_HCPB   # [at%]
+        if self.breeder_enrich is None:
+            self.breeder_enrich  = ENRICH_HCPB   # [at%]
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
         s = f"{self.n_particles:.0e}x{self.n_cycles}".replace("+0", "").replace("+", "")
