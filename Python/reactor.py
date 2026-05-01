@@ -174,16 +174,15 @@ class Reactor(ABC):
             else:
                 self.model.run(cwd=self.path)
 
-                # Clean up intermediate statepoint files
-                print(f"{C.YELLOW}Comment.{C.END} Removing intermediate statepoints (< {self.n_cycles} cycles)...")
+                # Clean up intermediate statepoint files -- KEEP UNDER THIS LAST 'ELSE'!! --ppark 2026-05-01
                 for filename in os.listdir(self.path):
                     if filename.startswith('statepoint.') and filename.endswith('.h5'):
                         try:
                             # Extract the integer batch number from the filename
-                            batch_num = int(filename.split('.')[1])
-                            
+                            batch_num = int(filename.split('.')[1])  
                             # Delete if it's less than the final programmed cycle
                             if batch_num < self.n_cycles:
+                                print(f"{C.YELLOW}Comment.{C.END} Removing intermediate statepoint.{batch_num}.h5 (< {self.n_cycles} cycles)...")
                                 file_path = os.path.join(self.path, filename)
                                 os.remove(file_path)
                         except ValueError:
@@ -191,6 +190,8 @@ class Reactor(ABC):
                             pass
         else:    
             print(f"{C.RED}Warning.{C.END} OpenMC calculation skipped (run_openmc=False) for: {self.path}")
+
+
             
 
 
@@ -387,10 +388,10 @@ class Reactor(ABC):
 
 
         # =====================================================================
-        # PROCESS LEAKAGE CURRENT INTO VOID (CELL 99)
+        # PROCESS LEAKAGE CURRENT INTO VOID (CELLS 98 & 99)
         # =====================================================================
-        # Filter for particles where the destination cell is 99 (the void)
-        void_current_df = current_df[current_df['cell'] == 99].copy()
+        # Filter for particles where the destination cell is either 98 or 99
+        void_current_df = current_df[current_df['cell'].isin([98, 99])].copy()
         
         # Sum the currents leaking into 99 from any adjacent cell
         total_leakage_current = void_current_df['mean'].sum()

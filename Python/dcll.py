@@ -308,6 +308,12 @@ class DCLL(Reactor):
         surface_bp_o  = openmc.model.Polygon(points_bp_o,  basis='rz')  # back plate        - outboard
         surface_ss_o  = openmc.model.Polygon(points_ss_o,  basis='rz')  # steel shield      - outboard
 
+        # Toroidal sector with reflective boundaries
+        self.sector_angle = np.radians(SECTOR_DEG)
+        wedge_plane_a  = openmc.YPlane(y0=0, boundary_type='reflective')
+        wedge_plane_b = openmc.Plane(a=-np.sin(self.sector_angle), b=np.cos(self.sector_angle), c=0, d=0, boundary_type='reflective')
+        wedge = +wedge_plane_a & -wedge_plane_b
+
         dividing_cylinder = openmc.ZCylinder(r=self.R0)
         outer_cylinder    = openmc.ZCylinder(r=self.extent_r, boundary_type='vacuum')
         top_plane         = openmc.ZPlane(z0=self.extent_z, boundary_type='vacuum')
@@ -318,31 +324,31 @@ class DCLL(Reactor):
         # Cells | 10: vc, fw | 2X: structure | 3X: breeding
         # ------------------------------------------------------------------
 
-        cell_vc   = openmc.Cell(cell_id=10, region= -surface_vc)
+        cell_vc   = openmc.Cell(cell_id=10, region= -surface_vc & wedge)
         cell_vc.importance = {'neutron':1}
 
-        cell_fw   = openmc.Cell(cell_id=11, region= +surface_vc  & -surface_fw,  fill=self.firstwall)
-        cell_fwf  = openmc.Cell(cell_id=21, region= +surface_fw  & -surface_fwf, fill=self.f82h)
-        cell_fwc  = openmc.Cell(cell_id=12, region= +surface_fwf & -surface_fwc, fill=self.coolant)
-        cell_fwb  = openmc.Cell(cell_id=22, region= +surface_fwc & -surface_fwb, fill=self.f82h)
-        cell_br1  = openmc.Cell(cell_id=31, region= +surface_fwb & -surface_br1, fill=self.blanket)
-        cell_d1   = openmc.Cell(cell_id=23, region= +surface_br1 & -surface_d1,  fill=self.divider)
-        cell_br2  = openmc.Cell(cell_id=32, region= +surface_d1  & -surface_br2, fill=self.blanket)
+        cell_fw   = openmc.Cell(cell_id=11, region= +surface_vc  & -surface_fw  & wedge,  fill=self.firstwall)
+        cell_fwf  = openmc.Cell(cell_id=21, region= +surface_fw  & -surface_fwf & wedge, fill=self.f82h)
+        cell_fwc  = openmc.Cell(cell_id=12, region= +surface_fwf & -surface_fwc & wedge, fill=self.coolant)
+        cell_fwb  = openmc.Cell(cell_id=22, region= +surface_fwc & -surface_fwb & wedge, fill=self.f82h)
+        cell_br1  = openmc.Cell(cell_id=31, region= +surface_fwb & -surface_br1 & wedge, fill=self.blanket)
+        cell_d1   = openmc.Cell(cell_id=23, region= +surface_br1 & -surface_d1  & wedge,  fill=self.divider)
+        cell_br2  = openmc.Cell(cell_id=32, region= +surface_d1  & -surface_br2 & wedge, fill=self.blanket)
 
-        cell_im_i = openmc.Cell(cell_id=24, region= -dividing_cylinder & +surface_br2  & -surface_im_i, fill=self.manifold)    # inner manifold - inboard
-        cell_bp_i = openmc.Cell(cell_id=41, region= -dividing_cylinder & +surface_im_i & -surface_bp_i, fill=self.f82h)        # back plate     - inboard
-        cell_ss_i = openmc.Cell(cell_id=42, region= -dividing_cylinder & +surface_bp_i & -surface_ss_i, fill=self.shield)      # steel shield   - inboard
+        cell_im_i = openmc.Cell(cell_id=24, region= -dividing_cylinder & +surface_br2  & -surface_im_i & wedge, fill=self.manifold)    # inner manifold - inboard
+        cell_bp_i = openmc.Cell(cell_id=41, region= -dividing_cylinder & +surface_im_i & -surface_bp_i & wedge, fill=self.f82h)        # back plate     - inboard
+        cell_ss_i = openmc.Cell(cell_id=42, region= -dividing_cylinder & +surface_bp_i & -surface_ss_i & wedge, fill=self.shield)      # steel shield   - inboard
 
-        cell_d2_o  = openmc.Cell(cell_id=25, region= +dividing_cylinder & +surface_br2   & -surface_d2_o,  fill=self.divider)  # divider 2         - only on outboard 
-        cell_br3_o = openmc.Cell(cell_id=33, region= +dividing_cylinder & +surface_d2_o  & -surface_br3_o, fill=self.blanket)  # breeding region 3 - only on outboard  
-        cell_im_o  = openmc.Cell(cell_id=26, region= +dividing_cylinder & +surface_br3_o & -surface_im_o,  fill=self.manifold) # inner manifold    - outboard  
-        cell_bp_o  = openmc.Cell(cell_id=43, region= +dividing_cylinder & +surface_im_o  & -surface_bp_o,  fill=self.f82h)     # back plate        - outboard
-        cell_ss_o  = openmc.Cell(cell_id=44, region= +dividing_cylinder & +surface_bp_o  & -surface_ss_o,  fill=self.shield)   # steel shield      - outboard
+        cell_d2_o  = openmc.Cell(cell_id=25, region= +dividing_cylinder & +surface_br2   & -surface_d2_o  & wedge,  fill=self.divider)  # divider 2         - only on outboard 
+        cell_br3_o = openmc.Cell(cell_id=33, region= +dividing_cylinder & +surface_d2_o  & -surface_br3_o & wedge,  fill=self.blanket)  # breeding region 3 - only on outboard  
+        cell_im_o  = openmc.Cell(cell_id=26, region= +dividing_cylinder & +surface_br3_o & -surface_im_o  & wedge,  fill=self.manifold) # inner manifold    - outboard  
+        cell_bp_o  = openmc.Cell(cell_id=43, region= +dividing_cylinder & +surface_im_o  & -surface_bp_o  & wedge,  fill=self.f82h)     # back plate        - outboard
+        cell_ss_o  = openmc.Cell(cell_id=44, region= +dividing_cylinder & +surface_bp_o  & -surface_ss_o  & wedge,  fill=self.shield)   # steel shield      - outboard
 
 
         # Void cells
-        cell_void_i = openmc.Cell(cell_id=99, region= +surface_im_i & -dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane)
-        cell_void_o = openmc.Cell(cell_id=98, region= +surface_im_o & +dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane)
+        cell_void_i = openmc.Cell(cell_id=99, region= +surface_im_i & -dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane & wedge)
+        cell_void_o = openmc.Cell(cell_id=98, region= +surface_im_o & +dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane & wedge)
         cell_void_i.importance = {'neutron': 0}
         cell_void_o.importance = {'neutron': 0}
 
