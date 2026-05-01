@@ -173,8 +173,25 @@ class Reactor(ABC):
                 print(f"{C.YELLOW}Warning.{C.END} File {self.path}/statepoint.XX.h5 already exists, so this OpenMC run will be skipped...")
             else:
                 self.model.run(cwd=self.path)
+
+                # Clean up intermediate statepoint files
+                print(f"{C.YELLOW}Comment.{C.END} Removing intermediate statepoints (< {self.n_cycles} cycles)...")
+                for filename in os.listdir(self.path):
+                    if filename.startswith('statepoint.') and filename.endswith('.h5'):
+                        try:
+                            # Extract the integer batch number from the filename
+                            batch_num = int(filename.split('.')[1])
+                            
+                            # Delete if it's less than the final programmed cycle
+                            if batch_num < self.n_cycles:
+                                file_path = os.path.join(self.path, filename)
+                                os.remove(file_path)
+                        except ValueError:
+                            # Safely ignore any improperly formatted statepoint files
+                            pass
         else:    
             print(f"{C.RED}Warning.{C.END} OpenMC calculation skipped (run_openmc=False) for: {self.path}")
+            
 
 
     def volumes(self, samples=int(1e10)):
