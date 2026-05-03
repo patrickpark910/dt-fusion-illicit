@@ -216,24 +216,28 @@ def set_xs_path():
         return xs_path
 
 
-def miller_model(R0, a, kappa, delta, extrude=0, calc_vol=False, n=100):
-    """
-    Calculate parametric coordinates from the Miller local equilibrium model.
-    cf. R. L. Miller et al., doi.org/10.1063/1.872666
-    cf. (Justin) Ball et al., arxiv.org/pdf/1510.08923
-    
+def miller_model(R0, a, kappa, delta, extrude=0, calc=None, n=100):
+    """Parametric coordinates from the Miller local equilibrium model,
+    with optional toroidal volume or surface area via Pappus's theorem.
+
+    Refs: R.L. Miller et al., doi.org/10.1063/1.872666
+          (Justin) Ball et al., arxiv.org/pdf/1510.08923
+
     Args:
-        R0 : float : major radius (cm)
-        a  : float : minor radius (cm)
-        kappa : float : elongation
-        delta : float : triangularity
-        extrude : float : thickness by which to extrude the boundary (for blanket layers)
-        calc_vol : bool : return volume?
-        n  : int : number of (r, z) pairs to generate
-    
+        R0 (float): Major radius [cm].
+        a (float): Minor radius [cm].
+        kappa (float): Elongation.
+        delta (float): Triangularity.
+        extrude (float): Outward extrusion thickness along surface normals [cm].
+        calc (str | None): 'vol' for toroidal volume [cm³], 'area' for surface area [cm²], None for coordinates only.
+        n (int): Number of (R, Z) pairs along the contour.
+
     Returns:
-        R, Z : arrays of R and Z coordinates 
+        list[tuple[float, float]]: Closed (R, Z) contour [cm].
+        float: Toroidal volume [cm³], if calc='vol'.
+        float: Toroidal surface area [cm²], if calc='area'.
     """
+
     # Original Miller contour
     t = np.linspace(0, 2*np.pi, n)
     R = R0 + a * np.cos(t + delta * np.sin(t))
@@ -258,7 +262,7 @@ def miller_model(R0, a, kappa, delta, extrude=0, calc_vol=False, n=100):
         R_offset = np.append(R_offset, R_offset[0])
         Z_offset = np.append(Z_offset, Z_offset[0])
 
-    if calc_vol:
+    if calc == 'vol':
         # Shoelace area
         A = 0.5 * np.sum(R_offset[:-1]*Z_offset[1:] - R_offset[1:]*Z_offset[:-1])
 
@@ -269,6 +273,15 @@ def miller_model(R0, a, kappa, delta, extrude=0, calc_vol=False, n=100):
         volume = 2*np.pi*Cx*abs(A)
 
         return R_offset, Z_offset, volume
+
+    if calc == 'area':
+        dR = np.diff(R_offset)
+        dZ = np.diff(Z_offset)
+        dl = np.sqrt(dR**2 + dZ**2)
+        R_mid = 0.5 * (R_offset[:-1] + R_offset[1:])
+        area = 2 * np.pi * np.sum(R_mid * dl)
+        
+        return R_offset, Z_offset, area
 
     # return R_offset, Z_offset
     return list(zip(R_offset, Z_offset))
@@ -317,21 +330,17 @@ if __name__ == "__main__":
     # print(calc_biso_blanket_vol_fracs(1000, LL_BR_VOL, fertile_isotope='Th232'))
     # for 1000, LL_BR_VOL, 'U', 0.71: (0.7874738114760764, 0.21252618852392352)
 
-    V_br1_in  = miller_model(DCLL_R0, DCLL_A, DCLL_KAPPA, DCLL_DELTA, extrude=(DCLL_FW_CM+DCLL_FWF_CM + DCLL_FWC_CM + DCLL_FWB_CM), calc_vol=True, n=10000)
-    V_br1_out = miller_model(DCLL_R0, DCLL_A, DCLL_KAPPA, DCLL_DELTA, extrude=(DCLL_FW_CM+DCLL_FWF_CM + DCLL_FWC_CM + DCLL_FWB_CM + DCLL_BR1_CM), calc_vol=True, n=10000)
-    V_br1 = (V_br1_out[2] - V_br1_in[2]) / 100**3
-    print(f"Breeding region 1: {V_br1:.6f} m^3")
+    A_FW_FLiBe  = miller_model(FLIBE_R0, FLIBE_A, FLIBE_KAPPA, FLIBE_DELTA, extrude=(FLIBE_FW_CM), calc='area', n=10000)
+    A_FW_DCLL   = miller_model(DCLL_R0, DCLL_A, DCLL_KAPPA, DCLL_DELTA,     extrude=(DCLL_FW_CM),  calc='area', n=10000)
+    A_FW_HCPB   = miller_model(HCPB_R0, HCPB_A, HCPB_KAPPA, HCPB_DELTA,     extrude=(HCPB_FW_CM),  calc='area', n=10000)
 
-    V_br2_in  = miller_model(DCLL_R0, DCLL_A, DCLL_KAPPA, DCLL_DELTA, extrude=(DCLL_FW_CM+DCLL_FWF_CM + DCLL_FWC_CM + DCLL_FWB_CM + DCLL_BR1_CM + DCLL_D1_CM), calc_vol=True, n=10000)
-    V_br2_out = miller_model(DCLL_R0, DCLL_A, DCLL_KAPPA, DCLL_DELTA, extrude=(DCLL_FW_CM+DCLL_FWF_CM + DCLL_FWC_CM + DCLL_FWB_CM + DCLL_BR1_CM + DCLL_D1_CM + DCLL_BR2_CM), calc_vol=True, n=10000)
-    V_br2 = (V_br2_out[2] - V_br2_in[2]) / 100**3
-    print(f"Breeding region 2: {V_br2:.6f} m^3")
+    print(f"FW surface area for FLiBe: {(A_FW_FLiBe[2]/1e4):.2f} m²")   
+    print(f"FW surface area for DCLL:  {(A_FW_DCLL[2]/1e4):.2f}  m²")
+    print(f"FW surface area for HCPB:  {(A_FW_HCPB[2]/1e4):.2f}  m²")
 
-    V_br3_in  = miller_model(DCLL_R0, DCLL_A, DCLL_KAPPA, DCLL_DELTA, extrude=(DCLL_FW_CM+DCLL_FWF_CM + DCLL_FWC_CM + DCLL_FWB_CM + DCLL_BR1_CM + DCLL_D1_CM + DCLL_BR2_CM + DCLL_D2_CM), calc_vol=True, n=10000)
-    V_br3_out = miller_model(DCLL_R0, DCLL_A, DCLL_KAPPA, DCLL_DELTA, extrude=(DCLL_FW_CM+DCLL_FWF_CM + DCLL_FWC_CM + DCLL_FWB_CM + DCLL_BR1_CM + DCLL_D1_CM + DCLL_BR2_CM + DCLL_D2_CM + DCLL_BR3_CM), calc_vol=True, n=10000)
-    V_br3 = (V_br3_out[2] - V_br3_in[2]) / 100**3
-    print(f"Breeding region 3: {V_br3:.6f} m^3")
+    P_NEUTRON_MW = P_FUS_MW * 14.06 / 17.6
+    print(P_NEUTRON_MW)
 
-    print(f"Actual outboard breeding region 3 volume is: 106.6827507 m^3")
-    print(f"In which case the outboard is this fraction: {106.6827507 / V_br3:.6f}")
-
+    print(f"Neutron wall loading for FLiBe: {(P_NEUTRON_MW / (A_FW_FLiBe[2]/1e4))} MW/m²")   
+    print(f"Neutron wall loading for DCLL:  {(P_NEUTRON_MW / (A_FW_DCLL[2]/1e4))} MW/m²")
+    print(f"Neutron wall loading for HCPB:  {(P_NEUTRON_MW / (A_FW_HCPB[2]/1e4))} MW/m²")
