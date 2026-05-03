@@ -311,9 +311,9 @@ class DCLL(Reactor):
 
         # Toroidal sector with reflective boundaries
         self.sector_angle = np.radians(SECTOR_DEG)
-        wedge_plane_a  = openmc.YPlane(y0=0, boundary_type='reflective')
-        wedge_plane_b = openmc.Plane(a=-np.sin(self.sector_angle), b=np.cos(self.sector_angle), c=0, d=0, boundary_type='reflective')
-        wedge = +wedge_plane_a & -wedge_plane_b
+        wedge_plane_a     = openmc.YPlane(y0=0, boundary_type='reflective')
+        wedge_plane_b     = openmc.Plane(a=-np.sin(self.sector_angle), b=np.cos(self.sector_angle), c=0, d=0, boundary_type='reflective')
+        wedge             = +wedge_plane_a & -wedge_plane_b
 
         dividing_cylinder = openmc.ZCylinder(r=self.R0)
         outer_cylinder    = openmc.ZCylinder(r=self.extent_r, boundary_type='vacuum')
@@ -348,8 +348,8 @@ class DCLL(Reactor):
 
 
         # Void cells
-        cell_void_i = openmc.Cell(cell_id=99, region= +surface_im_i & -dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane & wedge)
-        cell_void_o = openmc.Cell(cell_id=98, region= +surface_im_o & +dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane & wedge)
+        cell_void_i = openmc.Cell(cell_id=99, region= +surface_ss_i & -dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane & wedge)
+        cell_void_o = openmc.Cell(cell_id=98, region= +surface_ss_o & +dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane & wedge)
         cell_void_i.importance = {'neutron': 0}
         cell_void_o.importance = {'neutron': 0}
 

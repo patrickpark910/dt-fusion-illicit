@@ -15,9 +15,11 @@ SECTOR_DEG        = SECTOR * 360
 SECTOR_TALLY_MULT = 1/SECTOR
 
 # Fusion power parameters - from JL Ball 24
-N_PER_MJ = 3.546e17 # 17.6 MeV
+EV_TO_MJ = 1.602e-25  # 1.602e-19 J/eV × 1e-6 MJ/J
+N_PER_MJ = 1 / (17.6 * 1.602e-19)  # 1 MJ / (17.6 MeV × 1.602e-19 J/eV) = 3.546e17 neutrons/MJ 
 P_FUS_MW = 1000
 NPS_FUS  = P_FUS_MW * N_PER_MJ # n/s
+
 
 """ Material parameters of breeders """
 

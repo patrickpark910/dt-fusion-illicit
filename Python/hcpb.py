@@ -277,25 +277,30 @@ class HCPB(Reactor):
         outer_cylinder    = openmc.ZCylinder(r=self.extent_r, boundary_type='vacuum')
         top_plane         = openmc.ZPlane(z0=self.extent_z, boundary_type='vacuum')
         bottom_plane      = openmc.ZPlane(z0=-self.extent_z, boundary_type='vacuum')
+
+        self.sector_angle = np.radians(SECTOR_DEG)
+        wedge_plane_a = openmc.YPlane(y0=0, boundary_type='reflective')
+        wedge_plane_b = openmc.Plane(a=-np.sin(self.sector_angle), b=np.cos(self.sector_angle), c=0, d=0, boundary_type='reflective')
+        wedge = +wedge_plane_a & -wedge_plane_b
         
 
         # ------------------------------------------------------------------
         # Cells | 10: vc, fw | 2X: structure | 3X: breeding
         # ------------------------------------------------------------------
 
-        cell_vc = openmc.Cell(cell_id=10, region= -surface_vc)
+        cell_vc = openmc.Cell(cell_id=10, region= -surface_vc & wedge)
         cell_vc.importance = {'neutron':1}
 
-        cell_fw    = openmc.Cell(cell_id=11, region= +surface_vc  & -surface_fw,  fill=self.firstwall)
-        cell_st1   = openmc.Cell(cell_id=21, region= +surface_fw  & -surface_st1, fill=self.eurofer)
-        cell_br1_i = openmc.Cell(cell_id=31, region= -dividing_cylinder & +surface_st1   & -surface_br1_i, fill=self.blanket)  # inboard blanket
-        cell_st2_i = openmc.Cell(cell_id=22, region= -dividing_cylinder & +surface_br1_i & -surface_st2_i, fill=self.eurofer)  # inboard structure
-        cell_br1_o = openmc.Cell(cell_id=32, region= +dividing_cylinder & +surface_st1   & -surface_br1_o, fill=self.blanket)  # outboard blanket
-        cell_st2_o = openmc.Cell(cell_id=23, region= +dividing_cylinder & +surface_br1_o & -surface_st2_o, fill=self.eurofer)  # outboard structure
+        cell_fw    = openmc.Cell(cell_id=11, region= +surface_vc  & -surface_fw & wedge,  fill=self.firstwall)
+        cell_st1   = openmc.Cell(cell_id=21, region= +surface_fw  & -surface_st1 & wedge, fill=self.eurofer)
+        cell_br1_i = openmc.Cell(cell_id=31, region= -dividing_cylinder & +surface_st1   & -surface_br1_i & wedge, fill=self.blanket)  # inboard blanket
+        cell_st2_i = openmc.Cell(cell_id=22, region= -dividing_cylinder & +surface_br1_i & -surface_st2_i & wedge, fill=self.eurofer)  # inboard structure
+        cell_br1_o = openmc.Cell(cell_id=32, region= +dividing_cylinder & +surface_st1   & -surface_br1_o & wedge, fill=self.blanket)  # outboard blanket
+        cell_st2_o = openmc.Cell(cell_id=23, region= +dividing_cylinder & +surface_br1_o & -surface_st2_o & wedge, fill=self.eurofer)  # outboard structure
         
         # Void cells
-        cell_void_i = openmc.Cell(cell_id=98, region= +surface_st2_i & -dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane)
-        cell_void_o = openmc.Cell(cell_id=97, region= +surface_st2_o & +dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane)
+        cell_void_i = openmc.Cell(cell_id=99, region= +surface_st2_i & -dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane & wedge)
+        cell_void_o = openmc.Cell(cell_id=98, region= +surface_st2_o & +dividing_cylinder & -outer_cylinder & +bottom_plane & -top_plane & wedge)
         cell_void_i.importance = {'neutron': 0}
         cell_void_o.importance = {'neutron': 0}
 

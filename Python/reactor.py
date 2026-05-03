@@ -56,10 +56,11 @@ class Reactor(ABC):
         self.tallies = openmc.Tallies() # initialize
 
         # Filters
-        cellfrom_filter = openmc.CellFromFilter([cell for cell in self.cells if cell.fill is not None])
+        void_cell_filter    = openmc.CellFilter([cell for cell in self.cells if cell.fill is None])
+        cellfrom_filter     = openmc.CellFromFilter(self.cells)
         cellwithvoid_filter = openmc.CellFilter(self.cells)
-        cell_filter = openmc.CellFilter([cell for cell in self.cells if cell.fill is not None])
-        energy_filter = openmc.EnergyFilter(logspace_per_decade(1e-5, 20e6, 100)) # './helpers/utilities.py'
+        cell_filter         = openmc.CellFilter([cell for cell in self.cells if cell.fill is not None])  # 
+        energy_filter       = openmc.EnergyFilter(logspace_per_decade(1e-3, 20e6, 50)) # './helpers/utilities.py'
                 
 
         # ---------------------------------------------------------------
@@ -73,7 +74,10 @@ class Reactor(ABC):
 
         # Current tally
         current_tally        = self.make_tally('current', ['current'], filters=[cellwithvoid_filter, cellfrom_filter])
-        # current_energy_tally = self.make_tally('current spectrum', ['current'], filters=[energy_filter]) # this might make output too big
+
+        # Leakage current spectrum - scope CellFilter to void cells only to keep output manageable
+        current_energy_tally = self.make_tally('current spectrum', ['current'],
+                                               filters=[void_cell_filter, cellfrom_filter, energy_filter])
 
         # Flux tally 
         flux_tally        = self.make_tally('flux', ['flux'], filters=[cell_filter])
@@ -84,11 +88,12 @@ class Reactor(ABC):
         # Power tallies
         # - Tally heating-local throughout the blanket, then tally fission-q-recoverable to isolate fission power contribution
         # ---------------------------------------------------------------
-        heating_tally        = self.make_tally('heating', ['heating-local'], filters=[cell_filter])
-        heating_energy_tally = self.make_tally('heating spectrum', ['heating-local'], filters=[energy_filter])  # not having cell_filter on purpose
 
-        fisq_tally = self.make_tally('fission-q recoverable', ['fission-q-recoverable'], filters=[cell_filter])
-        fisq_energy_tally = self.make_tally('fission-q recoverable spectrum', ['fission-q-recoverable'], filters=[energy_filter])  # not having cell_filter on purpose
+        heating_tally        = self.make_tally('heating', ['heating-local'], filters=[cell_filter])
+        heating_energy_tally = self.make_tally('heating spectrum', ['heating-local'], filters=[cell_filter, energy_filter])  # not having cell_filter on purpose
+
+        fisq_tally           = self.make_tally('fission-q', ['fission-q-recoverable'], filters=[cell_filter])
+        fisq_energy_tally    = self.make_tally('fission-q spectrum', ['fission-q-recoverable'], filters=[cell_filter, energy_filter])  # not having cell_filter on purpose
 
 
         # ---------------------------------------------------------------
@@ -96,14 +101,14 @@ class Reactor(ABC):
         # ---------------------------------------------------------------
 
         # Fertile element reaction rates
-        fertile_tally_tot    = self.make_tally(f'Total fertile rxn rate',     ['(n,gamma)', 'fission', 'elastic'], nuclides=['U238', 'U235', 'Th232'])
-        fertile_tally        = self.make_tally(f'Fertile rxn rates',          ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter], nuclides=['U238', 'U235', 'Th232'])
-        fertile_energy_tally = self.make_tally(f'Fertile rxn rates spectrum', ['(n,gamma)', 'fission', 'elastic'], filters=[energy_filter], nuclides=['U238', 'U235', 'Th232'])
+        fertile_tally_tot    = self.make_tally('Total fertile rxn rate',     ['(n,gamma)', 'fission', 'elastic'], nuclides=['U238', 'U235', 'Th232'])
+        fertile_tally        = self.make_tally('Fertile rxn rates',          ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter], nuclides=['U238', 'U235', 'Th232'])
+        fertile_energy_tally = self.make_tally('Fertile rxn rates spectrum', ['(n,gamma)', 'fission', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['U238', 'U235', 'Th232'])
 
         # Lithium reaction rates
         Li_tally_tot    = self.make_tally('Total Li rxn rate',     ['(n,gamma)', '(n,Xt)', 'elastic'], nuclides=['Li6', 'Li7'])
         Li_tally        = self.make_tally('Li rxn rates',          ['(n,gamma)', '(n,Xt)', 'elastic'], filters=[cell_filter], nuclides=['Li6', 'Li7'])
-        Li_energy_tally = self.make_tally('Li rxn rates spectrum', ['(n,gamma)', '(n,Xt)', 'elastic'], filters=[energy_filter], nuclides=['Li6', 'Li7'])
+        Li_energy_tally = self.make_tally('Li rxn rates spectrum', ['(n,gamma)', '(n,Xt)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Li6', 'Li7'])
 
         # Fluorine reaction rates
         # F_tally        = self.make_tally('F rxn rates', ['(n,gamma)', 'elastic'], filters=[cell_filter], nuclides=['F19'])
@@ -111,7 +116,7 @@ class Reactor(ABC):
 
         # Beryllium reaction rates
         Be_tally        = self.make_tally('Be rxn rates', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter], nuclides=['Be9'])
-        Be_energy_tally = self.make_tally('Be rxn rates spectrum', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[energy_filter], nuclides=['Be9'])
+        Be_energy_tally = self.make_tally('Be rxn rates spectrum', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Be9'])
 
 
         self.tallies.extend([fertile_tally_tot, Li_tally_tot])
@@ -119,8 +124,8 @@ class Reactor(ABC):
         self.tallies.extend([current_tally, flux_tally])
         self.tallies.extend([heating_tally, fisq_tally])
         self.tallies.extend([fertile_energy_tally, Li_energy_tally, Be_energy_tally])
-        self.tallies.extend([flux_energy_tally]) 
-        self.tallies.extend([heating_energy_tally, fisq_energy_tally])y
+        self.tallies.extend([current_energy_tally, flux_energy_tally]) 
+        self.tallies.extend([heating_energy_tally, fisq_energy_tally])
 
 
     def make_tally(self, name, scores, filters:list=None, nuclides:list=None):
@@ -391,9 +396,11 @@ class Reactor(ABC):
         flux_spec    = sp.get_tally(name='flux spectrum').get_pandas_dataframe()
         Li           = sp.get_tally(name='Li rxn rates').get_pandas_dataframe()
         Li_spec      = sp.get_tally(name='Li rxn rates spectrum').get_pandas_dataframe()
-        fertile      = sp.get_tally(name=f'Fertile rxn rates').get_pandas_dataframe()
-        fertile_spec = sp.get_tally(name=f'Fertile rxn rates spectrum').get_pandas_dataframe()
+        fertile      = sp.get_tally(name='Fertile rxn rates').get_pandas_dataframe()
+        fertile_spec = sp.get_tally(name='Fertile rxn rates spectrum').get_pandas_dataframe()
         current_df   = sp.get_tally(name='current').get_pandas_dataframe()
+        heating      = sp.get_tally(name='heating').get_pandas_dataframe()
+        fisq         = sp.get_tally(name='fission-q').get_pandas_dataframe()
 
         # Add new column for energy bin midpoint (for plotting)
         for df in [flux_spec, fertile_spec, Li_spec]:
@@ -401,23 +408,57 @@ class Reactor(ABC):
 
 
         # =====================================================================
-        # PROCESS LEAKAGE CURRENT INTO VOID (CELLS 98 & 99)
+        # PROCESS LEAKAGE CURRENT INTO VOID CELLS
         # =====================================================================
-        # Filter for particles where the destination cell is either 98 or 99
-        void_current_df = current_df[current_df['cell'].isin([98, 99])].copy()
-        
-        # Sum the currents leaking into 99 from any adjacent cell
+        # Identify void vs material cells by fill
+        void_ids    = [cell.id for cell in self.cells if cell.fill is None and cell.id != 10]  # exclude plasma
+        material_ids = [23, 22, 42, 44]  # these are the outermost blanket cells for FLiBe (23), HCPB (22, 23), DCLL (42, 44)
+
+        # Filter: destination is a void cell, origin is a material cell
+        void_current_df = current_df[
+            (current_df['cell'].isin(void_ids)) &
+            (current_df['cellfrom'].isin(material_ids))
+        ].copy()
+
+        # Total leakage
         total_leakage_current = void_current_df['mean'].sum()
-        
-        # Standard deviation sums in quadrature for independent variables
         total_leakage_err = np.sqrt((void_current_df['std. dev.']**2).sum())
-        
-        # Create a dedicated dataframe for this density's leakage
-        leakage_df = pd.DataFrame({
-            'fertile_kgm3': [self.fertile_kgm3],
-            'leakage': [total_leakage_current],
-            'leakage_stdev': [total_leakage_err]
-        })
+
+        # Per-void-cell breakdown (inboard vs outboard for DCLL)
+        leakage_rows = []
+        for vid in void_ids:
+            mask = void_current_df['cell'] == vid
+            leak_val = void_current_df.loc[mask, 'mean'].sum()
+            leak_err = np.sqrt((void_current_df.loc[mask, 'std. dev.']**2).sum())
+            # Which material cell(s) actually contribute
+            neighbors = void_current_df.loc[mask & (void_current_df['mean'] > 0), 'cellfrom'].unique().tolist()
+            leakage_rows.append({'void_cell': vid, 'cellfrom': str(neighbors),
+                                 'leakage': leak_val, 'leakage_stdev': leak_err})
+
+        leakage_rows.append({'void_cell': 'total', 'cellfrom': '',
+                             'leakage': total_leakage_current, 'leakage_stdev': total_leakage_err})
+
+        leakage_df = pd.DataFrame(leakage_rows)
+        leakage_df.insert(0, 'fertile_kgm3', self.fertile_kgm3)
+
+
+        # =====================================================================
+        # PROCESS LEAKAGE CURRENT SPECTRUM INTO VOID (CELL 99)
+        # =====================================================================
+        current_spec_df = sp.get_tally(name='current spectrum').get_pandas_dataframe()
+        current_spec_df['energy mid [eV]'] = (current_spec_df['energy low [eV]'] + current_spec_df['energy high [eV]']) / 2
+
+        # Filter: destination is cell 99, exclude self-crossing (cellfrom != 99)
+        leakage_spec_df = current_spec_df[
+            (current_spec_df['cell'] == 99) &
+            (current_spec_df['cellfrom'] != 99)
+        ].copy()
+
+        # Sum partial currents over all cellfrom origins per energy bin
+        leakage_Ebin_df = ( leakage_spec_df.groupby(['energy low [eV]', 'energy high [eV]', 'energy mid [eV]'])
+                                           .agg(mean=('mean', 'sum'),std_dev=('std. dev.', lambda x: np.sqrt((x**2).sum())))
+                                           .reset_index() )
+        leakage_Ebin_df.columns = ['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'mean', 'std. dev.']
 
 
         # =====================================================================
@@ -453,6 +494,12 @@ class Reactor(ABC):
         U238_fis_err_list = U238[U238['score'] == 'fission'][['std. dev.']]['std. dev.'].tolist()
         U238_ng_list      = U238[U238['score'] == '(n,gamma)'][['mean']]['mean'].tolist()
         U238_ng_err_list  = U238[U238['score'] == '(n,gamma)'][['std. dev.']]['std. dev.'].tolist()
+        
+        # Heating and fission-q-recoverable, converted to MW
+        heat_list     = (heating['mean'] * NPS_FUS * EV_TO_MJ).tolist()
+        heat_err_list = (heating['std. dev.'] * NPS_FUS * EV_TO_MJ).tolist()
+        fisq_list     = (fisq['mean'] * NPS_FUS * EV_TO_MJ).tolist()
+        fisq_err_list = (fisq['std. dev.'] * NPS_FUS * EV_TO_MJ).tolist()
 
 
         # Determine the atomic mass based on the isotope
@@ -481,7 +528,11 @@ class Reactor(ABC):
                            'Li7(n,t)'          : Li7_nt_list,
                            'Li7(n,t)_stdev'    : Li7_nt_err_list,
                            f'{self.fertile_isotope}(n,fis)'       : U238_fis_list,
-                           f'{self.fertile_isotope}(n,fis)_stdev' : U238_fis_err_list })
+                           f'{self.fertile_isotope}(n,fis)_stdev' : U238_fis_err_list,
+                           'heating [MW]'      : heat_list ,
+                           'heating_stdev'     : heat_err_list,
+                           'fisq [MW]'         : fisq_list,
+                           'fisq_stdev'        : fisq_err_list })
 
         totals = df.sum(numeric_only=True)
         totals['cell'] = 'total'
@@ -491,6 +542,7 @@ class Reactor(ABC):
         
         # Export the Dataframes
         df.to_csv(f'./{self.path}/tallies_summary.csv', index=False)
-        leakage_df.to_csv(f'./{self.path}/leakage_void_current.csv', index=False)
+        leakage_df.to_csv(f'./{self.path}/leakage.csv', index=False)
         U238_ng_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_n-gamma_Ebins.csv', index=False)
         flux_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_flux_Ebins.csv', index=False)
+        leakage_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_leakage_Ebins.csv', index=False)
