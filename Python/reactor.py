@@ -396,6 +396,7 @@ class Reactor(ABC):
         flux_spec    = sp.get_tally(name='flux spectrum').get_pandas_dataframe()
         Li           = sp.get_tally(name='Li rxn rates').get_pandas_dataframe()
         Li_spec      = sp.get_tally(name='Li rxn rates spectrum').get_pandas_dataframe()
+        Be           = sp.get_tally(name='Be rxn rates').get_pandas_dataframe()
         fertile      = sp.get_tally(name='Fertile rxn rates').get_pandas_dataframe()
         fertile_spec = sp.get_tally(name='Fertile rxn rates spectrum').get_pandas_dataframe()
         current_df   = sp.get_tally(name='current').get_pandas_dataframe()
@@ -484,6 +485,11 @@ class Reactor(ABC):
         Li7_nt_list     = Li7_nt['mean'].tolist() 
         Li6_nt_err_list = Li6_nt['std. dev.'].tolist()
         Li7_nt_err_list = Li7_nt['std. dev.'].tolist()
+
+        # Beryllium (n, 2n) reaction rates
+        Be9_n2n = Be[(Be['nuclide'] == 'Be9') & (Be['score'] == '(n,2n)')][['cell', 'score', 'mean', 'std. dev.']]
+        Be9_n2n_list     = Be9_n2n['mean'].tolist()
+        Be9_n2n_err_list = Be9_n2n['std. dev.'].tolist()
         
         tbr_list = [x + y for x, y in zip(Li6_nt_list, Li7_nt_list)] 
         tbr_err_list = [x + y for x, y in zip(Li6_nt_err_list, Li7_nt_err_list)]
@@ -527,6 +533,8 @@ class Reactor(ABC):
                            'Li6(n,t)_stdev'    : Li6_nt_err_list,
                            'Li7(n,t)'          : Li7_nt_list,
                            'Li7(n,t)_stdev'    : Li7_nt_err_list,
+                           'Be9(n,2n)'         : Be9_n2n_list,
+                           'Be9(n,2n)_stdev'   : Be9_n2n_err_list,
                            f'{self.fertile_isotope}(n,fis)'       : U238_fis_list,
                            f'{self.fertile_isotope}(n,fis)_stdev' : U238_fis_err_list,
                            'heating [MW]'      : heat_list ,
