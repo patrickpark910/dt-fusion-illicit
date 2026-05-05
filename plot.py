@@ -53,9 +53,6 @@ class Plot:
         # Calculate corrected TBR values by multiplying the appropriate correction factor for each fertile_kg/m3
         self.hcpb_u_rr_df_corr  = self.hcpb_u_rr_df.copy()
         self.hcpb_th_rr_df_corr = self.hcpb_th_rr_df.copy()
-        self.dcll_u_rr_df_corr  = self.dcll_u_rr_df.copy()
-        self.dcll_th_rr_df_corr = self.dcll_th_rr_df.copy()
-
         self.hcpb_u_rr_df_corr['U238(n,g)']   *= get_ratio(self.hcpb_u_rr_df_corr['fertile_kg/m3'],  HCPB_CONV_U_FPR)
         self.hcpb_th_rr_df_corr['Th232(n,g)'] *= get_ratio(self.hcpb_th_rr_df_corr['fertile_kg/m3'], HCPB_CONV_TH_FPR)        
 
@@ -71,12 +68,13 @@ class Plot:
         # -------------------------------------------------------------
 
         # Load the dataframes to plot, label, color, marker, markersize, linestyle, and polynomial fit
+        long_dashed = (0, (10, 2))
         datasets = [ (self.flibe_u_rr_df,  r'FLiBe-UF$_4$',  '#66b420', 'o',  5,  '-',  'makima'),
-                     (self.flibe_th_rr_df, r'FLiBe-ThF$_4$', '#66b420', '+', 12, '--',  'makima'),
                      (self.hcpb_u_rr_df,   r'HCPB-UO$_2$',   '#b41f24', 's',  6,  '-',  2),
-                     (self.hcpb_th_rr_df,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, '--',  2),
                      (self.dcll_u_rr_df,   r'DCLL-UO$_2$',   '#0047ba', '^',  8,  '-',  2),
-                     (self.dcll_th_rr_df,  r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, '--',  2),
+                     (self.flibe_th_rr_df, r'FLiBe-ThF$_4$', '#66b420', '+', 12, long_dashed,  'makima'),
+                     (self.hcpb_th_rr_df,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, long_dashed,  2),
+                     (self.dcll_th_rr_df,  r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, long_dashed,  2),
                    ]
 
         # Select a subset of fertile kg/m3 to SHOW to avoid cluttering the low end with markers
@@ -85,10 +83,10 @@ class Plot:
         # Settings
 
         v = {'xlim': (-25, 1025), 'xmax':1000, 'x_major': 100, 'x_minor': 50, 
-             'ylim': (0.83, 1.47), 'suffix': '1000kgm3', 'fertile_kgm3': selected,
+             'ylim': (0.73, 1.47), 'suffix': '1000kgm3', 'fertile_kgm3': selected,
              'leg_loc': 'upper right'}
   
-        plt.figure(figsize=(3.5, 2.75))
+        plt.figure(figsize=(3.5, 3.0))  # 3.5 x 2.75
         ax = plt.gca()
         ax.axhspan(0, 1.00, color='#F0F0F0')            
 
@@ -102,7 +100,7 @@ class Plot:
             y_filtered = BLANKET_COVERAGE * df_filtered['tbr']
 
             # Plot filtered data
-            plt.scatter(x_filtered, y_filtered, marker=marker, s=markersize*5, color=color, zorder=3)
+            # plt.scatter(x_filtered, y_filtered, marker=marker, s=markersize*5, color=color, zorder=3)
 
             # But still fit the polynomial to all of the data you did compute
             x_fit = df['fertile_kg/m3']
@@ -117,10 +115,10 @@ class Plot:
                 y_fine = np.poly1d(coeffs)(x_fine)
 
             # Plot interpolation
-            plt.plot(x_fine, y_fine, linestyle, linewidth=1, color=color)
+            plt.plot(x_fine, y_fine, linestyle=linestyle, linewidth=0.75, color=color)
 
             # Dummy plots for legend -- bit of a hack lmao -- ppark
-            plt.plot([9e8,9e9], [9e8,9e9], marker+linestyle, markersize=markersize, linewidth=1, color=color, label=label)
+            # plt.plot([9e8,9e9], [9e8,9e9], marker+linestyle, markersize=markersize, linewidth=0.75, color=color, label=label)
 
         # Labeling
         plt.xlabel(r'Fertile isotope density [kg$/$m³]')  # specifically use unicode superscript m³ and not m$^3$
@@ -136,7 +134,7 @@ class Plot:
         
         ax.yaxis.set_ticks_position('both')
         ax.yaxis.set_major_locator(MultipleLocator(0.05))
-        ax.yaxis.set_minor_locator(MultipleLocator(0.01))
+        ax.yaxis.set_minor_locator(MultipleLocator(0.025))
         
         ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
         ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
@@ -147,8 +145,8 @@ class Plot:
         # leg.get_frame().set_linewidth(0.5) 
 
         if self.save:
-            plt.savefig(f'./Figures/PDF/fig_tbr_{v["suffix"]}.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/PNG/fig_tbr_{v["suffix"]}.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/PDF/fig_tbr_{v["suffix"]}.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+            plt.savefig(f'./Figures/PNG/fig_tbr_{v["suffix"]}.png', bbox_inches='tight', pad_inches=0.01, format='png')
             print(f"Comment. <plot.py/plot_tbr()> Exported TBR plot: fig_tbr_{v['suffix']}")
         else:
             print(f"{C.YELLOW}Comment.{C.END} <plot.py/plot_tbr()> Did NOT export TBR plot due to user setting: fig_tbr_{v['suffix']}")
@@ -175,13 +173,13 @@ class Plot:
         # Dataset Configuration: 
         # (dataframe, label, color, marker, markersize, linestyle, reaction_key, conversion_factor)
         # -----------------------------------------------------------------------------------------
-        long_dashed = (0, (10, 3))
+        long_dashed = (0, (10, 2))
         datasets = [ (self.flibe_th_rr_df,      r'FLiBe-ThF$_4$', '#66b420', '+', 12, long_dashed, 'makima', 'Th232(n,g)', u233_conv),
                      (self.hcpb_th_rr_df_corr,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, long_dashed, 'makima', 'Th232(n,g)', u233_conv),
-                     (self.dcll_th_rr_df_corr,  r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, long_dashed, 'makima', 'Th232(n,g)', u233_conv),
+                     (self.dcll_th_rr_df,       r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, long_dashed, 'makima', 'Th232(n,g)', u233_conv),
                      (self.flibe_u_rr_df,       r'FLiBe-UF$_4$',  '#66b420', 'o',  5,         '-', 'makima',  'U238(n,g)', pu239_conv),
                      (self.hcpb_u_rr_df_corr,   r'HCPB-UO$_2$',   '#b41f24', 's',  6,         '-', 'makima',  'U238(n,g)', pu239_conv),
-                     (self.dcll_u_rr_df_corr,   r'DCLL-UO$_2$',   '#0047ba', '^',  8,         '-', 'makima',  'U238(n,g)', pu239_conv),      ]
+                     (self.dcll_u_rr_df,        r'DCLL-UO$_2$',   '#0047ba', '^',  8,         '-', 'makima',  'U238(n,g)', pu239_conv),      ]
 
         # Select a subset of fertile kg/m3 to SHOW to avoid cluttering the low end with markers
         selected1 = [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150,]  # [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99]
@@ -189,20 +187,20 @@ class Plot:
 
         # Set view limits for each of the plots
         view_limits = [ # Zoomed in on (0, 155) fertile kg/m3
-                        {'xlim': (-2.5, 152.5),   'xmax': 150, 'x_major': 15,  'x_minor': 5,  
-                         'ylim': (-15, 565), 'y_major': 50, 'y_minor':25 ,
-                         'suffix': '0150kgm3', 'fertile_kgm3': selected1,
-                         'leg_loc': 'upper left'},
+                        # {'xlim': (-2.5, 152.5),   'xmax': 150, 'x_major': 15,  'x_minor': 5,  
+                        #  'ylim': (-15, 565), 'y_major': 50, 'y_minor':25 ,
+                        #  'suffix': '0150kgm3', 'fertile_kgm3': selected1,
+                        #  'leg_loc': 'upper left'},
                         # Zoomed out to (0, 1000) fertile kg/m3
                         {'xlim': (-25, 1025), 'xmax':1000, 'x_major': 100, 'x_minor': 50, 
-                         'ylim': (-50, 1850), 'y_major': 200, 'y_minor':100,
+                         'ylim': (-50, 2250), 'y_major': 200, 'y_minor':100,
                          'suffix': '1000kgm3', 'fertile_kgm3': selected2,
                          'leg_loc': 'upper left'} ]
 
 
         for v in view_limits:
 
-            plt.figure(figsize=(8, 6))
+            plt.figure(figsize=(3.5, 3.0))  # 3.5 x 2.75
             ax = plt.gca()
             x_fine = np.linspace(0, 1000, 500)
 
@@ -231,10 +229,10 @@ class Plot:
                     y_fine = np.poly1d(coeffs)(x_fine)
 
                 # Plot interpolation
-                plt.plot(x_fine, y_fine, linestyle=linestyle, linewidth=1, color=color)
+                plt.plot(x_fine, y_fine, linestyle=linestyle, linewidth=0.75, color=color)
 
                 # Dummy plots for legend -- bit of a hack lmao -- ppark
-                # plt.plot([9e8,9e9], [9e8,9e9], marker+linestyle, markersize=markersize, linewidth=1, color=color, label=label)
+                # plt.plot([9e8,9e9], [9e8,9e9], marker+linestyle, markersize=markersize, linewidth=0.75, color=color, label=label)
 
             # Labeling and Titles
             plt.xlabel(r"Fertile isotope density [kg$/$m³]")  # specifically use unicode superscript m³ and not m$^3$
@@ -260,8 +258,8 @@ class Plot:
             # leg.get_frame().set_linewidth(0.5) 
 
             if self.save:
-                plt.savefig(f'./Figures/PDF/fig_fpr_{v["suffix"]}.pdf', bbox_inches='tight', format='pdf')
-                plt.savefig(f'./Figures/PNG/fig_fpr_{v["suffix"]}.png', bbox_inches='tight', format='png')
+                plt.savefig(f'./Figures/PDF/fig_fpr_{v["suffix"]}.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+                plt.savefig(f'./Figures/PNG/fig_fpr_{v["suffix"]}.png', bbox_inches='tight', pad_inches=0.01, format='png')
                 print("Exported fissile production per year plot for all blankets.")
             else:
                 print("Did not export fissile production per year plot due to user setting.")
@@ -356,8 +354,8 @@ class Plot:
             leg.get_frame().set_linewidth(0.5) 
 
         if self.save:
-            plt.savefig(f'./Figures/PDF/fig_cum_norm_histogram.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/PNG/fig_cum_norm_histogram.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/PDF/fig_cum_norm_histogram.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+            plt.savefig(f'./Figures/PNG/fig_cum_norm_histogram.png', bbox_inches='tight', pad_inches=0.01, format='png')
             print(f"Exported cumulative normalized histogram plots.")
         else:
             print(f"Did not export cumulative normalized histogram plot.")
@@ -454,8 +452,8 @@ class Plot:
         leg.get_frame().set_linewidth(0.5) 
     
         if self.save:
-            plt.savefig(f'./Figures/PDF/fig_dRdn.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/PNG/fig_dRdn.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/PDF/fig_dRdn.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+            plt.savefig(f'./Figures/PNG/fig_dRdn.png', bbox_inches='tight', pad_inches=0.01, format='png')
             print("Exported rate of change for fissile material production with respect to fertile material plot for all blankets.")
         else:
             print("Did not export dR / dn plot due to user setting.")
@@ -544,8 +542,8 @@ class Plot:
         leg.get_frame().set_linewidth(0.5) 
     
         if self.save:
-            plt.savefig(f'./Figures/PDF/fig_Rn.pdf', bbox_inches='tight', format='pdf')
-            plt.savefig(f'./Figures/PNG/fig_Rn.png', bbox_inches='tight', format='png')
+            plt.savefig(f'./Figures/PDF/fig_Rn.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+            plt.savefig(f'./Figures/PNG/fig_Rn.png', bbox_inches='tight', pad_inches=0.01, format='png')
             print("Exported fissile material production divided by fertile material for all blankets.")
         else:
             print("Did not export R/n plot due to user setting.")

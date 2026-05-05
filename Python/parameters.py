@@ -215,6 +215,7 @@ fm.fontManager.addfont(font_path)
 prop = fm.FontProperties(fname=font_path)
 plt.rcParams['font.family'] = prop.get_name()
 plt.rcParams['mathtext.default'] = 'regular'
+plt.rcParams['pdf.fonttype'] = 42  # By default, matplotlib converts text to outlines (paths) in PDFs; type 42 embeds text as actual TrueType characters
 
 # Ticks
 plt.rcParams['xtick.direction']   = 'in'
