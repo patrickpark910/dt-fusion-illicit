@@ -68,13 +68,13 @@ class Plot:
         # -------------------------------------------------------------
 
         # Load the dataframes to plot, label, color, marker, markersize, linestyle, and polynomial fit
-        long_dashed = (0, (10, 2))
+        LONG_DASH = (0, (10, 2))
         datasets = [ (self.flibe_u_rr_df,  r'FLiBe-UF$_4$',  '#66b420', 'o',  5,  '-',  'makima'),
                      (self.hcpb_u_rr_df,   r'HCPB-UO$_2$',   '#b41f24', 's',  6,  '-',  2),
                      (self.dcll_u_rr_df,   r'DCLL-UO$_2$',   '#0047ba', '^',  8,  '-',  2),
-                     (self.flibe_th_rr_df, r'FLiBe-ThF$_4$', '#66b420', '+', 12, long_dashed,  'makima'),
-                     (self.hcpb_th_rr_df,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, long_dashed,  2),
-                     (self.dcll_th_rr_df,  r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, long_dashed,  2),
+                     (self.flibe_th_rr_df, r'FLiBe-ThF$_4$', '#66b420', '+', 12, LONG_DASH,  'makima'),
+                     (self.hcpb_th_rr_df,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, LONG_DASH,  2),
+                     (self.dcll_th_rr_df,  r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, LONG_DASH,  2),
                    ]
 
         # Select a subset of fertile kg/m3 to SHOW to avoid cluttering the low end with markers
@@ -173,13 +173,13 @@ class Plot:
         # Dataset Configuration: 
         # (dataframe, label, color, marker, markersize, linestyle, reaction_key, conversion_factor)
         # -----------------------------------------------------------------------------------------
-        long_dashed = (0, (10, 2))
-        datasets = [ (self.flibe_th_rr_df,      r'FLiBe-ThF$_4$', '#66b420', '+', 12, long_dashed, 'makima', 'Th232(n,g)', u233_conv),
-                     (self.hcpb_th_rr_df_corr,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, long_dashed, 'makima', 'Th232(n,g)', u233_conv),
-                     (self.dcll_th_rr_df,       r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, long_dashed, 'makima', 'Th232(n,g)', u233_conv),
-                     (self.flibe_u_rr_df,       r'FLiBe-UF$_4$',  '#66b420', 'o',  5,         '-', 'makima',  'U238(n,g)', pu239_conv),
-                     (self.hcpb_u_rr_df_corr,   r'HCPB-UO$_2$',   '#b41f24', 's',  6,         '-', 'makima',  'U238(n,g)', pu239_conv),
-                     (self.dcll_u_rr_df,        r'DCLL-UO$_2$',   '#0047ba', '^',  8,         '-', 'makima',  'U238(n,g)', pu239_conv),      ]
+        
+        datasets = [ (self.flibe_th_rr_df,      r'FLiBe-ThF$_4$', '#66b420', '+', 12, LONG_DASH, 'makima', 'Th232(n,g)', u233_conv),
+                     (self.hcpb_th_rr_df_corr,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, LONG_DASH, 'makima', 'Th232(n,g)', u233_conv),
+                     (self.dcll_th_rr_df,       r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, LONG_DASH, 'makima', 'Th232(n,g)', u233_conv),
+                     (self.flibe_u_rr_df,       r'FLiBe-UF$_4$',  '#66b420', 'o',  5,       '-', 'makima',  'U238(n,g)', pu239_conv),
+                     (self.hcpb_u_rr_df_corr,   r'HCPB-UO$_2$',   '#b41f24', 's',  6,       '-', 'makima',  'U238(n,g)', pu239_conv),
+                     (self.dcll_u_rr_df,        r'DCLL-UO$_2$',   '#0047ba', '^',  8,       '-', 'makima',  'U238(n,g)', pu239_conv),      ]
 
         # Select a subset of fertile kg/m3 to SHOW to avoid cluttering the low end with markers
         selected1 = [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150,]  # [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 250, 500, 750, 999.99]
@@ -271,33 +271,28 @@ class Plot:
 
 
 
-    def plot_cum_norm_histogram(self):
+    def plot_hist(self):
         """
         Plots cumulative, normalized Pu production vs. energy for contours of MTU.
         """
         print(f"\nPlotting cumulative, normalized fissile production vs. energy...")
 
-
-
-        fig, axes = plt.subplots(3, 2, figsize=(15,15), sharex=True, sharey=True) # sharex='col', sharey='row', 
+        fig, axes = plt.subplots(3, 2, figsize=(7,9), sharex=True, sharey=True)
 
         # load in thorium and uranium background (n, gamma) cross section, shift to 0.1 and 0.9
         u_path = "./Figures/XSPlot/U238gamma.txt"
         th_path = "./Figures/XSPlot/Th232gamma.txt"
-        u238_energy, u238_mxs = readtxtFile(u_path) # cross sections are returned as log(microxs)
+        u238_energy, u238_mxs = readtxtFile(u_path)
         th232_energy, th232_mxs = readtxtFile(th_path)
 
         u238_mxs_shifted = (u238_mxs - np.min(u238_mxs)) * 0.8 / (np.max(u238_mxs) - np.min(u238_mxs)) + 0.1
         th232_mxs_shifted = (th232_mxs - np.min(th232_mxs)) * 0.8 / (np.max(th232_mxs) - np.min(th232_mxs)) + 0.1
 
         for ax in axes.flatten():
-            # Check if the axis is on the bottom edge
             if ax.get_subplotspec().is_last_row():
-                ax.set_xlabel("Incident neutron energy [eV]", fontsize=16)
-            
-            # Check if the axis is on the left edge
+                ax.set_xlabel("Incident neutron energy [eV]")
             if ax.get_subplotspec().is_first_col():
-                ax.set_ylabel(r"Cumulative fraction of fertile $($n,$\gamma)$ rxns", fontsize=16)
+                ax.set_ylabel(r"Cumulative fraction of fertile $($n,$\gamma)$ rxns")
                 ax.plot(u238_energy, u238_mxs_shifted, linewidth=1.0, color='gray', alpha=0.25, label=fr'U-238 $($n,$\gamma)$')
             else:
                 ax.plot(th232_energy, th232_mxs_shifted, linewidth=1.0, color='gray', alpha=0.25, label=fr'Th-232 $($n,$\gamma)$')
@@ -305,39 +300,43 @@ class Plot:
         titles = [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$", r"HCPB-UO$_2$", r"HCPB-ThO$_2$", r"DCLL-UO$_2$", r"DCLL-ThO$_2$",]
         dfs    = [self.flibe_u_ng_df, self.flibe_th_ng_df, self.hcpb_u_ng_df, self.hcpb_th_ng_df, self.dcll_u_ng_df, self.dcll_th_ng_df,]
 
+        densities_to_plot = [0.1, 10, 100, 999.99]
+        colors = {0.1: '#ff1f5b', 10: '#f48628', 100: '#04cc6c', 999.99: '#0c9edd'}
+        labels = {0.1: r'0.1 kg$/$m³', 10: r'10 kg$/$m³', 100: r'100 kg$/$m³', 999.99: r'1000 kg$/$m³'}
+
+        print(f"\n{'Panel':<20} {'Density [kg/m³]':>16} {'Mean [eV]':>12} {'Median [eV]':>13} {'Mode [eV]':>12}")
+        print("-" * 75)
+
         for ax, df, title in zip(axes.flatten(), dfs, titles):
 
-            # Filter out MT_fertile loadings we want to plot 
-            if title in [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$"]:
-                df = df[df["fertile_kg/m3"].isin([0.1, 15, 150, 750])]   
-            else:
-                df = df[df["fertile_kg/m3"].isin([0.1, 15, 150, 999.99])]
+            df = df[df["fertile_kg/m3"].isin(densities_to_plot)]
 
-            # Compute sum of 'mean' for each MT_fertile. 
-            df_mean = df.groupby("fertile_kg/m3")["mean"].sum().to_frame() # pd.DataFrame(, columns=["MT_fertile","sum"]) # 2-col df, colA = MT_fertile values, colB = sum of 'mean'
+            df_mean = df.groupby("fertile_kg/m3")["mean"].sum().to_frame()
             df_mean.columns = ["sum"]   
-            df = df.merge(df_mean, on="fertile_kg/m3", how="left") # adds sum as column to df
+            df = df.merge(df_mean, on="fertile_kg/m3", how="left")
             df['norm_mean'] = df['mean'] / df['sum']
 
-            # Create bin edges from low and high energy boundaries
-            edges = np.unique(np.concatenate([df['energy low [eV]'].values, df['energy high [eV]'].values]))
-            bins  = np.sort(df['energy mid [eV]'].unique())
+            bins = np.sort(df['energy mid [eV]'].unique())
 
-            sub   = df[df['fertile_kg/m3'] == 0.1]
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', linewidth=1.0, color='#ff1f5b', label=fr'0.1 kg$/$m³')
+            for d in densities_to_plot:
+                sub = df[df['fertile_kg/m3'] == d]
+                ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', linewidth=0.75, color=colors[d], label=labels[d])
 
-            sub = df[df['fertile_kg/m3'] == 15]
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', linewidth=1.0, color='#f48628', label=fr'15 kg$/$m³')
+                # Compute mean, median, mode
+                energies = sub['energy mid [eV]'].values
+                weights = sub['norm_mean'].values
+                idx = np.argsort(energies)
+                energies, weights = energies[idx], weights[idx]
 
-            sub = df[df['fertile_kg/m3'] == 150]
-            ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', linewidth=1.0, color='#04cc6c', label=fr'150 kg$/$m³')
+                w_mean = np.average(energies, weights=weights)
+                cumw = np.cumsum(weights)
+                w_median = energies[np.searchsorted(cumw, 0.5 * cumw[-1])]
+                w_mode = energies[np.argmax(weights)]
 
-            if title in [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$"]:
-                sub = df[df['fertile_kg/m3'] == 750]
-                ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', linewidth=1.0, color='#0c9edd', label=fr'750 kg$/$m³')
-            else:
-                sub = df[df['fertile_kg/m3'] == 999.99]
-                ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', linewidth=1.0, color='#0c9edd', label=fr'1000 kg$/$m³')
+                # Strip LaTeX for clean printing
+                clean_title = title.replace(r'$_4$', '4').replace(r'$_2$', '2')
+                d_label = f"{d:.1f}" if d < 999 else "1000.0"
+                print(f"{clean_title:<20} {d_label:>16} {w_mean:>12.2e} {w_median:>13.2e} {w_mode:>12.2e}")
 
             ax.xaxis.set_ticks_position('both')
             ax.yaxis.set_ticks_position('both')
@@ -350,21 +349,21 @@ class Plot:
             ax.set_ylim(-0.03, 1.03)
             fig.tight_layout()
 
-            leg = ax.legend(title=title, title_fontsize=14, fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1, loc="lower right")
+            leg = ax.legend(title=title, fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=1, loc="lower right")
             leg.get_frame().set_linewidth(0.5) 
 
         if self.save:
-            plt.savefig(f'./Figures/PDF/fig_cum_norm_histogram.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
-            plt.savefig(f'./Figures/PNG/fig_cum_norm_histogram.png', bbox_inches='tight', pad_inches=0.01, format='png')
-            print(f"Exported cumulative normalized histogram plots.")
+            plt.savefig(f'./Figures/PDF/fig_hist.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+            plt.savefig(f'./Figures/PNG/fig_hist.png', bbox_inches='tight', pad_inches=0.01, format='png')
+            print(f"\nExported cumulative normalized histogram plots.")
         else:
-            print(f"Did not export cumulative normalized histogram plot.")
+            print(f"\nDid not export cumulative normalized histogram plot.")
 
         if self.show: plt.show()
         plt.close('all')
 
 
-    def plot_dfisdfer(self):
+    def plot_dRdn(self):
         print(f"\nPlotting rate of change of fissile material with respect to fertile density vs. fertile density...")
 
         tot_n_per_yr = NPS_FUS * 3.156e+7
@@ -406,12 +405,12 @@ class Plot:
         # plot
         plt.figure(figsize=(7.5,5))
 
-        plt.scatter(x6, y6eval, marker='s', s=40, color='#b41f24')   # HCPB-UO2
-        plt.scatter(x5, y5eval, marker='1', s=70, color='#b41f24')   # HCPB-ThO2
-        plt.scatter(x4, y4eval, marker='^', s=40, color='#0047ba')   # DCLL-UO2
-        plt.scatter(x3, y3eval, marker='x', s=50, color='#0047ba')   # DCLL-ThO2
-        plt.scatter(x2, y2eval, marker='o', s=30, color='#66b420')   # FLiBe-UF4
-        plt.scatter(x1, y1eval, marker='+', s=60, color='#66b420')   # FLiBe-ThF4
+        # plt.scatter(x6, y6eval, marker='s', s=40, color='#b41f24')   # HCPB-UO2
+        # plt.scatter(x5, y5eval, marker='1', s=70, color='#b41f24')   # HCPB-ThO2
+        # plt.scatter(x4, y4eval, marker='^', s=40, color='#0047ba')   # DCLL-UO2
+        # plt.scatter(x3, y3eval, marker='x', s=50, color='#0047ba')   # DCLL-ThO2
+        # plt.scatter(x2, y2eval, marker='o', s=30, color='#66b420')   # FLiBe-UF4
+        # plt.scatter(x1, y1eval, marker='+', s=60, color='#66b420')   # FLiBe-ThF4
 
         plt.plot(x_fine, y6fine, '-',   linewidth=1, color='#b41f24',)   #  HCPB-UO2
         plt.plot(x_fine, y5fine, '--',  linewidth=1, color='#b41f24',)   #  HCPB-ThO2
@@ -421,19 +420,19 @@ class Plot:
         plt.plot(x_fine, y1fine, '--',  linewidth=1, color='#66b420', )  #  FLiBe-ThF4 
 
         # Dummy plots for legend -- ppark
-        plt.plot([9e8,9e9], [9e8,9e9], '+--', markersize=8, linewidth=1, color='#66b420', label=r'FLiBe-ThF$_4$')   #  green: #66b420
-        plt.plot([9e8,9e9], [9e8,9e9], 'o-',  markersize=5, linewidth=1, color='#66b420', label=r'FLiBe-UF$_4$')    #  green: #66b420
-        plt.plot([9e8,9e9], [9e8,9e9], '1--', markersize=9, linewidth=1, color='#b41f24', label=r'HCPB-ThO$_2$')    #  red:   #b41f24
-        plt.plot([9e8,9e9], [9e8,9e9], 's-',  markersize=5, linewidth=1, color='#b41f24', label=r'HCPB-UO$_2$')     #  red:   #b41f24
-        plt.plot([9e8,9e9], [9e8,9e9], 'x--', markersize=7, linewidth=1, color='#0047ba', label=r'DCLL-ThO$_2$')    #  blue:  #0047ba
-        plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'DCLL-UO$_2$')     #  blue:  #0047ba
+        # plt.plot([9e8,9e9], [9e8,9e9], '+--', markersize=8, linewidth=1, color='#66b420', label=r'FLiBe-ThF$_4$')   #  green: #66b420
+        # plt.plot([9e8,9e9], [9e8,9e9], 'o-',  markersize=5, linewidth=1, color='#66b420', label=r'FLiBe-UF$_4$')    #  green: #66b420
+        # plt.plot([9e8,9e9], [9e8,9e9], '1--', markersize=9, linewidth=1, color='#b41f24', label=r'HCPB-ThO$_2$')    #  red:   #b41f24
+        # plt.plot([9e8,9e9], [9e8,9e9], 's-',  markersize=5, linewidth=1, color='#b41f24', label=r'HCPB-UO$_2$')     #  red:   #b41f24
+        # plt.plot([9e8,9e9], [9e8,9e9], 'x--', markersize=7, linewidth=1, color='#0047ba', label=r'DCLL-ThO$_2$')    #  blue:  #0047ba
+        # plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'DCLL-UO$_2$')     #  blue:  #0047ba
 
         # plt.title(f'Tritium breeding ratio (All)') # Exclude title for production figs --ppark 2025-08-06
         plt.xlabel(r'Fertile isotope density [kg$/$m³]')  # specifically use unicode superscript m³ and not m$^3$
         plt.ylabel(r'$dR_{\text{fis}}/dn$ [kg$/\text{yr}^2$]')
 
-        plt.xlim(-5,160)
-        plt.ylim(-0.25,6)  # plt.ylim(-7.5,225+7.5) REMEMBER TO CHANGE 
+        plt.xlim(-25,1025)
+        plt.ylim(-0.33,6.33)  # plt.ylim(-7.5,225+7.5) REMEMBER TO CHANGE 
 
         # Tick grid
         ax = plt.gca()
@@ -462,7 +461,7 @@ class Plot:
         plt.close('all')
 
 
-    def plot_fisovern(self):
+    def plot_Rovern(self):
         print(f"\nPlotting fissile material divided by fertile density vs. fertile density...")
 
         tot_n_per_yr = NPS_FUS * 3.156e+7
@@ -494,46 +493,48 @@ class Plot:
         y_akima6 = Akima1DInterpolator(x6, y6/x6)(x_fine)
 
         # plot
-        plt.figure(figsize=(7.5,5))
+        plt.figure(figsize=(3.5, 3.0))
 
-        plt.scatter(x6, y6/x6, marker='s', s=40, color='#b41f24') # HCPB-UO2
-        plt.scatter(x5, y5/x5, marker='1', s=70, color='#b41f24') # HCPB-ThO2
-        plt.scatter(x4, y4/x4, marker='^', s=40, color='#0047ba') # DCLL-UO2
-        plt.scatter(x3, y3/x3, marker='x', s=50, color='#0047ba') # DCLL-ThO2
-        plt.scatter(x2, y2/x2, marker='o', s=30, color='#66b420')   # FLiBe-UF4
-        plt.scatter(x1, y1/x1, marker='+', s=60, color='#66b420')   # FLiBe-ThF4
+        # plt.scatter(x6, y6/x6, marker='s', s=40/3, color='#b41f24') # HCPB-UO2
+        # plt.scatter(x5, y5/x5, marker='1', s=70/3, color='#b41f24') # HCPB-ThO2
+        # plt.scatter(x4, y4/x4, marker='^', s=40/3, color='#0047ba') # DCLL-UO2
+        # plt.scatter(x3, y3/x3, marker='x', s=50/3, color='#0047ba') # DCLL-ThO2
+        # plt.scatter(x2, y2/x2, marker='o', s=30/3, color='#66b420')   # FLiBe-UF4
+        # plt.scatter(x1, y1/x1, marker='+', s=60/3, color='#66b420')   # FLiBe-ThF4
 
-        plt.plot(x_fine, y_akima6, '-',   linewidth=1, color='#b41f24',)   #  HCPB-UO2
-        plt.plot(x_fine, y_akima5, '--',  linewidth=1, color='#b41f24',)   #  HCPB-ThO2
-        plt.plot(x_fine, y_akima4, '-',   linewidth=1, color='#0047ba',)   #  DCLL-UO2
-        plt.plot(x_fine, y_akima3, '--',  linewidth=1, color='#0047ba',)   #  DCLL-ThO2
-        plt.plot(x_fine, y_akima2, '-',   linewidth=1, color='#66b420', )    #  FLiBe-UF4
-        plt.plot(x_fine, y_akima1, '--',  linewidth=1, color='#66b420', )    #  FLiBe-ThF4 
+        plt.plot(x_fine, y_akima2, linestyle='-',       linewidth=0.75, color='#66b420',label=r'FLiBe-UF$_4$' )    #  FLiBe-UF4
+        plt.plot(x_fine, y_akima1, linestyle=LONG_DASH, linewidth=0.75, color='#66b420',label=r'FLiBe-ThF$_4$')    #  FLiBe-ThF4 
+        plt.plot(x_fine, y_akima6, linestyle='-',       linewidth=0.75, color='#b41f24',label=r'HCPB-UO$_2$'  )   #  HCPB-UO2
+        plt.plot(x_fine, y_akima5, linestyle=LONG_DASH, linewidth=0.75, color='#b41f24',label=r'HCPB-ThO$_2$' )   #  HCPB-ThO2       
+        plt.plot(x_fine, y_akima3, linestyle=LONG_DASH, linewidth=0.75, color='#0047ba',label=r'DCLL-ThO$_2$' )   #  DCLL-ThO2
+        plt.plot(x_fine, y_akima4, linestyle='-',       linewidth=0.75, color='#0047ba',label=r'DCLL-UO$_2$'  )   #  DCLL-UO2
+
 
         # Dummy plots for legend -- ppark
-        plt.plot([9e8,9e9], [9e8,9e9], '+--', markersize=8, linewidth=1, color='#66b420',   label=r'FLiBe-ThF$_4$') #  green: #66b420
-        plt.plot([9e8,9e9], [9e8,9e9], 'o-',  markersize=5, linewidth=1, color='#66b420',   label=r'FLiBe-UF$_4$')  # 
-        plt.plot([9e8,9e9], [9e8,9e9], '1--', markersize=9, linewidth=1, color='#b41f24', label=r'HCPB-ThO$_2$')    # 
-        plt.plot([9e8,9e9], [9e8,9e9], 's-',  markersize=5, linewidth=1, color='#b41f24', label=r'HCPB-UO$_2$')     # 
-        plt.plot([9e8,9e9], [9e8,9e9], 'x--', markersize=7, linewidth=1, color='#0047ba', label=r'DCLL-ThO$_2$')    #  red: #b41f24
-        plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'DCLL-UO$_2$')     #  blue: #0047ba
+        # plt.plot([9e8,9e9], [9e8,9e9], '+--', markersize=8, linewidth=1, color='#66b420', label=r'FLiBe-ThF$_4$') #  green: #66b420
+        # plt.plot([9e8,9e9], [9e8,9e9], 'o-',  markersize=5, linewidth=1, color='#66b420', label=r'FLiBe-UF$_4$')  # 
+        # plt.plot([9e8,9e9], [9e8,9e9], '1--', markersize=9, linewidth=1, color='#b41f24', label=r'HCPB-ThO$_2$')    # 
+        # plt.plot([9e8,9e9], [9e8,9e9], 's-',  markersize=5, linewidth=1, color='#b41f24', label=r'HCPB-UO$_2$')     # 
+        # plt.plot([9e8,9e9], [9e8,9e9], 'x--', markersize=7, linewidth=1, color='#0047ba', label=r'DCLL-ThO$_2$')    #  red: #b41f24
+        # plt.plot([9e8,9e9], [9e8,9e9], '^-',  markersize=6, linewidth=1, color='#0047ba', label=r'DCLL-UO$_2$')     #  blue: #0047ba
 
         # plt.title(f'Tritium breeding ratio (All)') # Exclude title for production figs --ppark 2025-08-06
-        plt.xlabel(r'Fertile isotope density $n$ in blanket [kg$/$m³]')  # specifically use unicode superscript m³ and not m$^3$
-        plt.ylabel(r'$R_{\text{fis}}/n$ [kg$/$yr]')
+        plt.xlabel(r'Fertile isotope density [kg$/$m³]')  # specifically use unicode superscript m³ and not m$^3$
+        plt.ylabel(r'Fissile prod rate [kg$/$yr] per fertile density')
 
-        plt.xlim(-5,160)
-        plt.ylim(-0.25,6) 
+        plt.xlim(-25,1025)
+        plt.ylim(-0.25,8.25) 
 
         # Tick grid
         ax = plt.gca()
         ax.xaxis.set_ticks_position('both')
-        ax.xaxis.set_minor_locator(MultipleLocator(10))
+        ax.xaxis.set_major_locator(MultipleLocator(100)) 
+        ax.xaxis.set_minor_locator(MultipleLocator(50))
         ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
  
         ax.yaxis.set_ticks_position('both')
         ax.yaxis.set_major_locator(MultipleLocator(1)) 
-        ax.yaxis.set_minor_locator(MultipleLocator(0.25)) 
+        ax.yaxis.set_minor_locator(MultipleLocator(0.5)) 
         ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
 
         plt.tight_layout()
@@ -548,7 +549,8 @@ class Plot:
         else:
             print("Did not export R/n plot due to user setting.")
 
-        if self.show: plt.show()
+        if self.show: 
+            plt.show()
         plt.close('all')
 
 
@@ -594,10 +596,10 @@ if __name__ == "__main__":
         elif p == 'fpr':
             combined_plot.plot_fpr()
         elif p == 'hist':
-            combined_plot.plot_cum_norm_histogram()
-        elif p == 'dfis':
-            combined_plot.plot_dfisdfer()
-        elif p == 'fisn':
-            combined_plot.plot_fisovern()
+            combined_plot.plot_hist()
+        elif p == 'drdn':
+            combined_plot.plot_dRdn()
+        elif p == 'rn':
+            combined_plot.plot_Rovern()
 
     print("\nComment. <plot.py/plot_all()> All plotting commands completed.")
