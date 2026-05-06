@@ -120,12 +120,12 @@ class Reactor(ABC):
         Pb_tally        = self.make_tally('Pb rxn rates',          ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter],                nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'])
         Pb_energy_tally = self.make_tally('Pb rxn rates spectrum', ['(n,gamma)', '(n,2n)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'])
 
-    
+
         self.tallies.extend([fertile_tally_tot, Li_tally_tot])
         self.tallies.extend([fertile_tally, Li_tally, Be_tally, Pb_tally])
         self.tallies.extend([current_tally, flux_tally])
         self.tallies.extend([heating_tally, fisq_tally])
-        self.tallies.extend([fertile_energy_tally, Li_energy_tally, Be_energy_tally])
+        self.tallies.extend([fertile_energy_tally, Li_energy_tally, Be_energy_tally, Pb_energy_tally])
         self.tallies.extend([current_energy_tally, flux_energy_tally]) 
         self.tallies.extend([heating_energy_tally, fisq_energy_tally])
 

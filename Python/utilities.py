@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit
 
-# from Python.parameters import *
-from parameters import *
+from Python.parameters import *
+# from parameters import *
 
 
 """
