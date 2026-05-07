@@ -494,12 +494,20 @@ class Reactor(ABC):
         tbr_list = [x + y for x, y in zip(Li6_nt_list, Li7_nt_list)] 
         tbr_err_list = [x + y for x, y in zip(Li6_nt_err_list, Li7_nt_err_list)]
 
-        # U-238 or Th-232 reaction rates 
+        # Fertile isotope (n,gamma) — capture on fertile nuclide only
         U238              = fertile[(fertile['nuclide']==self.fertile_isotope)][['cell','score','mean','std. dev.']]
-        U238_fis_list     = U238[U238['score'] == 'fission'][['mean']]['mean'].tolist()
-        U238_fis_err_list = U238[U238['score'] == 'fission'][['std. dev.']]['std. dev.'].tolist()
         U238_ng_list      = U238[U238['score'] == '(n,gamma)'][['mean']]['mean'].tolist()
         U238_ng_err_list  = U238[U238['score'] == '(n,gamma)'][['std. dev.']]['std. dev.'].tolist()
+
+        # Total fission rate summed over ALL nuclides (U238 + U235 + Th232)
+        all_fis = (fertile[fertile['score'] == 'fission']
+                   .groupby('cell')
+                   .agg(mean=('mean', 'sum'),
+                        std_dev=('std. dev.', lambda x: np.sqrt((x**2).sum())))
+                   .reset_index()
+                   .sort_values('cell'))
+        all_fis_list     = all_fis['mean'].tolist()
+        all_fis_err_list = all_fis['std_dev'].tolist()
         
         # Heating and fission-q-recoverable, converted to MW
         heat_list     = (heating['mean'] * NPS_FUS * EV_TO_MJ).tolist()
@@ -535,8 +543,8 @@ class Reactor(ABC):
                            'Li7(n,t)_stdev'    : Li7_nt_err_list,
                            'Be9(n,2n)'         : Be9_n2n_list,
                            'Be9(n,2n)_stdev'   : Be9_n2n_err_list,
-                           f'{self.fertile_isotope}(n,fis)'       : U238_fis_list,
-                           f'{self.fertile_isotope}(n,fis)_stdev' : U238_fis_err_list,
+                           'tot(n,fis)'        : all_fis_list,
+                           'tot(n,fis)_stdev'  : all_fis_err_list,
                            'heating [MW]'      : heat_list ,
                            'heating_stdev'     : heat_err_list,
                            'fisq [MW]'         : fisq_list,

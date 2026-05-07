@@ -1,4 +1,4 @@
-cell,flux,tbr,tbr_stdev,"U238(n,g)","U238(n,g)_stdev",Pu239_kg/yr,Pu239_kg/yr_stdev,"Li6(n,t)","Li6(n,t)_stdev","Li7(n,t)","Li7(n,t)_stdev","Be9(n,2n)","Be9(n,2n)_stdev","U238(n,fis)","U238(n,fis)_stdev",heating [MW],heating_stdev,fisq [MW],fisq_stdev
+cell,flux,tbr,tbr_stdev,"U238(n,g)","U238(n,g)_stdev",Pu239_kg/yr,Pu239_kg/yr_stdev,"Li6(n,t)","Li6(n,t)_stdev","Li7(n,t)","Li7(n,t)_stdev","Be9(n,2n)","Be9(n,2n)_stdev","tot(n,fis)","tot(n,fis)_stdev",heating [MW],heating_stdev,fisq [MW],fisq_stdev
 11,3.0960180593543662,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,25.549720583673196,0.0028860120424917353,0.0,0.0
 21,6.190913131565379,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.38430438126383,0.002431405565791459,0.0,0.0
 12,30.90379919911542,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,27.85041890459888,0.0018672585121608262,0.0,0.0

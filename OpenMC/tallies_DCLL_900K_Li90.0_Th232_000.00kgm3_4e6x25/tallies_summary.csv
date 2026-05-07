@@ -1,4 +1,4 @@
-cell,flux,tbr,tbr_stdev,"Th232(n,g)","Th232(n,g)_stdev",U233_kg/yr,U233_kg/yr_stdev,"Li6(n,t)","Li6(n,t)_stdev","Li7(n,t)","Li7(n,t)_stdev","Be9(n,2n)","Be9(n,2n)_stdev","Th232(n,fis)","Th232(n,fis)_stdev",heating [MW],heating_stdev,fisq [MW],fisq_stdev
+cell,flux,tbr,tbr_stdev,"Th232(n,g)","Th232(n,g)_stdev",U233_kg/yr,U233_kg/yr_stdev,"Li6(n,t)","Li6(n,t)_stdev","Li7(n,t)","Li7(n,t)_stdev","Be9(n,2n)","Be9(n,2n)_stdev","tot(n,fis)","tot(n,fis)_stdev",heating [MW],heating_stdev,fisq [MW],fisq_stdev
 11,3.0959225689918846,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,25.54903709650872,0.0026949784134299593,0.0,0.0
 21,6.190942261689591,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.38422658135875,0.0023439705064519267,0.0,0.0
 12,30.90334188359288,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,27.84969164752196,0.0020210286343023856,0.0,0.0
