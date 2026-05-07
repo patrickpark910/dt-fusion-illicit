@@ -554,6 +554,95 @@ class Plot:
         plt.close('all')
 
 
+    def plot_leakage_spectra(self):
+        """
+        Neutron leakage energy spectrum for four FLiBe configurations.
+        Prints mean, median, and mode energy for each case.
+        """
+        print(f"\nComment. <plot.py/plot_leakage_spectra()> Plotting leakage energy spectra...")
+
+        cases = [
+            {"file": "./Figures/Data/FLiBe_900K_Li07.5_U238_leak.csv",  "rho": 0,    "color": "black",      "label": r"7.5at% Li6 / Clean"},
+            {"file": "./Figures/Data/FLiBe_900K_Li00.0_U238_leak.csv",  "rho": 0,    "color": "#0047ba",  "label": r"Li7 / Clean"},
+            {"file": "./Figures/Data/FLiBe_900K_Li00.0_U238_leak.csv",  "rho": 1000, "color": "#b41f24",  "label": r"Li7 / 1000 kg(U238)/m³"},
+            {"file": "./Figures/Data/FLiBe_900K_Li00.0_Th232_leak.csv", "rho": 1000, "color": "#66b420",  "label": r"Li7 / 1000 kg(Th232)/m³"},
+        ]
+
+        plt.figure(figsize=(7, 3.0))
+        ax = plt.gca()
+
+        print(f"\n  {'Case':<45s} {'Mean [eV]':>14s} {'Median [eV]':>14s} {'Mode [eV]':>14s}")
+        print(f"  {'─'*45} {'─'*14} {'─'*14} {'─'*14}")
+
+        for case in cases:
+            try:
+                df = pd.read_csv(case["file"])
+            except FileNotFoundError:
+                print(f"{C.YELLOW}Warning.{C.END} Leakage file not found: {case['file']}")
+                continue
+
+            # Match target density (handles 999.99 ≈ 1000)
+            available = df["fertile_kg/m3"].unique()
+            closest = min(available, key=lambda x: abs(x - case["rho"]))
+            spec = df[df["fertile_kg/m3"] == closest].sort_values("energy mid [eV]")
+
+            E_mid  = spec["energy mid [eV]"].values
+            E_low  = spec["energy low [eV]"].values
+            E_high = spec["energy high [eV]"].values
+            dE     = E_high - E_low
+            counts = spec["mean"].values                # leakage current per bin [n/src-n]
+            flux_per_lethargy = counts / (dE / E_mid)
+
+            # ── Spectral statistics ──────────────────────────
+            total = counts.sum()
+            if total > 0:
+                mean_E   = np.sum(E_mid * counts) / total
+                cdf      = np.cumsum(counts) / total
+                median_E = np.interp(0.5, cdf, E_mid)
+                mode_E   = E_mid[np.argmax(flux_per_lethargy)]   # peak of per-lethargy spectrum
+            else:
+                mean_E = median_E = mode_E = 0.0
+
+            short_label = case["label"].replace(r"$^6$", "⁶")   # for terminal printing
+            print(f"  {short_label:<45s} {mean_E:14.4e} {median_E:14.4e} {mode_E:14.4e}")
+
+            ax.loglog(E_mid, flux_per_lethargy,
+                      color=case["color"], linewidth=0.75, label=case["label"])
+
+        print()
+
+        ax.set_xlabel("Energy [eV]")
+        ax.set_ylabel("Leakage current / lethargy [n/src-n]")
+        ax.set_xlim(1e-3, 20e6)
+
+        # "1eX" tick labels on both axes, major ticks every decade, minor ticks at 2–9
+        from matplotlib.ticker import LogLocator, LogFormatterSciNotation
+        efmt = LogFormatterSciNotation(base=10, labelOnlyBase=True)
+        for axis in [ax.xaxis, ax.yaxis]:
+            axis.set_major_locator(LogLocator(base=10, numticks=20))
+            axis.set_minor_locator(LogLocator(base=10, subs=np.arange(2, 10), numticks=100))
+            axis.set_major_formatter(FuncFormatter(lambda x, _: f'1e{int(np.log10(x))}' if x > 0 else ''))
+
+        ax.grid(axis='both', which='major', linestyle='-', linewidth=0.5)
+        ax.tick_params(which='minor', length=3)
+        ax.tick_params(which='major', length=5)
+
+        plt.tight_layout()
+
+        leg = plt.legend(fontsize=6, fancybox=False, edgecolor='black', frameon=False, framealpha=0.75, ncol=1)
+        leg.get_frame().set_linewidth(0.5)
+
+        if self.save:
+            plt.savefig('./Figures/PDF/fig_leakage_spectra.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+            plt.savefig('./Figures/PNG/fig_leakage_spectra.png', bbox_inches='tight', pad_inches=0.01, format='png')
+            print(f"Comment. <plot.py/plot_leakage_spectra()> Exported leakage spectra plot.")
+        else:
+            print(f"{C.YELLOW}Comment.{C.END} <plot.py/plot_leakage_spectra()> Did NOT export leakage spectra plot due to user setting.")
+
+        if self.show: plt.show()
+        plt.close('all')
+
+
 
 
     
@@ -601,5 +690,7 @@ if __name__ == "__main__":
             combined_plot.plot_dRdn()
         elif p == 'rn':
             combined_plot.plot_Rovern()
+        elif p == 'leak':
+            combined_plot.plot_leakage_spectra()
 
     print("\nComment. <plot.py/plot_all()> All plotting commands completed.")

@@ -195,6 +195,7 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich,temp_k, vol_m3):
         li7  = df[ df['cell']=='total' ]['Li7(n,t)'].values[0]
         be9  = df[ df['cell']=='total' ]['Be9(n,2n)'].values[0]
         u238 = df[ df['cell']=='total' ][f'{fertile_isotope}(n,g)'].values[0]
+        fis  = df[ df['cell']=='total' ]['tot(n,fis)'].values[0]
         tbr  = df[ df['cell']=='total' ]['tbr'].values[0]
         pu   = df[ df['cell']=='total' ][f'{fissile_isotope}_kg/yr'].values[0]
         leak = df_leak['leakage'].values[0]
@@ -206,6 +207,7 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich,temp_k, vol_m3):
         li7_stdev  = df[ df['cell']=='total' ]['Li7(n,t)_stdev'].values[0]
         be9_stdev  = df[ df['cell']=='total' ]['Be9(n,2n)_stdev'].values[0]
         u238_stdev = df[ df['cell']=='total' ][f'{fertile_isotope}(n,g)_stdev'].values[0]
+        fis_stdev  = df[ df['cell']=='total' ]['tot(n,fis)_stdev'].values[0]
         tbr_stdev  = df[ df['cell']=='total' ]['tbr_stdev'].values[0]
         pu_stdev   = df[ df['cell']=='total' ][f'{fissile_isotope}_kg/yr_stdev'].values[0]
         leak_stdev = df_leak['leakage_stdev'].values[0]
@@ -223,6 +225,8 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich,temp_k, vol_m3):
                          'Be9(n,2n)_sd': be9_stdev,
                          f'{fertile_isotope}(n,g)': u238,
                          f'{fertile_isotope}(n,g)_sd': u238_stdev,
+                          'tot(n,fis)': fis,
+                          'tot(n,fis)_sd': fis_stdev,
                          'tbr': tbr,
                          'tbr_sd': tbr_stdev,
                          f'{fissile_isotope} [kg/yr]': pu,
