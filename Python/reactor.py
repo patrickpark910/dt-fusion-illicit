@@ -189,8 +189,8 @@ class Reactor(ABC):
     def openmc(self):
 
         if self.run_openmc:
-            if has_statepoint(self.path):
-                print(f"{C.YELLOW}Warning.{C.END} File {self.path}/statepoint.XX.h5 already exists, so this OpenMC run will be skipped...")
+            if has_statepoint(self.path,cycle=self.n_cycles):
+                print(f"{C.YELLOW}Warning.{C.END} File {self.path}/statepoint.{str(self.n_cycles).zfill(2)}.h5 already exists, so this OpenMC run will be skipped...")
             else:
                 self.model.run(cwd=self.path)
 

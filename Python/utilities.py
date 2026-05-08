@@ -307,7 +307,7 @@ def timer(func):
     return wrapper
 
 
-def has_statepoint(directory_path):
+def has_statepoint(directory_path,cycle=None):
     """
     Check if any file starting with 'statepoint' exists in the given directory.
     
@@ -319,8 +319,13 @@ def has_statepoint(directory_path):
     """
     found = False
     for filename in os.listdir(directory_path):
-        if filename.startswith("statepoint"):
-            found = True
+        if cycle:
+            cycle_str = str(cycle).zfill(2)  # Pad cycle number with zeros to get 5 -> '05'
+            if filename.startswith(f"statepoint.{cycle_str}"):
+                found = True
+        else:
+            if filename.startswith("statepoint"):
+                found = True
     return found
 
 
