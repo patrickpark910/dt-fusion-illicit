@@ -24,17 +24,17 @@ class Plot:
         self.hcpb_u_rr_df   = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_U238_rxns.csv")
         self.hcpb_th_rr_df  = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_Th232_rxns.csv")
 
-        self.flibe_u_ng_df  = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_U238_n-gamma.csv")
-        self.flibe_th_ng_df = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_Th232_n-gamma.csv")
-        self.dcll_u_ng_df   = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_U238_n-gamma.csv")
-        self.dcll_th_ng_df  = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_Th232_n-gamma.csv")
-        self.hcpb_u_ng_df   = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_U238_n-gamma.csv")
-        self.hcpb_th_ng_df  = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_Th232_n-gamma.csv")
+        self.flibe_u_ebins_df  = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_U238_Ebins_rxns.csv")
+        self.flibe_th_ebins_df = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_Th232_Ebins_rxns.csv")
+        self.dcll_u_ebins_df   = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_U238_Ebins_rxns.csv")
+        self.dcll_th_ebins_df  = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_Th232_Ebins_rxns.csv")
+        self.hcpb_u_ebins_df   = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_U238_Ebins_rxns.csv")
+        self.hcpb_th_ebins_df  = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_Th232_Ebins_rxns.csv")
 
         self.flibe_u_rr_df = self.flibe_u_rr_df[self.flibe_u_rr_df['fertile_kg/m3'] <= LIMIT_UF4_FLIBE]
         self.flibe_th_rr_df = self.flibe_th_rr_df[self.flibe_th_rr_df['fertile_kg/m3'] <= LIMIT_THF4_FLIBE]
-        self.flibe_u_ng_df = self.flibe_u_ng_df[self.flibe_u_ng_df['fertile_kg/m3'] <= LIMIT_UF4_FLIBE]
-        self.flibe_th_ng_df = self.flibe_th_ng_df[self.flibe_th_ng_df['fertile_kg/m3'] <= LIMIT_THF4_FLIBE]
+        self.flibe_u_ebins_df = self.flibe_u_ebins_df[self.flibe_u_ebins_df['fertile_kg/m3'] <= LIMIT_UF4_FLIBE]
+        self.flibe_th_ebins_df = self.flibe_th_ebins_df[self.flibe_th_ebins_df['fertile_kg/m3'] <= LIMIT_THF4_FLIBE]
 
         # ------------------------------------------------------------------
         # Weigh TBRs and FPRs by correction factor derived from wedge models
@@ -297,8 +297,9 @@ class Plot:
             else:
                 ax.plot(th232_energy, th232_mxs_shifted, linewidth=1.0, color='gray', alpha=0.25, label=fr'Th-232 $($n,$\gamma)$')
 
-        titles = [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$", r"HCPB-UO$_2$", r"HCPB-ThO$_2$", r"DCLL-UO$_2$", r"DCLL-ThO$_2$",]
-        dfs    = [self.flibe_u_ng_df, self.flibe_th_ng_df, self.hcpb_u_ng_df, self.hcpb_th_ng_df, self.dcll_u_ng_df, self.dcll_th_ng_df,]
+        titles  = [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$", r"HCPB-UO$_2$", r"HCPB-ThO$_2$", r"DCLL-UO$_2$", r"DCLL-ThO$_2$",]
+        dfs     = [self.flibe_u_ebins_df, self.flibe_th_ebins_df, self.hcpb_u_ebins_df, self.hcpb_th_ebins_df, self.dcll_u_ebins_df, self.dcll_th_ebins_df,]
+        ng_cols = ['U238_ng', 'Th232_ng', 'U238_ng', 'Th232_ng', 'U238_ng', 'Th232_ng']
 
         densities_to_plot = [0.1, 10, 100, 999.99]
         colors = {0.1: '#ff1f5b', 10: '#f48628', 100: '#04cc6c', 999.99: '#0c9edd'}
@@ -307,14 +308,14 @@ class Plot:
         print(f"\n{'Panel':<20} {'Density [kg/m³]':>16} {'Mean [eV]':>12} {'Median [eV]':>13} {'Mode [eV]':>12}")
         print("-" * 75)
 
-        for ax, df, title in zip(axes.flatten(), dfs, titles):
+        for ax, df, title, ng_col in zip(axes.flatten(), dfs, titles, ng_cols):
 
             df = df[df["fertile_kg/m3"].isin(densities_to_plot)]
 
-            df_mean = df.groupby("fertile_kg/m3")["mean"].sum().to_frame()
-            df_mean.columns = ["sum"]   
-            df = df.merge(df_mean, on="fertile_kg/m3", how="left")
-            df['norm_mean'] = df['mean'] / df['sum']
+            df_sum = df.groupby("fertile_kg/m3")[ng_col].sum().to_frame()
+            df_sum.columns = ["sum"]   
+            df = df.merge(df_sum, on="fertile_kg/m3", how="left")
+            df['norm_mean'] = df[ng_col] / df['sum']
 
             bins = np.sort(df['energy mid [eV]'].unique())
 
@@ -345,6 +346,7 @@ class Plot:
             ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
 
             ax.set_xscale('log')
+            ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f'1e{int(np.log10(x))}' if x > 0 else ''))
             ax.set_xlim(0.5*1e1, 1.5*1e6)
             ax.set_ylim(-0.03, 1.03)
             fig.tight_layout()
@@ -643,6 +645,142 @@ class Plot:
         plt.close('all')
 
 
+    def plot_neutron_balance(self):
+        """
+        Cumulative neutron balance vs. energy.
+ 
+        3x2 grid: rows = FLiBe / HCPB / DCLL, columns = U / Th.
+        Each panel shows cumulative neutron gain/loss curves for four
+        reaction channels at two fertile loadings (0.1 and 1000 kg/m3).
+ 
+        Channels and neutron weights:
+          Be9 or Pb (n,2n)             -> +1
+          U235 + fertile isotope fis   -> +(nu_bar - 1)   [approximate]
+          Fertile isotope (n,gamma)    -> -1
+          Li6 (n,Xt)                   -> -1
+        """
+        print(f"\nPlotting cumulative neutron balance vs energy...")
+ 
+        # Approximate nu-bar values
+        # TODO: replace with nu-fission tally for energy-dependent accuracy
+        NU_U235  = 2.5
+        NU_U238  = 2.8
+        NU_TH232 = 2.3
+ 
+        # Panel layout: (dataframe, title, fertile_iso, nu_fertile, row, col)
+        panels = [
+            (self.flibe_u_ebins_df,  r'FLiBe-UF$_4$',  'U238',  NU_U238,  0, 0),
+            (self.flibe_th_ebins_df, r'FLiBe-ThF$_4$', 'Th232', NU_TH232, 0, 1),
+            (self.hcpb_u_ebins_df,   r'HCPB-UO$_2$',   'U238',  NU_U238,  1, 0),
+            (self.hcpb_th_ebins_df,  r'HCPB-ThO$_2$',  'Th232', NU_TH232, 1, 1),
+            (self.dcll_u_ebins_df,   r'DCLL-UO$_2$',   'U238',  NU_U238,  2, 0),
+            (self.dcll_th_ebins_df,  r'DCLL-ThO$_2$',  'Th232', NU_TH232, 2, 1),
+        ]
+ 
+        densities_to_plot = [0.1, 999.99]
+        linestyles = {0.1: '-', 999.99: '--'}
+        linewidths = {0.1: 0.75, 999.99: 1.0}
+ 
+        # Channel colors
+        colors = {
+            'n2n':  '#1D9E75',   # teal   -- neutron multiplier
+            'fis':  '#b41f24',   # red    -- fission
+            'ng':   '#0047ba',   # blue   -- fertile capture
+            'li6':  '#EF9F27',   # amber  -- tritium breeding
+        }
+
+        from matplotlib.lines import Line2D
+        legend_handles = [
+            Line2D([0], [0], color=colors['n2n'], lw=1.5, label=r'Be$/$Pb $($n,2n$)$: +1'),
+            Line2D([0], [0], color=colors['fis'], lw=1.5, label=r'Fission: +$(\bar\nu - 1)$'),
+            Line2D([0], [0], color='black', ls='-',  lw=1.0, label=r'0.1 kg$/$m³'),
+            Line2D([0], [0], color=colors['ng'],  lw=1.5, label=r'Fertile $($n,$\gamma)$: $-$1'),
+            Line2D([0], [0], color=colors['li6'], lw=1.5, label=r'Li-6 $($n,t$)$: $-$1'),
+            Line2D([0], [0], color='black', ls='--', lw=1.0,  label=r'1000 kg$/$m³'),
+        ]
+ 
+        fig, axes = plt.subplots(3, 2, figsize=(7, 9), sharex=True, sharey=True)
+ 
+        for df_Erxn, title, fert_iso, nu_fert, row, col in panels:
+            ax = axes[row, col]
+ 
+            for rho in densities_to_plot:
+ 
+                # Match closest available density
+                available = df_Erxn['fertile_kg/m3'].unique()
+                closest = min(available, key=lambda x: abs(x - rho))
+                spec = df_Erxn[df_Erxn['fertile_kg/m3'] == closest].copy()
+                spec = spec.sort_values('energy mid [eV]')
+ 
+                E_mid = spec['energy mid [eV]'].values
+                ls = linestyles[rho]
+                lw = linewidths[rho]
+ 
+                # Neutron-weighted channels
+
+                # Multiplier (n,2n): +1 per reaction
+                n2n = (+1) * (spec['Be9_n2n'].values + spec['Pb_n2n'].values)
+ 
+                # Fission: +(nu-1) for fertile + +(nu_U235 - 1) for U235
+                fis = ((nu_fert - 1) * spec[f'{fert_iso}_fis'].values
+                     + (NU_U235 - 1) * spec['U235_fis'].values)
+ 
+                # Fertile (n,gamma): -1 per reaction
+                ng = (-1) * spec[f'{fert_iso}_ng'].values
+ 
+                # Li-6 (n,t): -1 per reaction
+                li6 = (-1) * spec['Li6_nt'].values
+ 
+                # Cumulative sum from low to high energy
+                for key, vals in [('n2n', n2n), ('fis', fis), ('ng', ng), ('li6', li6)]:
+                    ax.semilogx(E_mid, np.cumsum(vals),
+                                color=colors[key], linestyle=ls, linewidth=lw)
+ 
+            # Axis formatting
+            # ax.axhline(0, color='gray', linewidth=0.5, zorder=0)
+ 
+            ax.xaxis.set_ticks_position('both')
+            ax.yaxis.set_ticks_position('both')
+            ax.grid(axis='both', which='major', linestyle='-', linewidth=0.5)
+            ax.set_xscale('log')
+            ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f'1e{int(np.log10(x))}' if x > 0 else ''))
+            ax.set_xlim(0.5e1, 1.5e7)
+            ax.set_yscale('linear')
+            ax.set_ylim(-1.5*1.05, 0.75*1.05)
+            ax.yaxis.set_major_locator(MultipleLocator(0.25))
+ 
+            if ax.get_subplotspec().is_last_row():
+                ax.set_xlabel('Neutron energy [eV]')
+            if ax.get_subplotspec().is_first_col():
+                ax.set_ylabel(r'Cumulative $\Delta n$ / src-n')
+ 
+            # Panel title in upper-left corner
+            ax.text(0.02, 0.97, title, transform=ax.transAxes,
+                    va='top', ha='left') # fontsize=10, fontweight='bold', -- use default font size --ppark 2026-05-21
+
+            # Legend keys right beneath the title
+            if row in [0, 1, 2]:
+                leg = ax.legend(handles=legend_handles, loc='upper left',
+                                bbox_to_anchor=(0.00, 0.935),
+                                fontsize=7, ncol=2,
+                                fancybox=False, edgecolor='black',
+                                frameon=False, framealpha=0.75)
+                # leg.get_frame().set_linewidth(0.5)
+ 
+        fig.tight_layout()
+ 
+        if self.save:
+            plt.savefig('./Figures/PDF/fig_nbal.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+            plt.savefig('./Figures/PNG/fig_nbal.png', bbox_inches='tight', pad_inches=0.01, format='png')
+            print("Exported cumulative neutron balance plot: fig_nbal")
+        else:
+            print("Did not export neutron balance plot due to user setting.")
+ 
+        if self.show:
+            plt.show()
+        plt.close('all')
+
+
 
 
     
@@ -692,5 +830,7 @@ if __name__ == "__main__":
             combined_plot.plot_Rovern()
         elif p == 'leak':
             combined_plot.plot_leakage_spectra()
+        elif p == 'bal':
+            combined_plot.plot_neutron_balance()
 
     print("\nComment. <plot.py/plot_all()> All plotting commands completed.")
