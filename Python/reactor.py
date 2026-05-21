@@ -102,9 +102,9 @@ class Reactor(OutputMixin, ABC):
         # ---------------------------------------------------------------
 
         # Fertile element reaction rates // MT 4 = inelastic scattering
-        fertile_tally_tot    = self.make_tally('Total fertile rxn rate',     ['(n,gamma)', 'fission', 'nu-fission','(n,2n)', '(n,3n)', 4, 'elastic'], nuclides=['U238', 'U235', 'Th232'])
-        fertile_tally        = self.make_tally('Fertile rxn rates',          ['(n,gamma)', 'fission', 'nu-fission','(n,2n)', '(n,3n)', 4, 'elastic'], nuclides=['U238', 'U235', 'Th232'], filters=[cell_filter])
-        fertile_energy_tally = self.make_tally('Fertile rxn rates spectrum', ['(n,gamma)', 'fission', 'nu-fission','(n,2n)', '(n,3n)', 4, 'elastic'], nuclides=['U238', 'U235', 'Th232'], filters=[cell_filter, energy_filter])
+        fertile_tally_tot    = self.make_tally('Total fertile rxn rate',     ['(n,gamma)', 'fission', 'nu-fission','(n,2n)', '(n,3n)', '4', 'elastic'], nuclides=['U238', 'U235', 'Th232'])
+        fertile_tally        = self.make_tally('Fertile rxn rates',          ['(n,gamma)', 'fission', 'nu-fission','(n,2n)', '(n,3n)', '4', 'elastic'], nuclides=['U238', 'U235', 'Th232'], filters=[cell_filter])
+        fertile_energy_tally = self.make_tally('Fertile rxn rates spectrum', ['(n,gamma)', 'fission', 'nu-fission','(n,2n)', '(n,3n)', '4', 'elastic'], nuclides=['U238', 'U235', 'Th232'], filters=[cell_filter, energy_filter])
 
         # Lithium reaction rates
         Li_tally_tot    = self.make_tally('Total Li rxn rate',     ['(n,gamma)', '(n,Xt)', 'elastic'], nuclides=['Li6', 'Li7'])
@@ -121,9 +121,9 @@ class Reactor(OutputMixin, ABC):
         Be_energy_tally = self.make_tally('Be rxn rates spectrum', ['(n,gamma)', '(n,2n)', '(n,a)', 'elastic'], nuclides=['Be9'], filters=[cell_filter, energy_filter], )
 
         # Lead reaction rates
-        Pb_tally_tot    = self.make_tally('Total Pb rxn rate',     ['(n,gamma)', '(n,2n)', 4, 'elastic'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'])
-        Pb_tally        = self.make_tally('Pb rxn rates',          ['(n,gamma)', '(n,2n)', 4, 'elastic'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[cell_filter],               )
-        Pb_energy_tally = self.make_tally('Pb rxn rates spectrum', ['(n,gamma)', '(n,2n)', 4, 'elastic'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[cell_filter, energy_filter],)
+        Pb_tally_tot    = self.make_tally('Total Pb rxn rate',     ['(n,gamma)', '(n,2n)', '4', 'elastic'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'])
+        Pb_tally        = self.make_tally('Pb rxn rates',          ['(n,gamma)', '(n,2n)', '4', 'elastic'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[cell_filter],               )
+        Pb_energy_tally = self.make_tally('Pb rxn rates spectrum', ['(n,gamma)', '(n,2n)', '4', 'elastic'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[cell_filter, energy_filter],)
 
 
         self.tallies.extend([fertile_tally_tot, Li_tally_tot, Be_tally_tot, Pb_tally_tot])
