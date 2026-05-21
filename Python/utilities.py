@@ -1,9 +1,10 @@
 """
 Set of helper functions
 """
-import os, re, sys, time, functools
+import os, sys, time, functools
 import numpy as np
 import pandas as pd
+import openmc
 from scipy.optimize import curve_fit
 
 from Python.parameters import *
@@ -327,6 +328,70 @@ def has_statepoint(directory_path,cycle=None):
             if filename.startswith("statepoint"):
                 found = True
     return found
+
+
+def sum_over_cells(df, nuclides, score):
+    """
+    Filter a spectrum DataFrame by nuclide(s) and score, 
+    then sum reaction rates over all cells per energy bin.
+    Returns a Series indexed by energy bin with columns 'mean' and 'std. dev.'.
+    """
+    if isinstance(nuclides, str):
+        nuclides = [nuclides]
+    mask = df['nuclide'].isin(nuclides) & (df['score'] == score)
+    grouped = (df[mask]
+                .groupby(['energy low [eV]', 'energy high [eV]', 'energy mid [eV]'])
+                .agg(mean=('mean', 'sum'),
+                    std_dev=('std. dev.', lambda x: np.sqrt((x**2).sum())))
+                .reset_index()
+                .sort_values('energy mid [eV]'))
+    return grouped
+
+
+def find_sp(sp_dir, n_cycles):
+    """
+    Load the OpenMC statepoint from `path`. Tries the exact cycle count
+    first, then falls back to the highest available statepoint.
+ 
+    Args:
+        sp_dir (str): Directory containing the statepoint HDF5 file(s).
+        n_cycles (int): Expected number of batches (used to build the default filename).
+ 
+    Returns:
+        openmc.StatePoint
+    """
+        
+    # First try finding statepoint that exactly matches the programmed n_cycles
+
+    sp_path = os.path.join(sp_dir, f"statepoint.{str(n_cycles).zfill(2)}.h5")
+
+    try:
+        print(f"{C.YELLOW}Comment.{C.END} Loading statepoint: {sp_path}")
+        return openmc.StatePoint(sp_path) 
+
+    except Exception as e:
+        print(f"{C.YELLOW}Warning.{C.END} {e}. statepoint.{n_cycles}.h5 missing or could not be read at: {sp_path}")
+    
+        # Second try finding highest statepoint
+        try:
+            print(f"{C.YELLOW}Comment.{C.END} Looking for the highest statepoint in: {sp_dir}")
+
+            sp_files = [f for f in os.listdir(sp_dir) if f.startswith('statepoint.') and f.endswith('.h5')]
+
+            if not sp_files:
+                print(f"{C.RED}Warning.{C.END} <utilities.py/find_sp> No statepoints found at all in: {sp_dir}")
+                print(f"But, reactor.py/openmc() should have run OpenMC if: (1) there are no statepoints (2) you have self.run_openmc=True (current state: {self.run_openmc})."
+                        f"If you see this error, self.run_openmc=False or you might have broken something in our logic.")
+                sys.exit(2)
+                
+            # Get the latest statepoint by batch number
+            sp_path = os.path.join(sp_dir, max(sp_files, key=lambda x: int(x.split('.')[1])))
+            return openmc.StatePoint(sp_path) 
+
+        except Exception as e:
+            print(f"{C.RED}  Fatal.{C.END} <reactor.py/extract_tallies> {e}. No valid statepoints found at all in: {sp_dir}")
+            sys.exit(2)
+
 
 
 if __name__ == "__main__":

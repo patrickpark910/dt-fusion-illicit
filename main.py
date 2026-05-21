@@ -140,45 +140,43 @@ def build_reactor(blanket:str, **kwargs):
     return reactor
 
 
-def collate_tallies(blanket, fertile_isotope, breeder_enrich,temp_k, vol_m3):
+def collate_tallies(blanket, fertile_isotope, breeder_enrich, temp_k, vol_m3):
     """
-    Collates all the tallies for given [blanket, fertile isotope, temperature] across multiple fertile kg/m³
+    Collates all the tallies for given [blanket, fertile isotope, temperature]
+    across multiple fertile kg/m³ into combined CSVs in ./Figures/Data/.
 
     Args:
-        blanket (str): one of ['FLiBe', 'DCLL', 'HCPB', 'ARC', 'ARCB']
+        blanket (str): one of ['FLiBe', 'DCLL', 'HCPB']
         fertile_isotope (str): one of ['U238', 'Th232']
         breeder_enrich (float): enrichment of lithium-6 in breeder
-        temp_k (float): temperature of the system for which you want to collate data 
-        breeder_volume (float): [m³] volume of breeder
+        temp_k (float): temperature of the system
+        vol_m3 (float): [m³] volume of breeder
     """
 
-    if fertile_isotope == 'U238':        
-        fissile_isotope = 'Pu239'
+    rows_all = []
+    rxnsE_list, fluxE_list, leakE_list = [], [], []
 
-    elif fertile_isotope == 'Th232':
-        fissile_isotope =  'U233'
+    tally_folders = [x for x in os.listdir("./OpenMC/")
+                     if x.startswith(f"tallies_{blanket}_{temp_k}K_Li{breeder_enrich:04.1f}")
+                     and x.split("_")[-3].startswith(fertile_isotope)]
 
-    rows_all = []   # where each row will be tallies_summary.csv for a given fertile loading
-    tally_folders = [x for x in os.listdir("./OpenMC/") if (x.startswith(f"tallies_{blanket}_{temp_k}K_Li{breeder_enrich:04.1f}")) and x.split("_")[-3].startswith(fertile_isotope)]
-    fluxE_list, ngE_list, leakE_list = [], [], []  # Use lists instead of empty DataFrames
     dst = f"./Figures/Data/{blanket}_{temp_k}K_Li{breeder_enrich:04.1f}_{fertile_isotope}"
 
     for folder in tally_folders:
 
-        # Extract the fertile loading
+        # Extract fertile loading from folder name
         part = folder.split("_")[-2]
         fertile = float(part.replace("kgm3", ""))
-        mt = fertile*vol_m3/1e3 # metric tons of fertile isotope
+        mt = fertile * vol_m3 / 1e3
 
+        # File paths (must match output.py exports)
         tally_summary = f"./OpenMC/{folder}/tallies_summary.csv"
-        tally_ngE     = f"./OpenMC/{folder}/{fertile_isotope}_n-gamma_Ebins.csv"
-        tally_fluxE   = f"./OpenMC/{folder}/{fertile_isotope}_flux_Ebins.csv"
-        tally_leak    = f"./OpenMC/{folder}/leakage.csv"
-        tally_leakE   = f"./OpenMC/{folder}/{fertile_isotope}_leakage_Ebins.csv"
+        tally_leak    = f"./OpenMC/{folder}/tallies_leakage.csv"
+        tally_rxnsE   = f"./OpenMC/{folder}/Ebins_rxns.csv"
+        tally_fluxE   = f"./OpenMC/{folder}/Ebins_flux.csv"
+        tally_leakE   = f"./OpenMC/{folder}/Ebins_leakage.csv"
 
-        """
-        Collating from each df = tallies_summary.csv
-        """
+        # Collate tallies_summary.csv
         try:
             df = pd.read_csv(tally_summary)
         except FileNotFoundError:
@@ -188,131 +186,98 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich,temp_k, vol_m3):
         try:
             df_leak = pd.read_csv(tally_leak)
         except FileNotFoundError:
-            print(f"{C.YELLOW}Warning.{C.END} File 'tallies_summary.csv' not found in {folder}, skipping...")
+            print(f"{C.YELLOW}Warning.{C.END} File 'tallies_leakage.csv' not found in {folder}, skipping...")
             continue
 
-        li6  = df[ df['cell']=='total' ]['Li6(n,t)'].values[0]
-        li7  = df[ df['cell']=='total' ]['Li7(n,t)'].values[0]
-        be9  = df[ df['cell']=='total' ]['Be9(n,2n)'].values[0]
-        u238 = df[ df['cell']=='total' ][f'{fertile_isotope}(n,g)'].values[0]
-        fis  = df[ df['cell']=='total' ]['tot(n,fis)'].values[0]
-        tbr  = df[ df['cell']=='total' ]['tbr'].values[0]
-        pu   = df[ df['cell']=='total' ][f'{fissile_isotope}_kg/yr'].values[0]
-        leak = df_leak['leakage'].values[0]
-        heat = df[ df['cell']=='total' ]['heating [MW]'].values[0]
-        fisq = df[ df['cell']=='total' ]['fisq [MW]'].values[0]
+        tot  = df[df['cell'] == 'total']
+        leak = df_leak[df_leak['void_cell'] == 'total']
 
+        rows_all.append({
+            'filename':        folder,
+            'fertile_kg/m3':   fertile,
+            'fertile_mt':      mt,
+            'Li6(n,t)':        tot['Li6(n,t)'].values[0],
+            'Li6(n,t)_sd':     tot['Li6(n,t)_stdev'].values[0],
+            'Li7(n,Xt)':       tot['Li7(n,t)'].values[0],
+            'Li7(n,Xt)_sd':    tot['Li7(n,t)_stdev'].values[0],
+            'Be9(n,2n)':       tot['Be9(n,2n)'].values[0],
+            'Be9(n,2n)_sd':    tot['Be9(n,2n)_stdev'].values[0],
+            'Pb(n,2n)':        tot['Pb(n,2n)'].values[0],
+            'Pb(n,2n)_sd':     tot['Pb(n,2n)_stdev'].values[0],
+            'U238(n,g)':       tot['U238(n,g)'].values[0],
+            'U238(n,g)_sd':    tot['U238(n,g)_stdev'].values[0],
+            'Th232(n,g)':      tot['Th232(n,g)'].values[0],
+            'Th232(n,g)_sd':   tot['Th232(n,g)_stdev'].values[0],
+            'tot(n,fis)':      tot['tot(n,fis)'].values[0],
+            'tot(n,fis)_sd':   tot['tot(n,fis)_stdev'].values[0],
+            'tbr':             tot['tbr'].values[0],
+            'tbr_sd':          tot['tbr_stdev'].values[0],
+            'Pu239_kg/yr':     tot['Pu239_kg/yr'].values[0],
+            'Pu239_kg/yr_sd':  tot['Pu239_kg/yr_stdev'].values[0],
+            'U233_kg/yr':      tot['U233_kg/yr'].values[0],
+            'U233_kg/yr_sd':   tot['U233_kg/yr_stdev'].values[0],
+            'leak [n/src-n]':  leak['leakage'].values[0],
+            'leak_sd':         leak['leakage_stdev'].values[0],
+            'heat [MW]':       tot['heating [MW]'].values[0],
+            'heat_sd':         tot['heating_stdev'].values[0],
+            'fisq [MW]':       tot['fisq [MW]'].values[0],
+            'fisq_sd':         tot['fisq_stdev'].values[0],
+        })
 
-        li6_stdev  = df[ df['cell']=='total' ]['Li6(n,t)_stdev'].values[0]
-        li7_stdev  = df[ df['cell']=='total' ]['Li7(n,t)_stdev'].values[0]
-        be9_stdev  = df[ df['cell']=='total' ]['Be9(n,2n)_stdev'].values[0]
-        u238_stdev = df[ df['cell']=='total' ][f'{fertile_isotope}(n,g)_stdev'].values[0]
-        fis_stdev  = df[ df['cell']=='total' ]['tot(n,fis)_stdev'].values[0]
-        tbr_stdev  = df[ df['cell']=='total' ]['tbr_stdev'].values[0]
-        pu_stdev   = df[ df['cell']=='total' ][f'{fissile_isotope}_kg/yr_stdev'].values[0]
-        leak_stdev = df_leak['leakage_stdev'].values[0]
-        heat_stdev = df[ df['cell']=='total' ]['heating_stdev'].values[0]
-        fisq_stdev = df[ df['cell']=='total' ]['fisq_stdev'].values[0]
+        # Collate Ebins_rxns.csv (already summed over cells)
+        try:
+            df_rxnsE = pd.read_csv(tally_rxnsE)
+            df_rxnsE['filename']   = folder
+            df_rxnsE['fertile_mt'] = mt
+            df_rxnsE['br_vol_m3']  = vol_m3
+            rxnsE_list.append(df_rxnsE)
+        except FileNotFoundError:
+            print(f"{C.YELLOW}Warning.{C.END} File 'Ebins_rxns.csv' not found in {folder}, skipping...")
 
-        rows_all.append({'filename': folder,
-                         'fertile_kg/m3': fertile,
-                         'fertile_mt': mt,
-                         'Li6(n,t)': li6,
-                         'Li6(n,t)_sd': li6_stdev,
-                         'Li7(n,Xt)': li7,
-                         'Li7(n,Xt)_sd': li7_stdev,
-                         'Be9(n,2n)': be9,
-                         'Be9(n,2n)_sd': be9_stdev,
-                         f'{fertile_isotope}(n,g)': u238,
-                         f'{fertile_isotope}(n,g)_sd': u238_stdev,
-                          'tot(n,fis)': fis,
-                          'tot(n,fis)_sd': fis_stdev,
-                         'tbr': tbr,
-                         'tbr_sd': tbr_stdev,
-                         f'{fissile_isotope} [kg/yr]': pu,
-                         f'{fissile_isotope}_sd': pu_stdev,
-                         'leak [n/src-n]': leak,
-                         'leak_sd': leak_stdev,
-                         'heat [MW]': heat,
-                         'heat_sd': heat_stdev,
-                         'fisq [MW]': fisq,
-                         'fisq_sd': fisq_stdev,})
+        # Collate Ebins_flux.csv (still per-cell, needs groupby) 
+        try:
+            df_fluxE = pd.read_csv(tally_fluxE)
+            cols = ['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'mean']
+            fluxE = (df_fluxE[cols]
+                     .groupby('energy mid [eV]', as_index=False)
+                     .agg(**{'energy low [eV]':  ('energy low [eV]', 'first'),
+                             'energy high [eV]': ('energy high [eV]', 'first'),
+                             'mean':             ('mean', 'sum')}))
+            fluxE['filename']      = folder
+            fluxE['fertile_kg/m3'] = fertile
+            fluxE['fertile_mt']    = mt
+            fluxE['br_vol_m3']     = vol_m3
+            fluxE_list.append(fluxE)
+        except FileNotFoundError:
+            print(f"{C.YELLOW}Warning.{C.END} File 'Ebins_flux.csv' not found in {folder}, skipping...")
 
-        # Sort the dataframe by 'fertile_kg/m3' in ascending order before exporting
+        # Collate Ebins_leakage.csv (already summed over cells)
+        try:
+            df_leakE = pd.read_csv(tally_leakE)
+            df_leakE['filename']      = folder
+            df_leakE['fertile_kg/m3'] = fertile
+            df_leakE['fertile_mt']    = mt
+            df_leakE['br_vol_m3']     = vol_m3
+            leakE_list.append(df_leakE)
+        except FileNotFoundError:
+            print(f"{C.YELLOW}Warning.{C.END} File 'Ebins_leakage.csv' not found in {folder}, skipping...")
+
+    # Export collated files
+    if rows_all:
         df_all = pd.DataFrame(rows_all).sort_values(by='fertile_kg/m3', ascending=True)
         df_all.to_csv(f"{dst}_rxns.csv", index=False)
 
+    if rxnsE_list:
+        pd.concat(rxnsE_list, ignore_index=True).to_csv(f"{dst}_Ebins_rxns.csv", index=False)
 
-        """
-        Collating all the energy spectrum for df_ngE = n-gamma_Ebins.csv, df_flux = flux_Ebins.csv, df_leakE = leakage.csv
-        """
-        try:
-            df_ngE = pd.read_csv(tally_ngE)
-        except FileNotFoundError:
-            print(f"{C.YELLOW}Warning.{C.END} File '{fertile_isotope}_n-gamma_Ebins.csv' not found in {folder}, skipping...")
-            continue
+    if fluxE_list:
+        df_fluxE_collated = pd.concat(fluxE_list, ignore_index=True)
+        df_fluxE_collated = df_fluxE_collated[['filename', 'fertile_kg/m3', 'fertile_mt', 'br_vol_m3',
+                                               'energy mid [eV]', 'mean', 'energy low [eV]', 'energy high [eV]']]
+        df_fluxE_collated.to_csv(f"{dst}_flux.csv", index=False)
 
-        try:
-            df_fluxE = pd.read_csv(tally_fluxE)
-        except FileNotFoundError:
-            print(f"{C.YELLOW}Warning.{C.END} File '{fertile_isotope}_flux_Ebins.csv' not found in {folder}, skipping...")
-            continue
-
-        try:
-            df_leakE = pd.read_csv(tally_leakE)
-        except FileNotFoundError:
-            print(f"{C.YELLOW}Warning.{C.END} File '{fertile_isotope}_leak_Ebins.csv' not found in {folder}, skipping...")
-            continue
-
-        # Group by energy midpoint and sum mean values across all cells while preserving energy bin boundaries  
-        # groupby("energy mid [eV]", as_index=False) - Groups all rows that have the same "energy mid [eV]" value together
-        # .agg(**{...}) - "output_column_name": ("input_column_name", "aggregation_function")
-        # "energy low [eV]": ("energy low [eV]", "first") - Takes the first "energy low [eV]" value in the group
-        # "energy high [eV]": ("energy high [eV]", "first") - Takes the first "energy high [eV]" value in the group
-        # "mean": ("mean", "sum") - Sums all "mean" values in the group
-
-        cols = ["energy low [eV]", "energy high [eV]", "energy mid [eV]", "mean"]   
-
-        ngE =  (df_ngE[cols].groupby("energy mid [eV]", as_index=False)
-                            .agg(**{"energy low [eV]" : ("energy low [eV]", "first"),
-                                    "energy high [eV]": ("energy high [eV]", "first"),
-                                                "mean": ("mean", "sum"),} ) )
-
-        fluxE = (df_fluxE[cols].groupby("energy mid [eV]", as_index=False)
-                               .agg(**{"energy low [eV]" : ("energy low [eV]", "first"),
-                                       "energy high [eV]": ("energy high [eV]", "first"),
-                                                   "mean": ("mean", "sum"),} ) )
-        
-        leakE = (df_leakE[cols].groupby("energy mid [eV]", as_index=False)
-                               .agg(**{"energy low [eV]" : ("energy low [eV]", "first"),
-                                       "energy high [eV]": ("energy high [eV]", "first"),
-                                                   "mean": ("mean", "sum"),} ) )
-
-        ngE['filename'],      fluxE['filename'],      leakE['filename']      = folder, folder, folder
-        ngE['fertile_kg/m3'], fluxE['fertile_kg/m3'], leakE['fertile_kg/m3'] = fertile, fertile, fertile
-        ngE['fertile_mt'],    fluxE['fertile_mt'],    leakE['fertile_mt']    = mt, mt, mt
-        ngE['br_vol_m3'],     fluxE['br_vol_m3'],     leakE['br_vol_m3']     = vol_m3, vol_m3, vol_m3
-
-        # avoid deprecation warning smh this change by pandas feels unnecessary
-        ngE_list.append(ngE)
-        fluxE_list.append(fluxE)
-        leakE_list.append(leakE)
-
-        # Concatenate once at the end
-        df_ngE_collated = pd.concat(ngE_list, ignore_index=True) if ngE_list else pd.DataFrame()
-        df_fluxE_collated = pd.concat(fluxE_list, ignore_index=True) if fluxE_list else pd.DataFrame()
-        df_leakE_collated = pd.concat(leakE_list, ignore_index=True) if leakE_list else pd.DataFrame()
-
-        # Reorder columns
-        df_ngE_collated = df_ngE_collated[['filename', 'fertile_kg/m3', 'fertile_mt', 'br_vol_m3', 
-                                         'energy mid [eV]', 'mean', 'energy low [eV]', 'energy high [eV]']]
-
-        df_fluxE_collated = df_fluxE_collated[['filename', 'fertile_kg/m3', 'fertile_mt', 'br_vol_m3', 
-                                             'energy mid [eV]', 'mean', 'energy low [eV]', 'energy high [eV]']]
-
-        df_ngE_collated.to_csv(f"{dst}_n-gamma.csv",index=False)
-        df_fluxE_collated.to_csv(f"{dst}_flux.csv",index=False)
-        df_leakE_collated.to_csv(f"{dst}_leak.csv",index=False)
+    if leakE_list:
+        pd.concat(leakE_list, ignore_index=True).to_csv(f"{dst}_leak.csv", index=False)
 
     print(f"{C.GREEN}Comment.{C.END} Collated tallies for {blanket} at {temp_k} K to: {dst}")
 

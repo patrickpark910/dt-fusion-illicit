@@ -8,9 +8,10 @@ from abc import ABC, abstractmethod
 # Import helper functions
 from Python.parameters import *
 from Python.utilities import *
+from Python.output import OutputMixin
 
 
-class Reactor(ABC):
+class Reactor(OutputMixin, ABC):
 
     def __init__(self, blanket_name, fertile_kgm3=0.0, fertile_isotope='U238', lithium_enrich=None, run_type='tallies', n_particles=N_PARTICLES, n_cycles=N_CYCLES, print_xml=True, run_openmc=True, run_debug=True):
 
@@ -101,9 +102,9 @@ class Reactor(ABC):
         # ---------------------------------------------------------------
 
         # Fertile element reaction rates
-        fertile_tally_tot    = self.make_tally('Total fertile rxn rate',     ['(n,gamma)', 'fission', '(n,2n)', 'elastic'], nuclides=['U238', 'U235', 'Th232'])
-        fertile_tally        = self.make_tally('Fertile rxn rates',          ['(n,gamma)', 'fission', '(n,2n)', 'elastic'], filters=[cell_filter], nuclides=['U238', 'U235', 'Th232'])
-        fertile_energy_tally = self.make_tally('Fertile rxn rates spectrum', ['(n,gamma)', 'fission', '(n,2n)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['U238', 'U235', 'Th232'])
+        fertile_tally_tot    = self.make_tally('Total fertile rxn rate',     ['(n,gamma)', 'fission', 'nu-fission','(n,2n)', 'elastic'], nuclides=['U238', 'U235', 'Th232'])
+        fertile_tally        = self.make_tally('Fertile rxn rates',          ['(n,gamma)', 'fission', 'nu-fission','(n,2n)', 'elastic'], filters=[cell_filter], nuclides=['U238', 'U235', 'Th232'])
+        fertile_energy_tally = self.make_tally('Fertile rxn rates spectrum', ['(n,gamma)', 'fission', 'nu-fission','(n,2n)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['U238', 'U235', 'Th232'])
 
         # Lithium reaction rates
         Li_tally_tot    = self.make_tally('Total Li rxn rate',     ['(n,gamma)', '(n,Xt)', 'elastic'], nuclides=['Li6', 'Li7'])
@@ -210,9 +211,6 @@ class Reactor(ABC):
                             pass
         else:    
             print(f"{C.RED}Warning.{C.END} OpenMC calculation skipped (run_openmc=False) for: {self.path}")
-
-
-            
 
 
     def volumes(self, samples=int(1e10)):
@@ -351,216 +349,3 @@ class Reactor(ABC):
                 print(f"{C.YELLOW}Comment.{C.END} Plots '{self.blanket_name}_xy.png', '{self.blanket_name}_xz.png' printed to {self.path}")
             else:
                 print(f"{C.YELLOW}Error.{C.END} OpenMC did not print '{self.blanket_name}_xy.ppm', '{self.blanket_name}_xz.ppm' to {self.path}!")
-
-
-    def extract_tallies(self):
-
-        """ Load tallies """
-        sp_path = f'{self.path}/statepoint.{self.n_cycles}.h5'
-        
-        # First try finding statepoint that exactly matches the programmed n_cycles
-        try:
-            print(f"{C.YELLOW}Comment.{C.END} Loading statepoint: {sp_path}")
-            sp = openmc.StatePoint(sp_path) 
-
-        except Exception as e:
-            print(f"{C.YELLOW}Warning.{C.END} {e}. statepoint.{self.n_cycles}.h5 missing or could not be read at: {sp_path}")
-        
-            # Second try finding highest statepoint
-            try:
-                print(f"{C.YELLOW}Comment.{C.END} Looking for the highest statepoint in: {self.path}")
-
-                sp_files = [f for f in os.listdir(self.path) if f.startswith('statepoint.') and f.endswith('.h5')]
-
-                if not sp_files:
-                    print(f"{C.RED}Warning.{C.END} <reactor.py/extract_tallies> No statepoints found at all in: {self.path}")
-                    print(f"But, reactor.py/openmc() should have run OpenMC if: (1) there are no statepoints (2) you have self.run_openmc=True (current state: {self.run_openmc})."
-                          f"If you see this error, self.run_openmc=False or you might have broken something in our logic.")
-                    sys.exit(2)
-                    
-                # Get the latest statepoint by batch number
-                sp_path = os.path.join(self.path, max(sp_files, key=lambda x: int(x.split('.')[1])))
-                sp = openmc.StatePoint(sp_path) 
-
-            except Exception as e:
-                print(f"{C.RED}  Fatal.{C.END} <reactor.py/extract_tallies> {e}. No valid statepoints found at all in: {self.path}")
-                sys.exit(2)
-
-        
-        print(f"Reading tallies...")
-
-        """
-        Convert tallies into usable forms. These dataframes have headers:
-        cell  energy low [eV]  energy high [eV] nuclide score     mean  std. dev.  energy mid [eV]
-        """
-
-        flux         = sp.get_tally(name='flux').get_pandas_dataframe()
-        flux_spec    = sp.get_tally(name='flux spectrum').get_pandas_dataframe()
-        Li           = sp.get_tally(name='Li rxn rates').get_pandas_dataframe()
-        Li_spec      = sp.get_tally(name='Li rxn rates spectrum').get_pandas_dataframe()
-        Be           = sp.get_tally(name='Be rxn rates').get_pandas_dataframe()
-        fertile      = sp.get_tally(name='Fertile rxn rates').get_pandas_dataframe()
-        fertile_spec = sp.get_tally(name='Fertile rxn rates spectrum').get_pandas_dataframe()
-        current_df   = sp.get_tally(name='current').get_pandas_dataframe()
-        heating      = sp.get_tally(name='heating').get_pandas_dataframe()
-        fisq         = sp.get_tally(name='fission-q').get_pandas_dataframe()
-
-        # Add new column for energy bin midpoint (for plotting)
-        for df in [flux_spec, fertile_spec, Li_spec]:
-            df['energy mid [eV]'] = (df['energy low [eV]'] + df['energy high [eV]'])/ 2
-
-
-        # =====================================================================
-        # PROCESS LEAKAGE CURRENT INTO VOID CELLS
-        # =====================================================================
-        # Identify void vs material cells by fill
-        void_ids    = [cell.id for cell in self.cells if cell.fill is None and cell.id != 10]  # exclude plasma
-        material_ids = [23, 22, 42, 44]  # these are the outermost blanket cells for FLiBe (23), HCPB (22, 23), DCLL (42, 44)
-
-        # Filter: destination is a void cell, origin is a material cell
-        void_current_df = current_df[
-            (current_df['cell'].isin(void_ids)) &
-            (current_df['cellfrom'].isin(material_ids))
-        ].copy()
-
-        # Total leakage
-        total_leakage_current = void_current_df['mean'].sum()
-        total_leakage_err = np.sqrt((void_current_df['std. dev.']**2).sum())
-
-        # Per-void-cell breakdown (inboard vs outboard for DCLL)
-        leakage_rows = []
-        for vid in void_ids:
-            mask = void_current_df['cell'] == vid
-            leak_val = void_current_df.loc[mask, 'mean'].sum()
-            leak_err = np.sqrt((void_current_df.loc[mask, 'std. dev.']**2).sum())
-            # Which material cell(s) actually contribute
-            neighbors = void_current_df.loc[mask & (void_current_df['mean'] > 0), 'cellfrom'].unique().tolist()
-            leakage_rows.append({'void_cell': vid, 'cellfrom': str(neighbors),
-                                 'leakage': leak_val, 'leakage_stdev': leak_err})
-
-        leakage_rows.append({'void_cell': 'total', 'cellfrom': '',
-                             'leakage': total_leakage_current, 'leakage_stdev': total_leakage_err})
-
-        leakage_df = pd.DataFrame(leakage_rows)
-        leakage_df.insert(0, 'fertile_kgm3', self.fertile_kgm3)
-
-
-        # =====================================================================
-        # PROCESS LEAKAGE CURRENT SPECTRUM INTO VOID (CELL 99)
-        # =====================================================================
-        current_spec_df = sp.get_tally(name='current spectrum').get_pandas_dataframe()
-        current_spec_df['energy mid [eV]'] = (current_spec_df['energy low [eV]'] + current_spec_df['energy high [eV]']) / 2
-
-        # Filter: destination is cell 99, exclude self-crossing (cellfrom != 99)
-        leakage_spec_df = current_spec_df[
-            (current_spec_df['cell'] == 99) &
-            (current_spec_df['cellfrom'] != 99)
-        ].copy()
-
-        # Sum partial currents over all cellfrom origins per energy bin
-        leakage_Ebin_df = ( leakage_spec_df.groupby(['energy low [eV]', 'energy high [eV]', 'energy mid [eV]'])
-                                           .agg(mean=('mean', 'sum'),std_dev=('std. dev.', lambda x: np.sqrt((x**2).sum())))
-                                           .reset_index() )
-        leakage_Ebin_df.columns = ['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'mean', 'std. dev.']
-
-
-        # =====================================================================
-        # PROCESS STANDARD REACTION RATES
-        # =====================================================================
-        # Flux spectrum dataframe
-        flux_Ebin_df     = flux_spec[flux_spec['cell'].between(30, 39, inclusive='both')]  
-
-        U238_ng_Ebin_df  = fertile_spec[(fertile_spec['nuclide'] == self.fertile_isotope) & (fertile_spec['score'] == '(n,gamma)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        U238_fis_Ebin_df = fertile_spec[(fertile_spec['nuclide'] == self.fertile_isotope) & (fertile_spec['score'] == 'fission')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        Li6_nt_Ebin_df   = Li_spec[(Li_spec['nuclide'] == 'Li6') & (Li_spec['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-        Li7_nt_Ebin_df   = Li_spec[(Li_spec['nuclide'] == 'Li7') & (Li_spec['score'] == '(n,Xt)')][['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'cell', 'mean', 'std. dev.']]
-
-
-        # Flux
-        flux_list = flux['mean'].tolist()
-
-        # Lithium reaction rates 
-        Li6_nt = Li[(Li['nuclide']=='Li6') & (Li['score']=='(n,Xt)')][['cell','score','mean','std. dev.']] 
-        Li7_nt = Li[(Li['nuclide']=='Li7') & (Li['score']=='(n,Xt)')][['cell','score','mean','std. dev.']] 
-        
-        Li6_nt_list     = Li6_nt['mean'].tolist()
-        Li7_nt_list     = Li7_nt['mean'].tolist() 
-        Li6_nt_err_list = Li6_nt['std. dev.'].tolist()
-        Li7_nt_err_list = Li7_nt['std. dev.'].tolist()
-
-        # Beryllium (n, 2n) reaction rates
-        Be9_n2n = Be[(Be['nuclide'] == 'Be9') & (Be['score'] == '(n,2n)')][['cell', 'score', 'mean', 'std. dev.']]
-        Be9_n2n_list     = Be9_n2n['mean'].tolist()
-        Be9_n2n_err_list = Be9_n2n['std. dev.'].tolist()
-        
-        tbr_list = [x + y for x, y in zip(Li6_nt_list, Li7_nt_list)] 
-        tbr_err_list = [x + y for x, y in zip(Li6_nt_err_list, Li7_nt_err_list)]
-
-        # Fertile isotope (n,gamma) — capture on fertile nuclide only
-        U238              = fertile[(fertile['nuclide']==self.fertile_isotope)][['cell','score','mean','std. dev.']]
-        U238_ng_list      = U238[U238['score'] == '(n,gamma)'][['mean']]['mean'].tolist()
-        U238_ng_err_list  = U238[U238['score'] == '(n,gamma)'][['std. dev.']]['std. dev.'].tolist()
-
-        # Total fission rate summed over ALL nuclides (U238 + U235 + Th232)
-        all_fis = (fertile[fertile['score'] == 'fission']
-                   .groupby('cell')
-                   .agg(mean=('mean', 'sum'),
-                        std_dev=('std. dev.', lambda x: np.sqrt((x**2).sum())))
-                   .reset_index()
-                   .sort_values('cell'))
-        all_fis_list     = all_fis['mean'].tolist()
-        all_fis_err_list = all_fis['std_dev'].tolist()
-        
-        # Heating and fission-q-recoverable, converted to MW
-        heat_list     = (heating['mean'] * NPS_FUS * EV_TO_MJ).tolist()
-        heat_err_list = (heating['std. dev.'] * NPS_FUS * EV_TO_MJ).tolist()
-        fisq_list     = (fisq['mean'] * NPS_FUS * EV_TO_MJ).tolist()
-        fisq_err_list = (fisq['std. dev.'] * NPS_FUS * EV_TO_MJ).tolist()
-
-
-        # Determine the atomic mass based on the isotope
-        amu = AMU_PU239 if self.fertile_isotope == 'U238' else AMU_U233
-
-        # Scaling factor
-        scaling_factor = NPS_FUS * SEC_PER_YR * amu / AVO / 1e3  # kg/yr
-
-        fissile_per_yr_list = [Pu_per_srcn * scaling_factor for Pu_per_srcn  in U238_ng_list]
-        fissile_per_yr_err_list = [err * scaling_factor for err in U238_ng_err_list]
-
-
-        """Create list of cell IDs randomly assigned by OpenMC to match mtu loading to cell ID"""
-        cell_ids = [str(x) for x in flux['cell'].unique().tolist()] 
-
-        df = pd.DataFrame({'cell': cell_ids,
-                           'flux': flux_list,
-                           'tbr'               : tbr_list,
-                           'tbr_stdev'         : tbr_err_list,
-                           f'{self.fertile_isotope}(n,g)'         : U238_ng_list,
-                           f'{self.fertile_isotope}(n,g)_stdev'   : U238_ng_err_list,
-                           f'{self.fissile_isotope}_kg/yr'        : fissile_per_yr_list,
-                           f'{self.fissile_isotope}_kg/yr_stdev'  : fissile_per_yr_err_list,
-                           'Li6(n,t)'          : Li6_nt_list,
-                           'Li6(n,t)_stdev'    : Li6_nt_err_list,
-                           'Li7(n,t)'          : Li7_nt_list,
-                           'Li7(n,t)_stdev'    : Li7_nt_err_list,
-                           'Be9(n,2n)'         : Be9_n2n_list,
-                           'Be9(n,2n)_stdev'   : Be9_n2n_err_list,
-                           'tot(n,fis)'        : all_fis_list,
-                           'tot(n,fis)_stdev'  : all_fis_err_list,
-                           'heating [MW]'      : heat_list ,
-                           'heating_stdev'     : heat_err_list,
-                           'fisq [MW]'         : fisq_list,
-                           'fisq_stdev'        : fisq_err_list })
-
-        totals = df.sum(numeric_only=True)
-        totals['cell'] = 'total'
-        df = pd.concat([df, pd.DataFrame([totals])], ignore_index=True)
-
-        print(df.iloc[:, :8])  # prints first 8 columns 
-        
-        # Export the Dataframes
-        df.to_csv(f'./{self.path}/tallies_summary.csv', index=False)
-        leakage_df.to_csv(f'./{self.path}/leakage.csv', index=False)
-        U238_ng_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_n-gamma_Ebins.csv', index=False)
-        flux_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_flux_Ebins.csv', index=False)
-        leakage_Ebin_df.to_csv(f'./{self.path}/{self.fertile_isotope}_leakage_Ebins.csv', index=False)
