@@ -24,9 +24,7 @@ from params import *
 # ============================================================
 # USER SETTINGS
 # ============================================================
-TARGETS = ['Be', 'Pb', #'Li7',
-           'Li_7.5', 'Li_60', 'Li_90',
-           'U', 'Th']
+TARGETS = ['Be', 'Pb', 'U', 'Th', 'Li_7.5', 'Li_60', 'Li_90',] # Li7 
 THICKNESS = 0.1        # cm — thin shell (keep << MFP)
 INNER_R   = 1.0        # cm
 PARTICLES = int(1e8)
@@ -54,24 +52,39 @@ INELASTIC_MTS = [str(mt) for mt in range(51, 92)]
 SPECIFIC_SCORES = {
     'Be':      ['(n,2n)'] + INELASTIC_MTS,
     'Pb':      ['(n,2n)'] + INELASTIC_MTS,
-    #'Li7':    ['(n,2n)'] + INELASTIC_MTS,
+    'U':       ['(n,2n)', 'nu-fission'] + INELASTIC_MTS,
+    'Th':      ['(n,2n)', 'nu-fission'] + INELASTIC_MTS,
+    'Li7':    ['(n,2n)'] + INELASTIC_MTS,
     'Li_7.5':  ['(n,2n)'] + INELASTIC_MTS,
     'Li_60':   ['(n,2n)'] + INELASTIC_MTS,
     'Li_90':   ['(n,2n)'] + INELASTIC_MTS,
-    'U':       ['(n,2n)', 'nu-fission'] + INELASTIC_MTS,
-    'Th':      ['(n,2n)', 'nu-fission'] + INELASTIC_MTS,
 }
 
 # Which curves to show on the plot
 PLOT_CURVES = {
     'Be':      ['(n,2n)'],
     'Pb':      ['(n,2n)', "(n,n')"],
-    #'Li7':    ['(n,2n)', "(n,n')"],
+    'U':       ['nu-fission', '(n,2n)', "(n,n')"],
+    'Th':      ['nu-fission', '(n,2n)', "(n,n')"],
+    'Li7':    ['(n,2n)', "(n,n')"],
     'Li_7.5':  ['(n,2n)', "(n,n')"],
     'Li_60':   ['(n,2n)', "(n,n')"],
     'Li_90':   ['(n,2n)', "(n,n')"],
-    'U':       ['nu-fission', '(n,2n)', "(n,n')"],
-    'Th':      ['nu-fission', '(n,2n)', "(n,n')"],
+}
+
+PLOT_LABELS = {'Be': 'Be-9', 'Pb': 'Pb-nat', 'Li7': 'Li-7', 'Li_7.5': 'Li-nat', 'Li_60': 'Li-60%e', 'Li_90': 'Li-90%e', 'U': 'U-nat', 'Th': 'Th-232'}
+
+# One color per target — shared across every plot.
+#   Li shades: darker blue = more Li-7, lighter blue = more Li-6 enrichment
+TARGET_COLOR = {
+    'Be':     "#D144F4",   # purple
+    'Pb':     "#474747",   # black
+    'U':      "#FF7700",   # orange
+    'Th':     "#00E100",   # green
+    'Li7':    '#08306B',   # darkest blue  (pure Li-7)
+    'Li_7.5': "#005CAD",   # dark blue     (7.5 at% Li-6)
+    'Li_60':  "#00A2FF",   # medium blue   (60 at% Li-6)
+    'Li_90':  "#75CAFF",   # light blue    (90 at% Li-6)
 }
 
 def log_buffer(lo, hi, buf=0.03):
@@ -279,9 +292,6 @@ os.chdir(RUN_DIR)
 # --- Single plot: reaction-specific outgoing spectra ---
 fig1, ax1 = plt.subplots(figsize=(7.0, 3.0))
 
-cmap = plt.get_cmap('tab20')
-
-color_idx = 0
 for tgt in TARGETS:
     for score_name in PLOT_CURVES[tgt]:
         sdata = results[tgt]['spectra'][score_name]
@@ -296,10 +306,10 @@ for tgt in TARGETS:
             mask &= rel_err < REL_ERR_THRESHOLD
 
         if mask.any():
-            label = f"{tgt} {score_name}"
+            nuc   = PLOT_LABELS.get(tgt, tgt)
+            label = f"{nuc} {score_name}"
             ax1.step(E_CENTERS[mask], spec[mask], where='mid', lw=0.75,
-                     color=cmap(color_idx % 20), label=label)  # color=f'C{color_idx}'
-        color_idx += 1
+                     color=TARGET_COLOR[tgt], label=label)
 
 ax1.set_xscale('log')
 ax1.set_yscale('log')
@@ -310,7 +320,7 @@ leg = ax1.legend(loc='lower left', fontsize=7, ncol=2,
                  frameon=True, framealpha=0.75)
 leg.get_frame().set_linewidth(0.5)
 ax1.set_xlim(log_buffer(1e4, 14e6, buf=0.03))
-ax1.set_ylim(log_buffer(1e-11, 1e-8, buf=0.03))
+ax1.set_ylim(log_buffer(1e-12, 1e-8, buf=0.03))
 
 
 # Format tick labels as 1eX scientific notation on both axes
@@ -327,12 +337,9 @@ print(f"\nSaved {RUN_DIR / 'compare.png'}")
 REACTIONS_SPLIT = ['(n,2n)', "(n,n')", 'nu-fission']
 REACTION_FILENAME = {
     '(n,2n)':     'n2n',
-    "(n,n')":     'nnp',
-    'nu-fission': 'nufission',
+    "(n,n')":     'n-inel',
+    'nu-fission': 'nu-fis',
 }
-
-# One fixed color per target, shared across all three split plots.
-TARGET_COLOR = {tgt: cmap(i % 20) for i, tgt in enumerate(TARGETS)}
 
 for reaction in REACTIONS_SPLIT:
     fig, ax = plt.subplots(figsize=(7.0, 3.0))
@@ -345,6 +352,10 @@ for reaction in REACTIONS_SPLIT:
         errs = sdata['errs']
 
         mask = spec > 0
+
+        nuc   = tgt if tgt not in PLOT_LABELS else PLOT_LABELS[tgt]
+        label = f"{nuc} {reaction}"
+        
         if REL_ERR_THRESHOLD is not None:
             with np.errstate(divide='ignore', invalid='ignore'):
                 rel_err = np.where(spec > 0, errs / spec, np.inf)
@@ -352,7 +363,7 @@ for reaction in REACTIONS_SPLIT:
 
         if mask.any():
             ax.step(E_CENTERS[mask], spec[mask], where='mid', lw=0.75,
-                    color=TARGET_COLOR[tgt], label=f"{tgt} {reaction}")
+                    color=TARGET_COLOR[tgt], label=label)
             plotted_any = True
 
     if not plotted_any:
@@ -369,7 +380,7 @@ for reaction in REACTIONS_SPLIT:
                     frameon=True, framealpha=0.75)
     leg.get_frame().set_linewidth(0.5)
     ax.set_xlim(log_buffer(1e4, 14e6, buf=0.03))
-    ax.set_ylim(log_buffer(1e-11, 1e-8, buf=0.03))
+    ax.set_ylim(log_buffer(1e-12, 1e-8, buf=0.03))
     ax.xaxis.set_major_formatter(sci_fmt)
     ax.yaxis.set_major_formatter(sci_fmt)
     fig.tight_layout()
@@ -400,8 +411,9 @@ for ax_s, reaction in zip(axes_s, REACTIONS_SPLIT):
             mask &= rel_err < REL_ERR_THRESHOLD
 
         if mask.any():
+            nuc = PLOT_LABELS.get(tgt, tgt)
             ax_s.step(E_CENTERS[mask], spec[mask], where='mid', lw=0.75,
-                      color=TARGET_COLOR[tgt], label=f"{tgt} {reaction}")
+                      color=TARGET_COLOR[tgt], label=f"{nuc} {reaction}")
             plotted_any = True
 
     ax_s.set_xscale('log')
@@ -414,7 +426,7 @@ for ax_s, reaction in zip(axes_s, REACTIONS_SPLIT):
                           frameon=True, framealpha=0.75)
         leg.get_frame().set_linewidth(0.5)
     ax_s.set_xlim(log_buffer(1e4, 14e6, buf=0.03))
-    ax_s.set_ylim(log_buffer(1e-11, 1e-8, buf=0.03))
+    ax_s.set_ylim(log_buffer(1e-12, 1e-8, buf=0.03))
     ax_s.xaxis.set_major_formatter(sci_fmt)
     ax_s.yaxis.set_major_formatter(sci_fmt)
 
@@ -423,6 +435,75 @@ fig_s.savefig('compare_stacked.pdf', bbox_inches='tight', pad_inches=0.01, forma
 fig_s.savefig('compare_stacked.png', bbox_inches='tight', pad_inches=0.01, format='png', dpi=300)
 plt.close(fig_s)
 print(f"Saved {RUN_DIR / 'compare_stacked.png'}")
+
+# --- Spectral statistics for each curve on the stacked plots ---
+print(f"\n{'='*120}")
+print("Spectral statistics for each curve on the stacked plots")
+print(f"{'='*120}")
+
+stats_rows = []
+
+for reaction in REACTIONS_SPLIT:
+    print(f"\n  Reaction: {reaction}")
+    print(f"  {'Target':<12s} {'Integral':>12s} {'Mean E':>12s} {'Median E':>12s}"
+          f" {'Peak E':>12s} {'Std Dev':>12s} {'E_10':>12s} {'E_90':>12s}")
+    print(f"  {'':─<12s} {'(n/src-n)':>12s} {'(MeV)':>12s} {'(MeV)':>12s}"
+          f" {'(MeV)':>12s} {'(MeV)':>12s} {'(MeV)':>12s} {'(MeV)':>12s}")
+
+    for tgt in TARGETS:
+        if reaction not in PLOT_CURVES[tgt]:
+            continue
+        if reaction not in results[tgt]['spectra']:
+            continue
+
+        sdata = results[tgt]['spectra'][reaction]
+        spec = sdata['vals']          # neutrons / src-n / eV
+
+        # Use all positive bins for statistics (not the display mask)
+        pos = spec > 0
+        if not pos.any():
+            continue
+
+        E = E_CENTERS[pos]            # eV
+        phi = spec[pos]               # neutrons / src-n / eV
+        dE = E_WIDTHS[pos]            # eV
+
+        # Differential counts per bin: phi(E)*dE  [neutrons / src-n]
+        counts = phi * dE
+
+        integral = counts.sum()
+        mean_E   = np.sum(E * counts) / integral
+        var_E    = np.sum((E - mean_E)**2 * counts) / integral
+        std_E    = np.sqrt(var_E)
+
+        # Peak energy (mode): bin with highest differential count
+        peak_E = E[np.argmax(counts)]
+
+        # Cumulative distribution for median and percentiles
+        cdf = np.cumsum(counts) / integral
+        median_E = np.interp(0.50, cdf, E)
+        E_10     = np.interp(0.10, cdf, E)
+        E_90     = np.interp(0.90, cdf, E)
+
+        nuc = PLOT_LABELS.get(tgt, tgt)
+        print(f"  {nuc:<12s} {integral:>12.4e} {mean_E/1e6:>12.4f} {median_E/1e6:>12.4f}"
+              f" {peak_E/1e6:>12.4f} {std_E/1e6:>12.4f} {E_10/1e6:>12.4f} {E_90/1e6:>12.4f}")
+
+        stats_rows.append({
+            'target':           nuc,
+            'reaction':         reaction,
+            'integral_n_per_src': integral,
+            'mean_E_MeV':       mean_E / 1e6,
+            'median_E_MeV':     median_E / 1e6,
+            'peak_E_MeV':       peak_E / 1e6,
+            'std_dev_E_MeV':    std_E / 1e6,
+            'E10_MeV':          E_10 / 1e6,
+            'E90_MeV':          E_90 / 1e6,
+        })
+
+df_stats = pd.DataFrame(stats_rows)
+df_stats.to_csv('spectral_stats.csv', index=False)
+print(f"\nSaved {RUN_DIR / 'spectral_stats.csv'}")
 
 # --- Export all spectra to CSV ---
 csv_data = {}

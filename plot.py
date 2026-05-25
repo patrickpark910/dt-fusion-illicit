@@ -1197,7 +1197,7 @@ class Plot:
             ax.grid(axis='both', which='major', linestyle='-', linewidth=0.5)
             ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f'1e{int(np.log10(x))}' if x > 0 else ''))
             ax.set_xlim(log_buffer(1e1,1e7))
-            # ax.set_ylim(0.5e-11, 1.5e1)
+            ax.set_ylim(log_buffer(1e-10,1e3))
 
             from matplotlib.ticker import LogLocator
             ax.yaxis.set_major_locator(LogLocator(base=10, numticks=20))

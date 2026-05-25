@@ -7,6 +7,43 @@ from Python.parameters import *
 from Python.utilities import *
 
 
+# OpenMC score names for MTs 51-91 (discrete inelastic levels + continuum).
+# Used to collapse individual level tallies back into a single '(n,level)' score,
+# working around an OpenMC bug in direct MT=4 tallying.
+INELASTIC_SCORES = frozenset(
+    [f'(n,n{i})' for i in range(1, 41)] + ['(n,nc)']
+)
+
+
+def _collapse_inelastic(df):
+    """
+    Sum individual inelastic-level scores (MTs 51-91) into one '(n,level)' row
+    per (cell, nuclide, energy-bin) group. Propagates uncertainties in quadrature.
+    Returns the DataFrame with those rows replaced; non-inelastic rows are untouched.
+    """
+    if df is None:
+        return None
+
+    mask = df['score'].isin(INELASTIC_SCORES)
+    if not mask.any():
+        return df
+
+    inel  = df[mask]
+    other = df[~mask].copy()
+
+    # Group by every column except score, mean, std. dev.
+    group_cols = [c for c in df.columns if c not in ('score', 'mean', 'std. dev.')]
+
+    grouped   = inel.groupby(group_cols, sort=False)
+    collapsed = grouped['mean'].sum().reset_index()
+    collapsed['std. dev.'] = grouped['std. dev.'].apply(
+        lambda x: np.sqrt((x**2).sum())
+    ).values
+    collapsed['score'] = '(n,level)'
+
+    return pd.concat([other, collapsed], ignore_index=True)
+
+
 class OutputMixin:
     """
     Mixin class for tally extraction and collation.
@@ -77,6 +114,12 @@ class OutputMixin:
         else:
             raw['Be']      = sp.get_tally(name='Be rxn rates').get_pandas_dataframe()
             raw['Be_spec'] = sp.get_tally(name='Be rxn rates spectrum').get_pandas_dataframe()
+
+        # Collapse individual inelastic levels (MTs 51-91) into single '(n,level)' score
+        raw['fertile']      = _collapse_inelastic(raw['fertile'])
+        raw['fertile_spec'] = _collapse_inelastic(raw['fertile_spec'])
+        raw['Pb']           = _collapse_inelastic(raw['Pb'])
+        raw['Pb_spec']      = _collapse_inelastic(raw['Pb_spec'])
 
         # Add energy-bin midpoints to all spectrum DataFrames
         for key in ['flux_spec', 'fertile_spec', 'Li_spec', 'Be_spec', 'Pb_spec']:
@@ -258,6 +301,18 @@ class OutputMixin:
         u238_ng  = fertile[(fertile['nuclide']=='U238')  & (fertile['score']=='(n,gamma)')][['cell','mean','std. dev.']]
         th232_ng = fertile[(fertile['nuclide']=='Th232') & (fertile['score']=='(n,gamma)')][['cell','mean','std. dev.']]
 
+        # Fertile inelastic scattering (MT 4 -> '(n,level)')
+        u235_inel  = fertile[(fertile['nuclide']=='U235')  & (fertile['score']=='(n,level)')][['cell','mean','std. dev.']]
+        u238_inel  = fertile[(fertile['nuclide']=='U238')  & (fertile['score']=='(n,level)')][['cell','mean','std. dev.']]
+        th232_inel = fertile[(fertile['nuclide']=='Th232') & (fertile['score']=='(n,level)')][['cell','mean','std. dev.']]
+
+        u235_inel_list  = u235_inel['mean'].tolist()  if len(u235_inel)  else zeros
+        u235_inel_err   = u235_inel['std. dev.'].tolist()  if len(u235_inel)  else zeros
+        u238_inel_list  = u238_inel['mean'].tolist()  if len(u238_inel)  else zeros
+        u238_inel_err   = u238_inel['std. dev.'].tolist()  if len(u238_inel)  else zeros
+        th232_inel_list = th232_inel['mean'].tolist() if len(th232_inel) else zeros
+        th232_inel_err  = th232_inel['std. dev.'].tolist() if len(th232_inel) else zeros
+
         # Total fission summed over all nuclides
         all_fis   = sum_over_nuclides(fertile, 'fission')
         all_nufis = sum_over_nuclides(fertile, 'nu-fission')
@@ -289,6 +344,12 @@ class OutputMixin:
             'U238(n,g)_stdev':     u238_ng_err,
             'Th232(n,g)':          th232_ng_list,
             'Th232(n,g)_stdev':    th232_ng_err,
+            'U235(n,inel)':        u235_inel_list,
+            'U235(n,inel)_stdev':  u235_inel_err,
+            'U238(n,inel)':        u238_inel_list,
+            'U238(n,inel)_stdev':  u238_inel_err,
+            'Th232(n,inel)':       th232_inel_list,
+            'Th232(n,inel)_stdev': th232_inel_err,
             'Pu239_kg/yr':         [x * pu_scaling   for x in u238_ng_list],
             'Pu239_kg/yr_stdev':   [x * pu_scaling   for x in u238_ng_err],
             'U233_kg/yr':          [x * u233_scaling  for x in th232_ng_list],
@@ -387,6 +448,12 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich, temp_k, vol_m3):
             'U238(n,g)_sd':    tot['U238(n,g)_stdev'].values[0],
             'Th232(n,g)':      tot['Th232(n,g)'].values[0],
             'Th232(n,g)_sd':   tot['Th232(n,g)_stdev'].values[0],
+            'U235(n,inel)':    tot['U235(n,inel)'].values[0],
+            'U235(n,inel)_sd': tot['U235(n,inel)_stdev'].values[0],
+            'U238(n,inel)':    tot['U238(n,inel)'].values[0],
+            'U238(n,inel)_sd': tot['U238(n,inel)_stdev'].values[0],
+            'Th232(n,inel)':    tot['Th232(n,inel)'].values[0],
+            'Th232(n,inel)_sd': tot['Th232(n,inel)_stdev'].values[0],
             'tot(n,fis)':      tot['tot(n,fis)'].values[0],
             'tot(n,fis)_sd':   tot['tot(n,fis)_stdev'].values[0],
             'tot(n,nufis)':    tot['tot(n,nufis)'].values[0],
