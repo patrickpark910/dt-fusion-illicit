@@ -31,6 +31,14 @@ class Plot:
         self.hcpb_u_ebins_df   = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_U238_Ebins_rxns.csv")
         self.hcpb_th_ebins_df  = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_Th232_Ebins_rxns.csv")
 
+        # Dataframes of energy-binned flux spectra (for flux ratio plot)
+        self.flibe_u_flux_df  = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_U238_flux.csv")
+        self.flibe_th_flux_df = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_Th232_flux.csv")
+        self.dcll_u_flux_df   = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_U238_flux.csv")
+        self.dcll_th_flux_df  = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_Th232_flux.csv")
+        self.hcpb_u_flux_df   = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_U238_flux.csv")
+        self.hcpb_th_flux_df  = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_Th232_flux.csv")
+
         self.flibe_u_rr_df = self.flibe_u_rr_df[self.flibe_u_rr_df['fertile_kg/m3'] <= LIMIT_UF4_FLIBE]
         self.flibe_th_rr_df = self.flibe_th_rr_df[self.flibe_th_rr_df['fertile_kg/m3'] <= LIMIT_THF4_FLIBE]
         self.flibe_u_ebins_df = self.flibe_u_ebins_df[self.flibe_u_ebins_df['fertile_kg/m3'] <= LIMIT_UF4_FLIBE]
@@ -365,6 +373,305 @@ class Plot:
         plt.close('all')
 
 
+    def plot_flux_ratio(self):
+        """
+        Flux spectral ratio plot: phi(rho) / phi(rho_ref) vs. energy.
+
+        3x2 grid (rows = FLiBe / HCPB / DCLL, cols = U238 / Th232).
+        Each panel overlays the ratio at several fertile loadings relative
+        to the clean (zero fertile) reference case.  A ratio > 1
+        means more flux at that energy; < 1 means less.
+
+        In FLiBe and HCPB, the ratio dips below 1 in the resonance region
+        (fertile absorber depleting resonance-energy neutrons) and rises
+        above 1 at higher energies.  In DCLL, the ratio dips above ~50 keV
+        (fast flux depletion by the growing absorber + its inelastic
+        scattering) and rises in the 1--50 keV range (fertile
+        self-moderation feeding neutrons into the resonance region).
+        """
+        print(f"\nPlotting flux spectral ratios vs. energy...")
+
+        panels = [
+            (self.flibe_u_flux_df,  r'FLiBe-UF$_4$',  0, 0),
+            (self.flibe_th_flux_df, r'FLiBe-ThF$_4$', 0, 1),
+            (self.hcpb_u_flux_df,   r'HCPB-UO$_2$',   1, 0),
+            (self.hcpb_th_flux_df,  r'HCPB-ThO$_2$',  1, 1),
+            (self.dcll_u_flux_df,   r'DCLL-UO$_2$',   2, 0),
+            (self.dcll_th_flux_df,  r'DCLL-ThO$_2$',  2, 1),
+        ]
+
+        rho_ref = 0                         # reference density: clean (no fertile) case
+        rho_compare = [10, 100, 999.99]     # densities to compare # 0.1, 
+        colors = {0.1: '#ff1f5b', 10: '#f48628', 100: '#04cc6c', 999.99: '#0c9edd'}
+        labels = {0.1: r'0.1 kg$/$m³', 10: r'10 kg$/$m³', 100: r'100 kg$/$m³', 999.99: r'1000 kg$/$m³'}
+
+        fig, axes = plt.subplots(3, 2, figsize=(7, 9), sharex=True, sharey=False)
+
+        # Per-row y-axis limits and tick spacing:
+        #   rows 0-1 (FLiBe, HCPB): wider range to capture resonance depletion
+        #   row  2   (DCLL):         tighter range around unity
+        row_ylim  = {0: (0.15*0.97, 1.3*1.03), 1: (0.15*0.97, 1.3*1.03), 2: (0.50*0.97, 5.5*1.03)}
+        row_major = {0: 0.1,          1: 0.1,           2: 0.5}
+        row_minor = {0: 0.05,         1: 0.05,          2: 0.25}
+
+        for df_flux, title, row, col in panels:
+            ax = axes[row, col]
+
+            # Match closest available density to rho_ref
+            available = df_flux['fertile_kg/m3'].unique()
+            ref_rho = min(available, key=lambda x: abs(x - rho_ref))
+            ref = df_flux[df_flux['fertile_kg/m3'] == ref_rho].sort_values('energy mid [eV]')
+            E_mid_ref = ref['energy mid [eV]'].values
+            phi_ref   = ref['mean'].values
+
+            for rho in rho_compare:
+                comp_rho = min(available, key=lambda x: abs(x - rho))
+                comp = df_flux[df_flux['fertile_kg/m3'] == comp_rho].sort_values('energy mid [eV]')
+                phi_comp = comp['mean'].values
+
+                # Only compute ratio where reference flux is non-negligible
+                # (avoids 0/0 in thermal bins for DCLL where flux is essentially zero)
+                ratio = np.ones_like(phi_ref, dtype=float)
+                mask = phi_ref > 1e-20
+                ratio[mask] = phi_comp[mask] / phi_ref[mask]
+                ratio[~mask] = np.nan
+
+                ax.semilogx(E_mid_ref, ratio,
+                            color=colors[rho], linewidth=0.75, label=labels[rho])
+
+            # Reference line at ratio = 1
+            ax.axhline(1.0, color='gray', linewidth=0.5, linestyle='-', zorder=0)
+
+            # Axis formatting
+            ax.xaxis.set_ticks_position('both')
+            ax.yaxis.set_ticks_position('both')
+            ax.grid(axis='both', which='major', linestyle='-', linewidth=0.5)
+            ax.set_xscale('log')
+            ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f'1e{int(np.log10(x))}' if x > 0 else ''))
+            ax.set_xlim(log_buffer(1e1,1e7))
+            ax.set_ylim(row_ylim[row])
+            ax.yaxis.set_major_locator(MultipleLocator(row_major[row]))
+            ax.yaxis.set_minor_locator(MultipleLocator(row_minor[row]))
+
+            if ax.get_subplotspec().is_last_row():
+                ax.set_xlabel('Neutron energy [eV]')
+            if ax.get_subplotspec().is_first_col():
+                ax.set_ylabel(r'Flux ratio $\phi(\rho)\,/\,\phi_0$')
+
+            # Panel title
+            # ax.text(0.02, 0.97, title, transform=ax.transAxes, va='top', ha='left')
+
+            # Legend: top for FLiBe/HCPB (rows 0-1), bottom-right for DCLL (row 2)
+            leg_loc = 'lower right' if row <= 1 else 'upper right'
+            leg = ax.legend(title=title, loc=leg_loc, fontsize=7, ncol=1,
+                            fancybox=False, edgecolor='black',
+                            frameon=True, framealpha=0.75)
+            leg.get_frame().set_linewidth(0.5)
+
+        fig.tight_layout()
+
+        if self.save:
+            plt.savefig('./Figures/PDF/fig_flux_ratio.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+            plt.savefig('./Figures/PNG/fig_flux_ratio.png', bbox_inches='tight', pad_inches=0.01, format='png')
+            print("Exported flux spectral ratio plot: fig_flux_ratio")
+        else:
+            print("Did not export flux ratio plot due to user setting.")
+
+        if self.show:
+            plt.show()
+        plt.close('all')
+
+
+    def plot_flux_spectrum(self):
+        """
+        Flux spectrum plot: phi(E) vs. energy.
+
+        3x2 grid (rows = FLiBe / HCPB / DCLL, cols = U238 / Th232).
+        Each panel overlays the flux at several fertile loadings
+        (0, 10, 100, 1000 kg/m³).
+        """
+        print(f"\nPlotting flux spectra vs. energy...")
+
+        panels = [
+            (self.flibe_u_flux_df,  r'FLiBe-UF$_4$',  0, 0),
+            (self.flibe_th_flux_df, r'FLiBe-ThF$_4$', 0, 1),
+            (self.hcpb_u_flux_df,   r'HCPB-UO$_2$',   1, 0),
+            (self.hcpb_th_flux_df,  r'HCPB-ThO$_2$',  1, 1),
+            (self.dcll_u_flux_df,   r'DCLL-UO$_2$',   2, 0),
+            (self.dcll_th_flux_df,  r'DCLL-ThO$_2$',  2, 1),
+        ]
+
+        densities_to_plot = [0, 10, 100, 999.99]
+        colors = {0: '#ff1f5b', 10: '#f48628', 100: '#04cc6c', 999.99: '#0c9edd'}
+        labels = {0: r'0 kg$/$m³', 10: r'10 kg$/$m³', 100: r'100 kg$/$m³', 999.99: r'1000 kg$/$m³'}
+        row_ylim = {0: log_buffer(1e-4, 1e1), 1: log_buffer(1e-4, 1e1), 2: log_buffer(1e-6, 1e1)}
+
+        fig, axes = plt.subplots(3, 2, figsize=(7, 9), sharex=True, sharey=False)
+        
+
+        for df_flux, title, row, col in panels:
+            ax = axes[row, col]
+
+            available = df_flux['fertile_kg/m3'].unique()
+
+            for rho in densities_to_plot:
+                closest = min(available, key=lambda x: abs(x - rho))
+                spec = df_flux[df_flux['fertile_kg/m3'] == closest].sort_values('energy mid [eV]')
+
+                E_mid = spec['energy mid [eV]'].values
+                phi   = spec['mean'].values.copy()
+
+                # Mask zeros / negatives to avoid log-scale artifacts
+                phi[phi <= 0] = np.nan
+
+                ax.loglog(E_mid, phi,
+                          color=colors[rho], linewidth=0.75, label=labels[rho])
+
+            # Axis formatting
+            ax.xaxis.set_ticks_position('both')
+            ax.yaxis.set_ticks_position('both')
+            ax.grid(axis='both', which='major', linestyle='-', linewidth=0.5)
+            ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f'1e{int(np.log10(x))}' if x > 0 else ''))
+            ax.set_xlim(log_buffer(1e1,1e7))
+            ax.set_ylim(row_ylim[row])
+
+            from matplotlib.ticker import LogLocator
+            ax.yaxis.set_major_locator(LogLocator(base=10, numticks=20))
+            ax.yaxis.set_minor_locator(LogLocator(base=10, subs=np.arange(2, 10), numticks=100))
+            ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f'1e{int(np.log10(x))}' if x > 0 else ''))
+
+            if ax.get_subplotspec().is_last_row():
+                ax.set_xlabel('Neutron energy [eV]')
+            if ax.get_subplotspec().is_first_col():
+                ax.set_ylabel(r'Flux [n$/$cm²$/$src-n]')
+
+            # Legend with panel title
+            leg = ax.legend(title=title, loc='lower right', fontsize=7, ncol=1,
+                            fancybox=False, edgecolor='black',
+                            frameon=True, framealpha=1)
+            leg.get_frame().set_linewidth(0.5)
+
+        fig.tight_layout()
+
+        if self.save:
+            plt.savefig('./Figures/PDF/fig_flux_spectrum.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+            plt.savefig('./Figures/PNG/fig_flux_spectrum.png', bbox_inches='tight', pad_inches=0.01, format='png')
+            print("Exported flux spectrum plot: fig_flux_spectrum")
+        else:
+            print("Did not export flux spectrum plot due to user setting.")
+
+        if self.show:
+            plt.show()
+        plt.close('all')
+
+
+    def plot_hist_diff(self):
+        """
+        Differential cumulative capture distributions:
+        CDF(rho) - CDF(rho_ref) vs. energy.
+
+        3x2 grid (rows = FLiBe / HCPB / DCLL, cols = U238 / Th232).
+        Each panel shows the difference in cumulative fractional (n,gamma)
+        distribution relative to the lowest-density case (0.1 kg/m3).
+
+        A positive region means that density's CDF runs ahead of the
+        reference (more captures have occurred by that energy), i.e.
+        captures shifted *downward* in energy.  A negative region means
+        the CDF lags (captures shifted *upward*).
+
+        Expected signatures:
+          FLiBe / HCPB: negative in the resonance region, positive above
+                        -- resonance saturation pushes captures upward.
+          DCLL:         positive in the 1--50 keV region, negative above
+                        -- fertile self-moderation pushes captures downward.
+        """
+        print(f"\nPlotting differential cumulative capture distributions...")
+
+        fig, axes = plt.subplots(3, 2, figsize=(7, 9), sharex=True, sharey=False)
+
+        # Per-row y-axis limits and tick spacing
+        row_ylim  = {0: (-0.30, 0.10), 1: (-0.20, 0.10), 2: (-0.05, 0.12)}
+        row_major = {0: 0.05,          1: 0.05,           2: 0.02}
+        row_minor = {0: 0.025,         1: 0.025,          2: 0.01}
+
+        panels = [
+            (self.flibe_u_ebins_df,  'U238_ng',  r'FLiBe-UF$_4$',  0, 0),
+            (self.flibe_th_ebins_df, 'Th232_ng', r'FLiBe-ThF$_4$', 0, 1),
+            (self.hcpb_u_ebins_df,   'U238_ng',  r'HCPB-UO$_2$',   1, 0),
+            (self.hcpb_th_ebins_df,  'Th232_ng', r'HCPB-ThO$_2$',  1, 1),
+            (self.dcll_u_ebins_df,   'U238_ng',  r'DCLL-UO$_2$',   2, 0),
+            (self.dcll_th_ebins_df,  'Th232_ng', r'DCLL-ThO$_2$',  2, 1),
+        ]
+
+        rho_ref = 0.1                            # reference density for CDF difference
+        rho_compare = [10, 100, 999.99]
+        colors = {10: '#f48628', 100: '#04cc6c', 999.99: '#0c9edd'}
+        labels = {10: r'10 kg$/$m³', 100: r'100 kg$/$m³', 999.99: r'1000 kg$/$m³'}
+
+        for df_ebin, ng_col, title, row, col in panels:
+            ax = axes[row, col]
+
+            # --- Build the reference CDF at rho_ref ---
+            available = df_ebin['fertile_kg/m3'].unique()
+            ref_rho = min(available, key=lambda x: abs(x - rho_ref))
+            ref = df_ebin[df_ebin['fertile_kg/m3'] == ref_rho].sort_values('energy mid [eV]')
+            E_mid = ref['energy mid [eV]'].values
+            ref_weights = ref[ng_col].values
+            ref_total = ref_weights.sum()
+            cdf_ref = np.cumsum(ref_weights) / ref_total if ref_total > 0 else np.zeros_like(ref_weights)
+
+            for rho in rho_compare:
+                comp_rho = min(available, key=lambda x: abs(x - rho))
+                comp = df_ebin[df_ebin['fertile_kg/m3'] == comp_rho].sort_values('energy mid [eV]')
+                comp_weights = comp[ng_col].values
+                comp_total = comp_weights.sum()
+                cdf_comp = np.cumsum(comp_weights) / comp_total if comp_total > 0 else np.zeros_like(comp_weights)
+
+                delta_cdf = cdf_comp - cdf_ref
+
+                ax.semilogx(E_mid, delta_cdf,
+                            color=colors[rho], linewidth=0.75, label=labels[rho])
+
+            # Reference line at zero
+            ax.axhline(0.0, color='gray', linewidth=0.5, linestyle='-', zorder=0)
+
+            # Axis formatting
+            ax.xaxis.set_ticks_position('both')
+            ax.yaxis.set_ticks_position('both')
+            ax.grid(axis='both', which='major', linestyle='-', linewidth=0.5)
+            ax.set_xscale('log')
+            ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f'1e{int(np.log10(x))}' if x > 0 else ''))
+            ax.set_xlim(0.5e1, 1.5e6)
+            ax.set_ylim(row_ylim[row])
+            ax.yaxis.set_major_locator(MultipleLocator(row_major[row]))
+            ax.yaxis.set_minor_locator(MultipleLocator(row_minor[row]))
+
+            if ax.get_subplotspec().is_last_row():
+                ax.set_xlabel('Neutron energy [eV]')
+            if ax.get_subplotspec().is_first_col():
+                ax.set_ylabel(r'$\Delta$ CDF$(E)$  vs. 0.1 kg$/$m³')
+
+            # Legend with panel title
+            leg_loc = 'lower left' if row <= 1 else 'upper left'
+            leg = ax.legend(title=title, loc=leg_loc, fontsize=7, ncol=1,
+                            fancybox=False, edgecolor='black',
+                            frameon=True, framealpha=0.75)
+            leg.get_frame().set_linewidth(0.5)
+
+        fig.tight_layout()
+
+        if self.save:
+            plt.savefig('./Figures/PDF/fig_hist_diff.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+            plt.savefig('./Figures/PNG/fig_hist_diff.png', bbox_inches='tight', pad_inches=0.01, format='png')
+            print("Exported differential cumulative capture distribution plot: fig_hist_diff")
+        else:
+            print("Did not export differential CDF plot due to user setting.")
+
+        if self.show:
+            plt.show()
+        plt.close('all')
+
+
     def plot_dRdn(self):
         print(f"\nPlotting rate of change of fissile material with respect to fertile density vs. fertile density...")
 
@@ -654,27 +961,28 @@ class Plot:
         reaction channels at two fertile loadings (0.1 and 1000 kg/m3).
  
         Channels and neutron weights:
-          Be9 or Pb (n,2n)             -> +1
-          U235 + fertile isotope fis   -> +(nu_bar - 1)   [approximate]
-          Fertile isotope (n,gamma)    -> -1
-          Li6 (n,Xt)                   -> -1
+          Be9 or Pb (n,2n)                         -> +1
+          U235 + fertile isotope (n,2n)             -> +1
+          U235 + fertile isotope fis               -> +(nu_bar - 1)   [approximate]
+          Fertile isotope (n,gamma)                -> -1
+          Li6 (n,Xt)                               -> -1
         """
         print(f"\nPlotting cumulative neutron balance vs energy...")
  
         # Approximate nu-bar values
-        # TODO: replace with nu-fission tally for energy-dependent accuracy
-        NU_U235  = 2.5
-        NU_U238  = 2.8
-        NU_TH232 = 2.3
+        # DONE // TODO: replace with nu-fission tally for energy-dependent accuracy
+        # NU_U235  = 2.5
+        # NU_U238  = 2.8
+        # NU_TH232 = 2.3
  
-        # Panel layout: (dataframe, title, fertile_iso, nu_fertile, row, col)
+        # Panel layout: (dataframe, title, fertile_iso, row, col)
         panels = [
-            (self.flibe_u_ebins_df,  r'FLiBe-UF$_4$',  'U238',  NU_U238,  0, 0),
-            (self.flibe_th_ebins_df, r'FLiBe-ThF$_4$', 'Th232', NU_TH232, 0, 1),
-            (self.hcpb_u_ebins_df,   r'HCPB-UO$_2$',   'U238',  NU_U238,  1, 0),
-            (self.hcpb_th_ebins_df,  r'HCPB-ThO$_2$',  'Th232', NU_TH232, 1, 1),
-            (self.dcll_u_ebins_df,   r'DCLL-UO$_2$',   'U238',  NU_U238,  2, 0),
-            (self.dcll_th_ebins_df,  r'DCLL-ThO$_2$',  'Th232', NU_TH232, 2, 1),
+            (self.flibe_u_ebins_df,  r'FLiBe-UF$_4$',  'U238',  0, 0),
+            (self.flibe_th_ebins_df, r'FLiBe-ThF$_4$', 'Th232', 0, 1),
+            (self.hcpb_u_ebins_df,   r'HCPB-UO$_2$',   'U238',  1, 0),
+            (self.hcpb_th_ebins_df,  r'HCPB-ThO$_2$',  'Th232', 1, 1),
+            (self.dcll_u_ebins_df,   r'DCLL-UO$_2$',   'U238',  2, 0),
+            (self.dcll_th_ebins_df,  r'DCLL-ThO$_2$',  'Th232', 2, 1),
         ]
  
         densities_to_plot = [0.1, 999.99]
@@ -683,15 +991,17 @@ class Plot:
  
         # Channel colors
         colors = {
-            'n2n':  '#1D9E75',   # teal   -- neutron multiplier
-            'fis':  '#b41f24',   # red    -- fission
-            'ng':   '#0047ba',   # blue   -- fertile capture
-            'li6':  '#EF9F27',   # amber  -- tritium breeding
+            'n2n':      '#1D9E75',   # teal   -- neutron multiplier (Be/Pb)
+            'n2n_act':  '#7B2D8E',   # purple -- neutron multiplier (actinide)
+            'fis':      '#b41f24',   # red    -- fission
+            'ng':       '#0047ba',   # blue   -- fertile capture
+            'li6':      '#EF9F27',   # amber  -- tritium breeding
         }
 
         from matplotlib.lines import Line2D
         legend_handles = [
-            Line2D([0], [0], color=colors['n2n'], lw=1.5, label=r'Be$/$Pb $($n,2n$)$: +1'),
+            Line2D([0], [0], color=colors['n2n'],     lw=1.5, label=r'Be$/$Pb $($n,2n$)$: +1'),
+            # Line2D([0], [0], color=colors['n2n_act'], lw=1.5, label=r'U235$/$fert $($n,2n$)$: +1'),
             Line2D([0], [0], color=colors['fis'], lw=1.5, label=r'Fission: +$(\bar\nu - 1)$'),
             Line2D([0], [0], color='black', ls='-',  lw=1.0, label=r'0.1 kg$/$m³'),
             Line2D([0], [0], color=colors['ng'],  lw=1.5, label=r'Fertile $($n,$\gamma)$: $-$1'),
@@ -701,7 +1011,7 @@ class Plot:
  
         fig, axes = plt.subplots(3, 2, figsize=(7, 9), sharex=True, sharey=True)
  
-        for df_Erxn, title, fert_iso, nu_fert, row, col in panels:
+        for df_Erxn, title, fert_iso, row, col in panels:
             ax = axes[row, col]
  
             for rho in densities_to_plot:
@@ -720,10 +1030,12 @@ class Plot:
 
                 # Multiplier (n,2n): +1 per reaction
                 n2n = (+1) * (spec['Be9_n2n'].values + spec['Pb_n2n'].values)
+
+                # Actinide (n,2n): +1 per reaction
+                n2n_act = (+1) * (spec['U235_n2n'].values + spec[f'{fert_iso}_n2n'].values)
  
                 # Fission: +(nu-1) for fertile + +(nu_U235 - 1) for U235
-                fis = ((nu_fert - 1) * spec[f'{fert_iso}_fis'].values
-                     + (NU_U235 - 1) * spec['U235_fis'].values)
+                fis = (spec[f'{fert_iso}_nufis'].values + spec['U235_nufis'].values)
  
                 # Fertile (n,gamma): -1 per reaction
                 ng = (-1) * spec[f'{fert_iso}_ng'].values
@@ -732,7 +1044,7 @@ class Plot:
                 li6 = (-1) * spec['Li6_nt'].values
  
                 # Cumulative sum from low to high energy
-                for key, vals in [('n2n', n2n), ('fis', fis), ('ng', ng), ('li6', li6)]:
+                for key, vals in [('n2n', n2n), ('fis', fis), ('ng', ng), ('li6', li6)]: # ('n2n_act', n2n_act), 
                     ax.semilogx(E_mid, np.cumsum(vals),
                                 color=colors[key], linestyle=ls, linewidth=lw)
  
@@ -744,9 +1056,9 @@ class Plot:
             ax.grid(axis='both', which='major', linestyle='-', linewidth=0.5)
             ax.set_xscale('log')
             ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f'1e{int(np.log10(x))}' if x > 0 else ''))
-            ax.set_xlim(0.5e1, 1.5e7)
+            ax.set_xlim(log_buffer(1e1,1e7))
             ax.set_yscale('linear')
-            ax.set_ylim(-1.5*1.05, 0.75*1.05)
+            ax.set_ylim(-1.5*1.03, 0.75*1.03)
             ax.yaxis.set_major_locator(MultipleLocator(0.25))
  
             if ax.get_subplotspec().is_last_row():
@@ -781,9 +1093,425 @@ class Plot:
         plt.close('all')
 
 
+    def plot_rxn_spectra(self):
+        """
+        Per-lethargy reaction rate spectra vs. energy.
 
+        3x2 grid (rows = FLiBe / HCPB / DCLL, cols = U238 / Th232).
+        Each panel shows reaction rate per unit lethargy [rxns / src-n]
+        for seven channels at two fertile loadings (0.1 and 1000 kg/m3):
+
+          Be/Pb (n,2n)          -- multiplier material
+          Be/Pb (n,elastic)     -- multiplier elastic scattering
+          Actinide (n,2n)       -- fertile + U235
+          Fertile (n,inelastic) -- fertile MT 4
+          Fission               -- total (fertile + U235), raw rate
+          Fertile (n,gamma)     -- capture / fissile breeding
+          Li-6 (n,t)            -- tritium breeding
+
+        No neutron-weight coefficients are applied.  Per-lethargy
+        normalization (rate / d_lnE) puts all energy decades on equal
+        visual footing, making resonance peaks and threshold reactions
+        directly comparable on a log-x axis.
+        """
+        print(f"\nPlotting per-lethargy reaction rate spectra vs energy...")
+
+        panels = [
+            (self.flibe_u_ebins_df,  r'FLiBe-UF$_4$',  'U238',  0, 0),
+            (self.flibe_th_ebins_df, r'FLiBe-ThF$_4$', 'Th232', 0, 1),
+            (self.hcpb_u_ebins_df,   r'HCPB-UO$_2$',   'U238',  1, 0),
+            (self.hcpb_th_ebins_df,  r'HCPB-ThO$_2$',  'Th232', 1, 1),
+            (self.dcll_u_ebins_df,   r'DCLL-UO$_2$',   'U238',  2, 0),
+            (self.dcll_th_ebins_df,  r'DCLL-ThO$_2$',  'Th232', 2, 1),
+        ]
+
+        densities_to_plot = [0.1, 999.99]
+        linestyles = {0.1: '-', 999.99: '--'}
+        linewidths = {0.1: 0.75, 999.99: 1.0}
+
+        # Channel colors
+        colors = {
+            'mult_n2n':  '#1D9E75',   # teal        -- Be/Pb (n,2n)
+            'mult_elas': '#85C77E',   # light green -- Be/Pb elastic
+            'fert_n2n':  '#7B2D8E',   # purple      -- actinide (n,2n)
+            'fert_inel': '#C77DBA',   # lilac       -- fertile inelastic
+            'fis':       '#b41f24',   # red         -- fission
+            'ng':        '#0047ba',   # blue        -- fertile capture
+            'li':        '#EF9F27',   # amber       -- Li-6 tritium breeding
+        }
+
+        from matplotlib.lines import Line2D
+        legend_handles = [
+            Line2D([0], [0], color=colors['mult_n2n'],  lw=1.5, label=r'Be$/$Pb $($n,2n$)$'),
+            Line2D([0], [0], color=colors['mult_elas'], lw=1.5, label=r'Be$/$Pb elastic'),
+            Line2D([0], [0], color=colors['fert_n2n'],  lw=1.5, label=r'Actinide $($n,2n$)$'),
+            Line2D([0], [0], color=colors['fert_inel'], lw=1.5, label=r'Fertile inelastic'),
+            Line2D([0], [0], color='black', ls='-',     lw=1.0, label=r'0.1 kg$/$m³'),
+            Line2D([0], [0], color=colors['fis'],       lw=1.5, label=r'Fission'),
+            Line2D([0], [0], color=colors['ng'],        lw=1.5, label=r'Fertile $($n,$\gamma)$'),
+            Line2D([0], [0], color=colors['li'],        lw=1.5, label=r'Li $($n,t$)$'),
+            Line2D([0], [0], color='black', ls='--',    lw=1.0,  label=r'1000 kg$/$m³'),
+        ]
+
+        fig, axes = plt.subplots(3, 2, figsize=(7, 9), sharex=True, sharey=True)
+
+        for df_Erxn, title, fert_iso, row, col in panels:
+            ax = axes[row, col]
+
+            for rho in densities_to_plot:
+
+                # Match closest available density
+                available = df_Erxn['fertile_kg/m3'].unique()
+                closest = min(available, key=lambda x: abs(x - rho))
+                spec = df_Erxn[df_Erxn['fertile_kg/m3'] == closest].copy()
+                spec = spec.sort_values('energy mid [eV]')
+
+                E_mid  = spec['energy mid [eV]'].values
+                E_low  = spec['energy low [eV]'].values
+                E_high = spec['energy high [eV]'].values
+                d_lnE  = (E_high - E_low) / E_mid   # lethargy bin width
+                ls = linestyles[rho]
+                lw = linewidths[rho]
+
+                # Raw reaction-rate channels (no neutron weights)
+                channels = {
+                    'mult_n2n':  spec['Be9_n2n'].values + spec['Pb_n2n'].values,
+                    'mult_elas': spec['Be9_elas'].values + spec['Pb_elas'].values,
+                    'fert_n2n':  spec[f'{fert_iso}_n2n'].values  + spec['U235_n2n'].values,
+                    'fert_inel': spec[f'{fert_iso}_inel'].values + spec['U235_inel'].values,
+                    'fis':       spec[f'{fert_iso}_fis'].values  + spec['U235_fis'].values,
+                    'ng':        spec[f'{fert_iso}_ng'].values,
+                    'li':        spec['Li6_nt'].values + spec['Li7_nt'].values,
+                }
+
+                for key, vals in channels.items():
+                    per_lethargy = vals / d_lnE
+                    # Mask zeros to avoid log-scale artifacts
+                    per_lethargy[per_lethargy <= 0] = np.nan
+                    ax.loglog(E_mid, per_lethargy,
+                              color=colors[key], linestyle=ls, linewidth=lw)
+
+            # Axis formatting
+            ax.xaxis.set_ticks_position('both')
+            ax.yaxis.set_ticks_position('both')
+            ax.grid(axis='both', which='major', linestyle='-', linewidth=0.5)
+            ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f'1e{int(np.log10(x))}' if x > 0 else ''))
+            ax.set_xlim(log_buffer(1e1,1e7))
+            # ax.set_ylim(0.5e-11, 1.5e1)
+
+            from matplotlib.ticker import LogLocator
+            ax.yaxis.set_major_locator(LogLocator(base=10, numticks=20))
+            ax.yaxis.set_minor_locator(LogLocator(base=10, subs=np.arange(2, 10), numticks=100))
+            ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f'1e{int(np.log10(x))}' if x > 0 else ''))
+
+            if ax.get_subplotspec().is_last_row():
+                ax.set_xlabel('Neutron energy [eV]')
+            if ax.get_subplotspec().is_first_col():
+                ax.set_ylabel(r'Reaction rate / lethargy [rxns$/$src-n]')
+
+            # Panel title
+            ax.text(0.02, 0.97, title, transform=ax.transAxes,
+                    va='top', ha='left')
+
+            # Legend
+            leg = ax.legend(handles=legend_handles, loc='upper left',
+                            bbox_to_anchor=(0.00, 0.935),
+                            fontsize=6, ncol=3,
+                            fancybox=False, edgecolor='black',
+                            frameon=False, framealpha=0.75)
+
+        fig.tight_layout()
+
+        if self.save:
+            plt.savefig('./Figures/PDF/fig_rxn_spectra.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+            plt.savefig('./Figures/PNG/fig_rxn_spectra.png', bbox_inches='tight', pad_inches=0.01, format='png')
+            print("Exported per-lethargy reaction rate spectra: fig_rxn_spectra")
+        else:
+            print("Did not export reaction rate spectra plot due to user setting.")
+
+        if self.show:
+            plt.show()
+        plt.close('all')
+
+
+    def plot_rxn_ratio(self):
+        """
+        Per-lethargy reaction-rate ratio: R(1000) / R(0.1) vs. energy.
+
+        3x2 grid (rows = FLiBe / HCPB / DCLL, cols = U238 / Th232).
+        For each of the seven reaction channels used in plot_rxn_spectra,
+        the ratio of the per-lethargy reaction rate at 1000 kg/m³ to that
+        at 0.1 kg/m³ is plotted.  A ratio > 1 means the channel increased
+        with fertile loading; < 1 means it decreased.
+
+        Uses the same channel color scheme as plot_rxn_spectra.
+        """
+        print(f"\nPlotting per-lethargy reaction rate ratios (1000 / 0.1 kg/m³) vs energy...")
+
+        panels = [
+            (self.flibe_u_ebins_df,  r'FLiBe-UF$_4$',  'U238',  0, 0),
+            (self.flibe_th_ebins_df, r'FLiBe-ThF$_4$', 'Th232', 0, 1),
+            (self.hcpb_u_ebins_df,   r'HCPB-UO$_2$',   'U238',  1, 0),
+            (self.hcpb_th_ebins_df,  r'HCPB-ThO$_2$',  'Th232', 1, 1),
+            (self.dcll_u_ebins_df,   r'DCLL-UO$_2$',   'U238',  2, 0),
+            (self.dcll_th_ebins_df,  r'DCLL-ThO$_2$',  'Th232', 2, 1),
+        ]
+
+        rho_num = 999.99   # numerator density   (1000 kg/m³)
+        rho_den = 0.1      # denominator density  (0.1  kg/m³)
+
+        # Channel colors — identical to plot_rxn_spectra
+        colors = {
+            'mult_n2n':  '#1D9E75',   # teal        -- Be/Pb (n,2n)
+            'mult_elas': '#85C77E',   # light green -- Be/Pb elastic
+            'fert_n2n':  '#7B2D8E',   # purple      -- actinide (n,2n)
+            'fert_inel': '#C77DBA',   # lilac       -- fertile inelastic
+            'fis':       '#b41f24',   # red         -- fission
+            'ng':        '#0047ba',   # blue        -- fertile capture
+            'li':        '#EF9F27',   # amber       -- Li-6 tritium breeding
+        }
+
+        # Per-row y-axis limits and tick spacing
+        row_ylim  = {0: (0.0, 1.5e4),  1: (0.0, 1.5e4),  2: (0.0, 4e4)}
+        # row_major = {0: 0.25,        1: 0.25,         2: 0.5}
+        # row_minor = {0: 0.125,       1: 0.125,        2: 0.25}
+
+        from matplotlib.lines import Line2D
+        legend_handles = [ Line2D([0], [0], color=colors['mult_n2n'],  lw=1.5, label=r'Be$/$Pb $($n,2n$)$'),
+                           Line2D([0], [0], color=colors['mult_elas'], lw=1.5, label=r'Be$/$Pb elastic'),
+                           Line2D([0], [0], color=colors['fert_n2n'],  lw=1.5, label=r'Actinide $($n,2n$)$'),
+                           Line2D([0], [0], color=colors['fert_inel'], lw=1.5, label=r'Fertile inelastic'),
+                           Line2D([0], [0], color=colors['fis'],       lw=1.5, label=r'Fission'),
+                           Line2D([0], [0], color=colors['ng'],        lw=1.5, label=r'Fertile $($n,$\gamma)$'),
+                           Line2D([0], [0], color=colors['li'],        lw=1.5, label=r'Li $($n,t$)$'),           ]
+
+        fig, axes = plt.subplots(3, 2, figsize=(7, 9), sharex=True, sharey=False)
+
+        for df_Erxn, title, fert_iso, row, col in panels:
+            ax = axes[row, col]
+
+            available = df_Erxn['fertile_kg/m3'].unique()
+
+            # ---- denominator (0.1 kg/m³) ----
+            den_rho = min(available, key=lambda x: abs(x - rho_den))
+            den = df_Erxn[df_Erxn['fertile_kg/m3'] == den_rho].copy().sort_values('energy mid [eV]')
+
+            E_mid_den  = den['energy mid [eV]'].values
+            E_low_den  = den['energy low [eV]'].values
+            E_high_den = den['energy high [eV]'].values
+            d_lnE_den  = (E_high_den - E_low_den) / E_mid_den
+
+            den_channels = {
+                'mult_n2n':  den['Be9_n2n'].values  + den['Pb_n2n'].values,
+                'mult_elas': den['Be9_elas'].values  + den['Pb_elas'].values,
+                'fert_n2n':  den[f'{fert_iso}_n2n'].values  + den['U235_n2n'].values,
+                'fert_inel': den[f'{fert_iso}_inel'].values + den['U235_inel'].values,
+                'fis':       den[f'{fert_iso}_fis'].values  + den['U235_fis'].values,
+                'ng':        den[f'{fert_iso}_ng'].values,
+                'li':        den['Li6_nt'].values + den['Li7_nt'].values,
+            }
+
+            # ---- numerator (1000 kg/m³) ----
+            num_rho = min(available, key=lambda x: abs(x - rho_num))
+            num = df_Erxn[df_Erxn['fertile_kg/m3'] == num_rho].copy().sort_values('energy mid [eV]')
+
+            E_mid_num  = num['energy mid [eV]'].values
+            E_low_num  = num['energy low [eV]'].values
+            E_high_num = num['energy high [eV]'].values
+            d_lnE_num  = (E_high_num - E_low_num) / E_mid_num
+
+            num_channels = {
+                'mult_n2n':  num['Be9_n2n'].values  + num['Pb_n2n'].values,
+                'mult_elas': num['Be9_elas'].values  + num['Pb_elas'].values,
+                'fert_n2n':  num[f'{fert_iso}_n2n'].values  + num['U235_n2n'].values,
+                'fert_inel': num[f'{fert_iso}_inel'].values + num['U235_inel'].values,
+                'fis':       num[f'{fert_iso}_fis'].values  + num['U235_fis'].values,
+                'ng':        num[f'{fert_iso}_ng'].values,
+                'li':        num['Li6_nt'].values + num['Li7_nt'].values,
+            }
+
+            for key in colors:
+                num_pl = num_channels[key] / d_lnE_num
+                den_pl = den_channels[key] / d_lnE_den
+
+                ratio = np.ones_like(den_pl, dtype=float)
+                valid = (den_pl > 0) & (num_pl > 0)
+                ratio[valid]  = num_pl[valid] / den_pl[valid]
+                ratio[~valid] = np.nan
+
+                ax.semilogx(E_mid_den, ratio, color=colors[key], linewidth=0.75)
+
+            # Reference line at ratio = 1
+            ax.axhline(1.0, color='gray', linewidth=0.5, linestyle='-', zorder=0)
+
+            # Axis formatting
+            ax.xaxis.set_ticks_position('both')
+            ax.yaxis.set_ticks_position('both')
+            ax.grid(axis='both', which='major', linestyle='-', linewidth=0.5)
+            ax.set_xscale('log')
+            ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f'1e{int(np.log10(x))}' if x > 0 else ''))
+            ax.set_xlim(log_buffer(1e1, 1e7))
+            ax.set_yscale('log')
+            ax.set_ylim(row_ylim[row])
+            # ax.yaxis.set_major_locator(MultipleLocator(row_major[row]))
+            # ax.yaxis.set_minor_locator(MultipleLocator(row_minor[row]))
+            # ax.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
+
+            if ax.get_subplotspec().is_last_row():
+                ax.set_xlabel('Neutron energy [eV]')
+            if ax.get_subplotspec().is_first_col():
+                ax.set_ylabel(r'Reaction rate ratio $R(1000)\,/\,R(0.1)$')
+
+            # Panel title
+            ax.text(0.02, 0.97, title, transform=ax.transAxes,
+                    va='top', ha='left')
+
+            # Legend
+            leg = ax.legend(handles=legend_handles, loc='upper left',
+                            bbox_to_anchor=(0.00, 0.935),
+                            fontsize=6, ncol=3,
+                            fancybox=False, edgecolor='black',
+                            frameon=False, framealpha=0.75)
+
+        fig.tight_layout()
+
+        if self.save:
+            plt.savefig('./Figures/PDF/fig_rxn_ratio.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+            plt.savefig('./Figures/PNG/fig_rxn_ratio.png', bbox_inches='tight', pad_inches=0.01, format='png')
+            print("Exported per-lethargy reaction rate ratio plot: fig_rxn_ratio")
+        else:
+            print("Did not export reaction rate ratio plot due to user setting.")
+
+        if self.show:
+            plt.show()
+        plt.close('all')
 
     
+    def plot_rxn_cumulative(self):
+        """
+        Cumulative reaction rate vs. energy.
+
+        3x2 grid (rows = FLiBe / HCPB / DCLL, cols = U238 / Th232).
+        Each panel shows the running integral of the reaction rate
+        [rxns / src-n] from low energy upward for seven channels at
+        two fertile loadings (0.1 and 1000 kg/m³).
+
+        Uses the same channel color scheme as plot_rxn_spectra.
+        """
+        print(f"\nPlotting cumulative reaction rate vs energy...")
+
+        panels = [
+            (self.flibe_u_ebins_df,  r'FLiBe-UF$_4$',  'U238',  0, 0),
+            (self.flibe_th_ebins_df, r'FLiBe-ThF$_4$', 'Th232', 0, 1),
+            (self.hcpb_u_ebins_df,   r'HCPB-UO$_2$',   'U238',  1, 0),
+            (self.hcpb_th_ebins_df,  r'HCPB-ThO$_2$',  'Th232', 1, 1),
+            (self.dcll_u_ebins_df,   r'DCLL-UO$_2$',   'U238',  2, 0),
+            (self.dcll_th_ebins_df,  r'DCLL-ThO$_2$',  'Th232', 2, 1),
+        ]
+
+        densities_to_plot = [0.1, 999.99]
+        linestyles = {0.1: '-', 999.99: '--'}
+        linewidths = {0.1: 0.75, 999.99: 1.0}
+
+        # Channel colors — identical to plot_rxn_spectra
+        colors = {
+            'mult_n2n':  '#1D9E75',   # teal        -- Be/Pb (n,2n)
+            'mult_elas': '#85C77E',   # light green -- Be/Pb elastic
+            'fert_n2n':  '#7B2D8E',   # purple      -- actinide (n,2n)
+            'fert_inel': '#C77DBA',   # lilac       -- fertile inelastic
+            'fis':       '#b41f24',   # red         -- fission
+            'ng':        '#0047ba',   # blue        -- fertile capture
+            'li':        '#EF9F27',   # amber       -- Li-6 tritium breeding
+        }
+
+        from matplotlib.lines import Line2D
+        legend_handles = [
+            Line2D([0], [0], color=colors['mult_n2n'],  lw=1.5, label=r'Be$/$Pb $($n,2n$)$'),
+            # Line2D([0], [0], color=colors['mult_elas'], lw=1.5, label=r'Be$/$Pb elastic'),
+            Line2D([0], [0], color=colors['fert_n2n'],  lw=1.5, label=r'Actinide $($n,2n$)$'),
+            Line2D([0], [0], color=colors['fert_inel'], lw=1.5, label=r'Fertile inelastic'),
+            Line2D([0], [0], color='black', ls='-',     lw=1.0, label=r'0.1 kg$/$m³'),
+            Line2D([0], [0], color=colors['fis'],       lw=1.5, label=r'Fission'),
+            Line2D([0], [0], color=colors['ng'],        lw=1.5, label=r'Fertile $($n,$\gamma)$'),
+            Line2D([0], [0], color=colors['li'],        lw=1.5, label=r'Li $($n,t$)$'),
+            Line2D([0], [0], color='black', ls='--',    lw=1.0, label=r'1000 kg$/$m³'),
+        ]
+
+        fig, axes = plt.subplots(3, 2, figsize=(7, 9), sharex=True, sharey=True)
+
+        for df_Erxn, title, fert_iso, row, col in panels:
+            ax = axes[row, col]
+
+            for rho in densities_to_plot:
+
+                # Match closest available density
+                available = df_Erxn['fertile_kg/m3'].unique()
+                closest = min(available, key=lambda x: abs(x - rho))
+                spec = df_Erxn[df_Erxn['fertile_kg/m3'] == closest].copy()
+                spec = spec.sort_values('energy mid [eV]')
+
+                E_mid = spec['energy mid [eV]'].values
+                ls = linestyles[rho]
+                lw = linewidths[rho]
+
+                # Raw reaction-rate channels (no neutron weights, no per-lethargy)
+                channels = {
+                    'mult_n2n':  spec['Be9_n2n'].values  + spec['Pb_n2n'].values,
+                    # 'mult_elas': spec['Be9_elas'].values + spec['Pb_elas'].values,
+                    'fert_n2n':  spec[f'{fert_iso}_n2n'].values  + spec['U235_n2n'].values,
+                    'fert_inel': spec[f'{fert_iso}_inel'].values + spec['U235_inel'].values,
+                    'fis':       spec[f'{fert_iso}_fis'].values  + spec['U235_fis'].values,
+                    'ng':        spec[f'{fert_iso}_ng'].values,
+                    'li':        spec['Li6_nt'].values + spec['Li7_nt'].values,
+                }
+
+                for key, vals in channels.items():
+                    cumulative = np.cumsum(vals)
+                    # Mask leading zeros so the line starts where reactions begin
+                    cumulative_masked = np.where(cumulative > 0, cumulative, np.nan)
+                    ax.semilogx(E_mid, cumulative_masked,
+                                color=colors[key], linestyle=ls, linewidth=lw)
+
+            # Axis formatting
+            ax.xaxis.set_ticks_position('both')
+            ax.yaxis.set_ticks_position('both')
+            ax.grid(axis='both', which='major', linestyle='-', linewidth=0.5)
+            ax.set_xscale('log')
+            ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f'1e{int(np.log10(x))}' if x > 0 else ''))
+            ax.set_xlim(log_buffer(1e1, 1e7))
+
+            if ax.get_subplotspec().is_last_row():
+                ax.set_xlabel('Neutron energy [eV]')
+            if ax.get_subplotspec().is_first_col():
+                ax.set_ylabel(r'Cumulative reaction rate [rxns$/$src-n]')
+
+            # Panel title
+            ax.text(0.02, 0.97, title, transform=ax.transAxes,
+                    va='top', ha='left')
+
+            # Legend
+            leg = ax.legend(handles=legend_handles, loc='upper left',
+                            bbox_to_anchor=(0.00, 0.935),
+                            fontsize=6, ncol=3,
+                            fancybox=False, edgecolor='black',
+                            frameon=False, framealpha=0.75)
+
+        fig.tight_layout()
+
+        if self.save:
+            plt.savefig('./Figures/PDF/fig_rxn_cumulative.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+            plt.savefig('./Figures/PNG/fig_rxn_cumulative.png', bbox_inches='tight', pad_inches=0.01, format='png')
+            print("Exported cumulative reaction rate plot: fig_rxn_cumulative")
+        else:
+            print("Did not export cumulative reaction rate plot due to user setting.")
+
+        if self.show:
+            plt.show()
+        plt.close('all')
+
+
+
+
 if __name__ == "__main__":
 
     for sd in ['PNG','PDF','Data']:
@@ -792,7 +1520,7 @@ if __name__ == "__main__":
         os.makedirs(sd_path, exist_ok=True)
 
 
-    plot_types = ['tbr','fpr','hist','dfis','fisn']
+    plot_types = ['tbr','fpr','hist','histd','fluxr','fluxs','rxns','rxnr','dfis','fisn']
 
     parser = argparse.ArgumentParser(description=f"Choose plots with -p flag, multiple separated by spaces: {plot_types}")
 
@@ -816,7 +1544,6 @@ if __name__ == "__main__":
 
     combined_plot = Plot(show=plot_show, save=plot_save)
 
-
     for p in plot_type:
         if   p == 'tbr':
             combined_plot.plot_tbr()
@@ -824,6 +1551,12 @@ if __name__ == "__main__":
             combined_plot.plot_fpr()
         elif p == 'hist':
             combined_plot.plot_hist()
+        elif p == 'histd':
+            combined_plot.plot_hist_diff()
+        elif p == 'fluxr':
+            combined_plot.plot_flux_ratio()
+        elif p == 'fluxs':
+            combined_plot.plot_flux_spectrum()
         elif p == 'drdn':
             combined_plot.plot_dRdn()
         elif p == 'rn':
@@ -832,5 +1565,11 @@ if __name__ == "__main__":
             combined_plot.plot_leakage_spectra()
         elif p == 'bal':
             combined_plot.plot_neutron_balance()
+        elif p == 'rxns':
+            combined_plot.plot_rxn_spectra()
+        elif p == 'rxnr':
+            combined_plot.plot_rxn_ratio()
+        elif p == 'rxnc':
+            combined_plot.plot_rxn_cumulative()
 
     print("\nComment. <plot.py/plot_all()> All plotting commands completed.")

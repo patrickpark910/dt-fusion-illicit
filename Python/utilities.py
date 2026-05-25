@@ -72,6 +72,11 @@ def logspace_per_decade(start, stop, pts_per_decade):
     return np.logspace(log_start, log_stop, num=npts)
 
 
+def log_buffer(lo, hi, buf=0.03):
+    f = (hi / lo) ** buf
+    return (lo / f, hi * f)
+
+
 def log_midpoints(points):
     """
     Compute logarithmic midpoints between adjacent points in a list.
@@ -331,10 +336,18 @@ def has_statepoint(directory_path,cycle=None):
 
 
 def sum_over_cells(df, nuclides, score):
-    """
-    Filter a spectrum DataFrame by nuclide(s) and score, 
-    then sum reaction rates over all cells per energy bin.
-    Returns a Series indexed by energy bin with columns 'mean' and 'std. dev.'.
+    """Sum reaction rates over all cells per energy bin for given nuclide(s) and score.
+
+    Args:
+        df (pd.DataFrame): Spectrum tally DataFrame with 'nuclide', 'score', energy bin, 'mean', and 'std. dev.' columns.
+        nuclides (str or list[str]): Nuclide name(s) (e.g. 'U238' or ['U235', 'U238']).
+        score (str): Reaction score to filter on (e.g. 'fission').
+
+    Returns:
+        pd.DataFrame: One row per energy bin with columns 'mean' and 'std_dev'.
+
+    Example:
+        >>> fission_spectrum = sum_over_cells(fertile_spec, ['U235', 'U238'], 'fission')
     """
     if isinstance(nuclides, str):
         nuclides = [nuclides]
@@ -342,10 +355,33 @@ def sum_over_cells(df, nuclides, score):
     grouped = (df[mask]
                 .groupby(['energy low [eV]', 'energy high [eV]', 'energy mid [eV]'])
                 .agg(mean=('mean', 'sum'),
-                    std_dev=('std. dev.', lambda x: np.sqrt((x**2).sum())))
+                    std_dev=('std. dev.', lambda x: np.sqrt((x**2).sum())))  # this names the column std_dev instead of std. dev. which gets fucky with OpenMC's outputs
+                .rename(columns={'std_dev': 'std. dev.'})                    # so we change it back here --ppark 2026-05-20
                 .reset_index()
                 .sort_values('energy mid [eV]'))
     return grouped
+
+
+def sum_over_nuclides(df, score):
+    """Sum reaction rates over all nuclides per cell for a given score.
+
+    Args:
+        df (pd.DataFrame): Tally DataFrame with 'score', 'cell', 'mean', and 'std. dev.' columns.
+        score (str): Reaction score to filter on (e.g. 'fission').
+
+    Returns:
+        pd.DataFrame: One row per cell with columns 'mean' and 'std_dev'.
+
+    Example:
+        >>> total_fission = sum_over_nuclides(fertile, 'fission')
+    """
+    return (df[df['score'] == score]
+            .groupby('cell')
+            .agg(mean=('mean', 'sum'),
+                 std_dev=('std. dev.', lambda x: np.sqrt((x**2).sum()))) # this names the column std_dev instead of std. dev. which gets fucky with OpenMC's outputs
+            .rename(columns={'std_dev': 'std. dev.'})                    # so we change it back here --ppark 2026-05-20
+            .reset_index()
+            .sort_values('cell'))
 
 
 def find_sp(sp_dir, n_cycles):

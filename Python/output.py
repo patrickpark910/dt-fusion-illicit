@@ -132,24 +132,17 @@ class OutputMixin:
         current_spec_df['energy mid [eV]'] = (
             current_spec_df['energy low [eV]'] + current_spec_df['energy high [eV]']) / 2
 
-        leakage_spec = current_spec_df[
-            (current_spec_df['cell'] == 99) &
-            (current_spec_df['cellfrom'] != 99)
-        ].copy()
+        leakage_spec = current_spec_df[(current_spec_df['cell'] == 99) & (current_spec_df['cellfrom'] != 99)].copy()
 
-        leakage_Ebin_df = (
-            leakage_spec
-            .groupby(['energy low [eV]', 'energy high [eV]', 'energy mid [eV]'])
-            .agg(mean=('mean', 'sum'),
-                 std_dev=('std. dev.', lambda x: np.sqrt((x**2).sum())))
-            .reset_index()
-        )
+        leakage_Ebin_df = (leakage_spec.groupby(['energy low [eV]', 'energy high [eV]', 'energy mid [eV]'])
+                                       .agg(mean=('mean', 'sum'), std_dev=('std. dev.', lambda x: np.sqrt((x**2).sum())))
+                                       .reset_index() )
         leakage_Ebin_df.columns = ['energy low [eV]', 'energy high [eV]',
-                                    'energy mid [eV]', 'mean', 'std. dev.']
+                                   'energy mid [eV]', 'mean', 'std. dev.']
         return leakage_Ebin_df
 
 
-    # Energy-binned neutron balance ─────────────────────────────
+    # Energy-binned neutron balance 
 
     def _build_energy_binned_rxns(self, raw):
         """
@@ -166,11 +159,26 @@ class OutputMixin:
         U238_fis_Ebin  = sum_over_cells(raw['fertile_spec'], 'U238',  'fission')
         Th232_fis_Ebin = sum_over_cells(raw['fertile_spec'], 'Th232', 'fission')
 
+        U235_nufis_Ebin  = sum_over_cells(raw['fertile_spec'], 'U235',  'nu-fission')
+        U238_nufis_Ebin  = sum_over_cells(raw['fertile_spec'], 'U238',  'nu-fission')
+        Th232_nufis_Ebin = sum_over_cells(raw['fertile_spec'], 'Th232', 'nu-fission')
+
+        U235_n2n_Ebin    = sum_over_cells(raw['fertile_spec'], 'U235',  '(n,2n)')
+        U238_n2n_Ebin    = sum_over_cells(raw['fertile_spec'], 'U238',  '(n,2n)')
+        Th232_n2n_Ebin   = sum_over_cells(raw['fertile_spec'], 'Th232', '(n,2n)')
+
         Li6_nt_Ebin    = sum_over_cells(raw['Li_spec'], 'Li6', '(n,Xt)')
         Li7_nt_Ebin    = sum_over_cells(raw['Li_spec'], 'Li7', '(n,Xt)')
 
         Be9_n2n_Ebin = sum_over_cells(raw['Be_spec'], 'Be9', '(n,2n)') if raw['Be_spec'] is not None else None
         Pb_n2n_Ebin  = sum_over_cells(raw['Pb_spec'], ['Pb204','Pb206','Pb207','Pb208'], '(n,2n)') if raw['Pb_spec'] is not None else None
+
+        # Fertile inelastic scattering (MT 4 -> '(n,level)') and Be/Pb elastic scattering ('(n,elastic)')
+        U235_inel_Ebin  = sum_over_cells(raw['fertile_spec'], 'U235',  '(n,level)')
+        U238_inel_Ebin  = sum_over_cells(raw['fertile_spec'], 'U238',  '(n,level)')
+        Th232_inel_Ebin = sum_over_cells(raw['fertile_spec'], 'Th232', '(n,level)')
+        Be9_elas_Ebin   = sum_over_cells(raw['Be_spec'], 'Be9', '(n,elastic)') if raw['Be_spec'] is not None else None
+        Pb_elas_Ebin    = sum_over_cells(raw['Pb_spec'], ['Pb204','Pb206','Pb207','Pb208'], '(n,elastic)') if raw['Pb_spec'] is not None else None
 
         rxns_df = U235_ng_Ebin[['energy low [eV]', 'energy high [eV]', 'energy mid [eV]']].copy()
 
@@ -180,20 +188,31 @@ class OutputMixin:
                      'U235_fis':  U235_fis_Ebin,
                      'U238_fis':  U238_fis_Ebin,
                      'Th232_fis': Th232_fis_Ebin,
+                     'U235_nufis':  U235_nufis_Ebin,
+                     'U238_nufis':  U238_nufis_Ebin,
+                     'Th232_nufis': Th232_nufis_Ebin,
                      'Li6_nt':    Li6_nt_Ebin,
                      'Li7_nt':    Li7_nt_Ebin,
                      'Be9_n2n':   Be9_n2n_Ebin,
                      'Pb_n2n':    Pb_n2n_Ebin,
+                     'U235_n2n':  U235_n2n_Ebin,
+                     'U238_n2n':  U238_n2n_Ebin,
+                     'Th232_n2n': Th232_n2n_Ebin,
+                     'U235_inel':  U235_inel_Ebin,
+                     'U238_inel':  U238_inel_Ebin,
+                     'Th232_inel': Th232_inel_Ebin,
+                     'Be9_elas':   Be9_elas_Ebin,
+                     'Pb_elas':    Pb_elas_Ebin,
                    } 
 
         for name, ch_df in channels.items():
             if ch_df is not None:
                 merged = rxns_df.merge(
-                    ch_df[['energy low [eV]', 'energy high [eV]', 'mean', 'std_dev']],
+                    ch_df[['energy low [eV]', 'energy high [eV]', 'mean', 'std. dev.']],
                     on=['energy low [eV]', 'energy high [eV]'],
                     how='left')
                 rxns_df[name]            = merged['mean'].fillna(0.0)
-                rxns_df[f'{name}_stdev'] = merged['std_dev'].fillna(0.0)
+                rxns_df[f'{name}_stdev'] = merged['std. dev.'].fillna(0.0)
             else:
                 rxns_df[name]            = 0.0
                 rxns_df[f'{name}_stdev'] = 0.0
@@ -227,31 +246,23 @@ class OutputMixin:
         if raw['Be'] is not None:
             Be = raw['Be']
             be9_n2n = Be[(Be['nuclide']=='Be9') & (Be['score']=='(n,2n)')][['cell','mean','std. dev.']]
-            be9_list,     be9_err = be9_n2n['mean'].tolist(), be9_n2n['std. dev.'].tolist()
-            pb_list,      pb_err  = zeros, zeros
+            be9_list, be9_err = be9_n2n['mean'].tolist(), be9_n2n['std. dev.'].tolist()
+            pb_list,  pb_err  = zeros, zeros
         else:
             Pb = raw['Pb']
-            pb_n2n = (Pb[Pb['score']=='(n,2n)']
-                      .groupby('cell')
-                      .agg(mean=('mean', 'sum'),
-                           **{'std. dev.': ('std. dev.', lambda x: np.sqrt((x**2).sum()))})
-                      .reset_index())
-            pb_list,      pb_err  = pb_n2n['mean'].tolist(), pb_n2n['std. dev.'].tolist()
-            be9_list,     be9_err = zeros, zeros
+            pb_n2n = sum_over_nuclides(Pb, '(n,2n)')
+            pb_list,  pb_err  = pb_n2n['mean'].tolist(), pb_n2n['std. dev.'].tolist()
+            be9_list, be9_err = zeros, zeros
 
         # Fertile capture — write both U238 and Th232, one is zero
         u238_ng  = fertile[(fertile['nuclide']=='U238')  & (fertile['score']=='(n,gamma)')][['cell','mean','std. dev.']]
         th232_ng = fertile[(fertile['nuclide']=='Th232') & (fertile['score']=='(n,gamma)')][['cell','mean','std. dev.']]
 
         # Total fission summed over all nuclides
-        all_fis = (fertile[fertile['score']=='fission']
-                   .groupby('cell')
-                   .agg(mean=('mean', 'sum'),
-                        std_dev=('std. dev.', lambda x: np.sqrt((x**2).sum())))
-                   .reset_index()
-                   .sort_values('cell'))
+        all_fis   = sum_over_nuclides(fertile, 'fission')
+        all_nufis = sum_over_nuclides(fertile, 'nu-fission')
 
-        # Heating → MW
+        # Heating MW
         heat_list     = (heating['mean']      * NPS_FUS * EV_TO_MJ).tolist()
         heat_err_list = (heating['std. dev.'] * NPS_FUS * EV_TO_MJ).tolist()
         fisq_list     = (fisq['mean']         * NPS_FUS * EV_TO_MJ).tolist()
@@ -291,7 +302,9 @@ class OutputMixin:
             'Pb(n,2n)':            pb_list,
             'Pb(n,2n)_stdev':      pb_err,
             'tot(n,fis)':          all_fis['mean'].tolist(),
-            'tot(n,fis)_stdev':    all_fis['std_dev'].tolist(),
+            'tot(n,fis)_stdev':    all_fis['std. dev.'].tolist(),
+            'tot(n,nufis)':        all_nufis['mean'].tolist(),
+            'tot(n,nufis)_stdev':  all_nufis['std. dev.'].tolist(),
             'heating [MW]':        heat_list,
             'heating_stdev':       heat_err_list,
             'fisq [MW]':           fisq_list,
@@ -302,3 +315,149 @@ class OutputMixin:
         totals['cell'] = 'total'
         df = pd.concat([df, pd.DataFrame([totals])], ignore_index=True)
         return df
+
+
+# Keep separate from OutputMixin class --ppark 2026-05-22
+
+def collate_tallies(blanket, fertile_isotope, breeder_enrich, temp_k, vol_m3):
+    """
+    Collates all the tallies for given [blanket, fertile isotope, temperature]
+    across multiple fertile kg/m³ into combined CSVs in ./Figures/Data/.
+
+    Args:
+        blanket (str): one of ['FLiBe', 'DCLL', 'HCPB']
+        fertile_isotope (str): one of ['U238', 'Th232']
+        breeder_enrich (float): enrichment of lithium-6 in breeder
+        temp_k (float): temperature of the system
+        vol_m3 (float): [m³] volume of breeder
+    """
+
+    rows_all = []
+    rxnsE_list, fluxE_list, leakE_list = [], [], []
+
+    tally_folders = [x for x in os.listdir("./OpenMC/")
+                     if x.startswith(f"tallies_{blanket}_{temp_k}K_Li{breeder_enrich:04.1f}")
+                     and x.split("_")[-3].startswith(fertile_isotope)]
+
+    dst = f"./Figures/Data/{blanket}_{temp_k}K_Li{breeder_enrich:04.1f}_{fertile_isotope}"
+
+    for folder in tally_folders:
+
+        # Extract fertile loading from folder name
+        part = folder.split("_")[-2]
+        fertile = float(part.replace("kgm3", ""))
+        mt = fertile * vol_m3 / 1e3
+
+        # File paths (must match output.py exports)
+        tally_summary = f"./OpenMC/{folder}/tallies_summary.csv"
+        tally_leak    = f"./OpenMC/{folder}/tallies_leakage.csv"
+        tally_rxnsE   = f"./OpenMC/{folder}/Ebins_rxns.csv"
+        tally_fluxE   = f"./OpenMC/{folder}/Ebins_flux.csv"
+        tally_leakE   = f"./OpenMC/{folder}/Ebins_leakage.csv"
+
+        # Collate tallies_summary.csv
+        try:
+            df = pd.read_csv(tally_summary)
+        except FileNotFoundError:
+            print(f"{C.YELLOW}Warning.{C.END} File 'tallies_summary.csv' not found in {folder}, skipping...")
+            continue
+
+        try:
+            df_leak = pd.read_csv(tally_leak)
+        except FileNotFoundError:
+            print(f"{C.YELLOW}Warning.{C.END} File 'tallies_leakage.csv' not found in {folder}, skipping...")
+            continue
+
+        tot  = df[df['cell'] == 'total']
+        leak = df_leak[df_leak['void_cell'] == 'total']
+
+        rows_all.append({
+            'filename':        folder,
+            'fertile_kg/m3':   fertile,
+            'fertile_mt':      mt,
+            'Li6(n,t)':        tot['Li6(n,t)'].values[0],
+            'Li6(n,t)_sd':     tot['Li6(n,t)_stdev'].values[0],
+            'Li7(n,Xt)':       tot['Li7(n,t)'].values[0],
+            'Li7(n,Xt)_sd':    tot['Li7(n,t)_stdev'].values[0],
+            'Be9(n,2n)':       tot['Be9(n,2n)'].values[0],
+            'Be9(n,2n)_sd':    tot['Be9(n,2n)_stdev'].values[0],
+            'Pb(n,2n)':        tot['Pb(n,2n)'].values[0],
+            'Pb(n,2n)_sd':     tot['Pb(n,2n)_stdev'].values[0],
+            'U238(n,g)':       tot['U238(n,g)'].values[0],
+            'U238(n,g)_sd':    tot['U238(n,g)_stdev'].values[0],
+            'Th232(n,g)':      tot['Th232(n,g)'].values[0],
+            'Th232(n,g)_sd':   tot['Th232(n,g)_stdev'].values[0],
+            'tot(n,fis)':      tot['tot(n,fis)'].values[0],
+            'tot(n,fis)_sd':   tot['tot(n,fis)_stdev'].values[0],
+            'tot(n,nufis)':    tot['tot(n,nufis)'].values[0],
+            'tot(n,nufis)_sd': tot['tot(n,nufis)_stdev'].values[0],
+            'tbr':             tot['tbr'].values[0],
+            'tbr_sd':          tot['tbr_stdev'].values[0],
+            'Pu239_kg/yr':     tot['Pu239_kg/yr'].values[0],
+            'Pu239_kg/yr_sd':  tot['Pu239_kg/yr_stdev'].values[0],
+            'U233_kg/yr':      tot['U233_kg/yr'].values[0],
+            'U233_kg/yr_sd':   tot['U233_kg/yr_stdev'].values[0],
+            'leak [n/src-n]':  leak['leakage'].values[0],
+            'leak_sd':         leak['leakage_stdev'].values[0],
+            'heat [MW]':       tot['heating [MW]'].values[0],
+            'heat_sd':         tot['heating_stdev'].values[0],
+            'fisq [MW]':       tot['fisq [MW]'].values[0],
+            'fisq_sd':         tot['fisq_stdev'].values[0],
+        })
+
+        # Collate Ebins_rxns.csv (already summed over cells)
+        try:
+            df_rxnsE = pd.read_csv(tally_rxnsE)
+            df_rxnsE['filename']   = folder
+            df_rxnsE['fertile_mt'] = mt
+            df_rxnsE['br_vol_m3']  = vol_m3
+            rxnsE_list.append(df_rxnsE)
+        except FileNotFoundError:
+            print(f"{C.YELLOW}Warning.{C.END} File 'Ebins_rxns.csv' not found in {folder}, skipping...")
+
+        # Collate Ebins_flux.csv (still per-cell, needs groupby) 
+        try:
+            df_fluxE = pd.read_csv(tally_fluxE)
+            cols = ['energy low [eV]', 'energy high [eV]', 'energy mid [eV]', 'mean']
+            fluxE = (df_fluxE[cols]
+                     .groupby('energy mid [eV]', as_index=False)
+                     .agg(**{'energy low [eV]':  ('energy low [eV]', 'first'),
+                             'energy high [eV]': ('energy high [eV]', 'first'),
+                             'mean':             ('mean', 'sum')}))
+            fluxE['filename']      = folder
+            fluxE['fertile_kg/m3'] = fertile
+            fluxE['fertile_mt']    = mt
+            fluxE['br_vol_m3']     = vol_m3
+            fluxE_list.append(fluxE)
+        except FileNotFoundError:
+            print(f"{C.YELLOW}Warning.{C.END} File 'Ebins_flux.csv' not found in {folder}, skipping...")
+
+        # Collate Ebins_leakage.csv (already summed over cells)
+        try:
+            df_leakE = pd.read_csv(tally_leakE)
+            df_leakE['filename']      = folder
+            df_leakE['fertile_kg/m3'] = fertile
+            df_leakE['fertile_mt']    = mt
+            df_leakE['br_vol_m3']     = vol_m3
+            leakE_list.append(df_leakE)
+        except FileNotFoundError:
+            print(f"{C.YELLOW}Warning.{C.END} File 'Ebins_leakage.csv' not found in {folder}, skipping...")
+
+    # Export collated files
+    if rows_all:
+        df_all = pd.DataFrame(rows_all).sort_values(by='fertile_kg/m3', ascending=True)
+        df_all.to_csv(f"{dst}_rxns.csv", index=False)
+
+    if rxnsE_list:
+        pd.concat(rxnsE_list, ignore_index=True).to_csv(f"{dst}_Ebins_rxns.csv", index=False)
+
+    if fluxE_list:
+        df_fluxE_collated = pd.concat(fluxE_list, ignore_index=True)
+        df_fluxE_collated = df_fluxE_collated[['filename', 'fertile_kg/m3', 'fertile_mt', 'br_vol_m3',
+                                               'energy mid [eV]', 'mean', 'energy low [eV]', 'energy high [eV]']]
+        df_fluxE_collated.to_csv(f"{dst}_flux.csv", index=False)
+
+    if leakE_list:
+        pd.concat(leakE_list, ignore_index=True).to_csv(f"{dst}_leak.csv", index=False)
+
+    print(f"{C.GREEN}Comment.{C.END} Collated tallies for {blanket} at {temp_k} K to: {dst}")
