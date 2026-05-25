@@ -1,0 +1,58 @@
+
+============================================================
+  Target: Be  |  Directory: Be
+============================================================
+                                %%%%%%%%%%%%%%%
+                           %%%%%%%%%%%%%%%%%%%%%%%%
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                                    %%%%%%%%%%%%%%%%%%%%%%%%
+                                     %%%%%%%%%%%%%%%%%%%%%%%%
+                 ###############      %%%%%%%%%%%%%%%%%%%%%%%%
+                ##################     %%%%%%%%%%%%%%%%%%%%%%%
+                ###################     %%%%%%%%%%%%%%%%%%%%%%%
+                ####################     %%%%%%%%%%%%%%%%%%%%%%
+                #####################     %%%%%%%%%%%%%%%%%%%%%
+                ######################     %%%%%%%%%%%%%%%%%%%%
+                #######################     %%%%%%%%%%%%%%%%%%
+                 #######################     %%%%%%%%%%%%%%%%%
+                 ######################     %%%%%%%%%%%%%%%%%
+                  ####################     %%%%%%%%%%%%%%%%%
+                    #################     %%%%%%%%%%%%%%%%%
+                     ###############     %%%%%%%%%%%%%%%%
+                       ############     %%%%%%%%%%%%%%%
+                          ########     %%%%%%%%%%%%%%
+                                      %%%%%%%%%%%
+
+                 | The OpenMC Monte Carlo Code
+       Copyright | 2011-2025 MIT, UChicago Argonne LLC, and contributors
+         License | https://docs.openmc.org/en/latest/license.html
+         Version | 0.15.3
+     Commit Hash | 27e38e894697bb32a1dac7848d2618818b6b8daf
+       Date/Time | 2026-05-25 06:29:05
+   MPI Processes | 1
+  OpenMP Threads | 4
+
+ Reading settings XML file...
+ Reading cross sections XML file...
+ Reading materials XML file...
+ Reading geometry XML file...
+ Reading Be9 from /scratch/gpfs/RJG/data/endf-b8.0-hdf5/neutron/Be9.h5
+ Minimum neutron data temperature: 294 K
+ Maximum neutron data temperature: 294 K
+ Reading tallies XML file...
+ Preparing distributed cell instances...
+ Reading plot XML file...
+ Writing summary.h5 file...
+ Maximum neutron transport energy: 20000000 eV for Be9
+
+ ===============>     FIXED SOURCE TRANSPORT SIMULATION     <===============
+
+ Simulating batch 1
+ Simulating batch 2
+ Simulating batch 3
+ Simulating batch 4
+ Simulating batch 5
+[2026-05-25T06:36:16.010] error: *** JOB 8731037 ON della-r3c1n5 CANCELLED AT 2026-05-25T06:36:16 DUE TO TIME LIMIT ***

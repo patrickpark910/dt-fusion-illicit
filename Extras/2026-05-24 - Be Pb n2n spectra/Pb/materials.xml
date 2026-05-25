@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<materials>
+  <material id="1" name="Pb">
+    <density value="11.35" units="g/cm3"/>
+    <nuclide name="Pb204" ao="0.014"/>
+    <nuclide name="Pb206" ao="0.241"/>
+    <nuclide name="Pb207" ao="0.221"/>
+    <nuclide name="Pb208" ao="0.524"/>
+  </material>
+</materials>
