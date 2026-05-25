@@ -1,0 +1,627 @@
+
+============================================================
+  Target: Be  |  Directory: Be
+============================================================
+  Statepoint already exists — skipping build & run.
+
+Reaction rates for Be (per source neutron):
+  (n,2n)         : 6.072232e-03 +/- 1.834641e-08
+  (n,3n)         : 0.000000e+00 +/- 0.000000e+00
+  (n,elastic)    : 1.309977e-02 +/- 1.204256e-07
+  absorption     : 3.956421e-04 +/- 2.124405e-09
+  (n,gamma)      : 2.119846e-08 +/- 1.249883e-13
+  (n,Xt)         : 2.571511e-04 +/- 1.362115e-10
+  fission        : 0.000000e+00 +/- 0.000000e+00
+  (n,n')         : 0.000000e+00 +/- 0.000000e+00
+
+============================================================
+  Target: Pb  |  Directory: Pb
+============================================================
+  Statepoint already exists — skipping build & run.
+
+Reaction rates for Pb (per source neutron):
+  (n,2n)         : 7.284069e-03 +/- 6.393300e-09
+  (n,3n)         : 0.000000e+00 +/- 0.000000e+00
+  (n,elastic)    : 9.734765e-03 +/- 9.526066e-08
+  absorption     : 1.306272e-05 +/- 1.451874e-10
+  (n,gamma)      : 4.038173e-06 +/- 1.456100e-10
+  (n,Xt)         : 6.333965e-08 +/- 4.557891e-14
+  fission        : 0.000000e+00 +/- 0.000000e+00
+  (n,n')         : 1.270854e-03 +/- 7.499035e-09
+
+============================================================
+  Target: Li_7.5  |  Directory: Li_7.5
+============================================================
+                                %%%%%%%%%%%%%%%
+                           %%%%%%%%%%%%%%%%%%%%%%%%
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                                    %%%%%%%%%%%%%%%%%%%%%%%%
+                                     %%%%%%%%%%%%%%%%%%%%%%%%
+                 ###############      %%%%%%%%%%%%%%%%%%%%%%%%
+                ##################     %%%%%%%%%%%%%%%%%%%%%%%
+                ###################     %%%%%%%%%%%%%%%%%%%%%%%
+                ####################     %%%%%%%%%%%%%%%%%%%%%%
+                #####################     %%%%%%%%%%%%%%%%%%%%%
+                ######################     %%%%%%%%%%%%%%%%%%%%
+                #######################     %%%%%%%%%%%%%%%%%%
+                 #######################     %%%%%%%%%%%%%%%%%
+                 ######################     %%%%%%%%%%%%%%%%%
+                  ####################     %%%%%%%%%%%%%%%%%
+                    #################     %%%%%%%%%%%%%%%%%
+                     ###############     %%%%%%%%%%%%%%%%
+                       ############     %%%%%%%%%%%%%%%
+                          ########     %%%%%%%%%%%%%%
+                                      %%%%%%%%%%%
+
+                 | The OpenMC Monte Carlo Code
+       Copyright | 2011-2025 MIT, UChicago Argonne LLC, and contributors
+         License | https://docs.openmc.org/en/latest/license.html
+         Version | 0.15.3
+     Commit Hash | 27e38e894697bb32a1dac7848d2618818b6b8daf
+       Date/Time | 2026-05-25 14:09:26
+   MPI Processes | 1
+  OpenMP Threads | 48
+
+ Reading settings XML file...
+ Reading cross sections XML file...
+ Reading materials XML file...
+ Reading geometry XML file...
+ Reading Li6 from /scratch/gpfs/RJG/data/endf-b8.0-hdf5/neutron/Li6.h5
+ Reading Li7 from /scratch/gpfs/RJG/data/endf-b8.0-hdf5/neutron/Li7.h5
+ Minimum neutron data temperature: 294 K
+ Maximum neutron data temperature: 294 K
+ Reading tallies XML file...
+ Preparing distributed cell instances...
+ Reading plot XML file...
+ Writing summary.h5 file...
+ Maximum neutron transport energy: 20000000 eV for Li6
+
+ ===============>     FIXED SOURCE TRANSPORT SIMULATION     <===============
+
+ Simulating batch 1
+ Simulating batch 2
+ Simulating batch 3
+ Simulating batch 4
+ Simulating batch 5
+ Simulating batch 6
+ Simulating batch 7
+ Simulating batch 8
+ Simulating batch 9
+ Simulating batch 10
+ Simulating batch 11
+ Simulating batch 12
+ Simulating batch 13
+ Simulating batch 14
+ Simulating batch 15
+ Simulating batch 16
+ Simulating batch 17
+ Simulating batch 18
+ Simulating batch 19
+ Simulating batch 20
+ Simulating batch 21
+ Simulating batch 22
+ Simulating batch 23
+ Simulating batch 24
+ Simulating batch 25
+ Simulating batch 26
+ Simulating batch 27
+ Simulating batch 28
+ Simulating batch 29
+ Simulating batch 30
+ Simulating batch 31
+ Simulating batch 32
+ Simulating batch 33
+ Simulating batch 34
+ Simulating batch 35
+ Simulating batch 36
+ Simulating batch 37
+ Simulating batch 38
+ Simulating batch 39
+ Simulating batch 40
+ Simulating batch 41
+ Simulating batch 42
+ Simulating batch 43
+ Simulating batch 44
+ Simulating batch 45
+ Simulating batch 46
+ Simulating batch 47
+ Simulating batch 48
+ Simulating batch 49
+ Simulating batch 50
+ Simulating batch 51
+ Simulating batch 52
+ Simulating batch 53
+ Simulating batch 54
+ Simulating batch 55
+ Simulating batch 56
+ Simulating batch 57
+ Simulating batch 58
+ Simulating batch 59
+ Simulating batch 60
+ Simulating batch 61
+ Simulating batch 62
+ Simulating batch 63
+ Simulating batch 64
+ Simulating batch 65
+ Simulating batch 66
+ Simulating batch 67
+ Simulating batch 68
+ Simulating batch 69
+ Simulating batch 70
+ Simulating batch 71
+ Simulating batch 72
+ Simulating batch 73
+ Simulating batch 74
+ Simulating batch 75
+ Simulating batch 76
+ Simulating batch 77
+ Simulating batch 78
+ Simulating batch 79
+ Simulating batch 80
+ Simulating batch 81
+ Simulating batch 82
+ Simulating batch 83
+ Simulating batch 84
+ Simulating batch 85
+ Simulating batch 86
+ Simulating batch 87
+ Simulating batch 88
+ Simulating batch 89
+ Simulating batch 90
+ Simulating batch 91
+ Simulating batch 92
+ Simulating batch 93
+ Simulating batch 94
+ Simulating batch 95
+ Simulating batch 96
+ Simulating batch 97
+ Simulating batch 98
+ Simulating batch 99
+ Simulating batch 100
+ Creating state point statepoint.100.h5...
+
+ =======================>     TIMING STATISTICS     <=======================
+
+ Total time for initialization     = 3.1333e-01 seconds
+   Reading cross sections          = 3.9896e-02 seconds
+ Total time in simulation          = 3.2056e+03 seconds
+   Time in transport only          = 3.2045e+03 seconds
+   Time in active batches          = 3.2056e+03 seconds
+   Time accumulating tallies       = 1.0294e+00 seconds
+   Time writing statepoints        = 5.0516e-03 seconds
+ Total time for finalization       = 1.3355e-02 seconds
+ Total time elapsed                = 3.2059e+03 seconds
+ Calculation Rate (active)         = 3.11956e+06 particles/second
+
+ ============================>     RESULTS     <============================
+
+ Leakage Fraction            = 1.00019 +/- 0.00000
+
+
+Reaction rates for Li_7.5 (per source neutron):
+  (n,2n)         : 1.354266e-04 +/- 4.574038e-11
+  (n,3n)         : 0.000000e+00 +/- 0.000000e+00
+  (n,elastic)    : 4.651412e-03 +/- 9.730592e-09
+  absorption     : 5.509154e-05 +/- 1.826268e-10
+  (n,gamma)      : 2.127246e-08 +/- 4.339936e-14
+  (n,Xt)         : 1.301827e-03 +/- 1.374863e-09
+  fission        : 0.000000e+00 +/- 0.000000e+00
+  (n,n')         : 1.746273e-03 +/- 1.249517e-09
+
+============================================================
+  Target: Li_60  |  Directory: Li_60
+============================================================
+                                %%%%%%%%%%%%%%%
+                           %%%%%%%%%%%%%%%%%%%%%%%%
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                                    %%%%%%%%%%%%%%%%%%%%%%%%
+                                     %%%%%%%%%%%%%%%%%%%%%%%%
+                 ###############      %%%%%%%%%%%%%%%%%%%%%%%%
+                ##################     %%%%%%%%%%%%%%%%%%%%%%%
+                ###################     %%%%%%%%%%%%%%%%%%%%%%%
+                ####################     %%%%%%%%%%%%%%%%%%%%%%
+                #####################     %%%%%%%%%%%%%%%%%%%%%
+                ######################     %%%%%%%%%%%%%%%%%%%%
+                #######################     %%%%%%%%%%%%%%%%%%
+                 #######################     %%%%%%%%%%%%%%%%%
+                 ######################     %%%%%%%%%%%%%%%%%
+                  ####################     %%%%%%%%%%%%%%%%%
+                    #################     %%%%%%%%%%%%%%%%%
+                     ###############     %%%%%%%%%%%%%%%%
+                       ############     %%%%%%%%%%%%%%%
+                          ########     %%%%%%%%%%%%%%
+                                      %%%%%%%%%%%
+
+                 | The OpenMC Monte Carlo Code
+       Copyright | 2011-2025 MIT, UChicago Argonne LLC, and contributors
+         License | https://docs.openmc.org/en/latest/license.html
+         Version | 0.15.3
+     Commit Hash | 27e38e894697bb32a1dac7848d2618818b6b8daf
+       Date/Time | 2026-05-25 15:02:54
+   MPI Processes | 1
+  OpenMP Threads | 48
+
+ Reading settings XML file...
+ Reading cross sections XML file...
+ Reading materials XML file...
+ Reading geometry XML file...
+ Reading Li6 from /scratch/gpfs/RJG/data/endf-b8.0-hdf5/neutron/Li6.h5
+ Reading Li7 from /scratch/gpfs/RJG/data/endf-b8.0-hdf5/neutron/Li7.h5
+ Minimum neutron data temperature: 294 K
+ Maximum neutron data temperature: 294 K
+ Reading tallies XML file...
+ Preparing distributed cell instances...
+ Reading plot XML file...
+ Writing summary.h5 file...
+ Maximum neutron transport energy: 20000000 eV for Li6
+
+ ===============>     FIXED SOURCE TRANSPORT SIMULATION     <===============
+
+ Simulating batch 1
+ Simulating batch 2
+ Simulating batch 3
+ Simulating batch 4
+ Simulating batch 5
+ Simulating batch 6
+ Simulating batch 7
+ Simulating batch 8
+ Simulating batch 9
+ Simulating batch 10
+ Simulating batch 11
+ Simulating batch 12
+ Simulating batch 13
+ Simulating batch 14
+ Simulating batch 15
+ Simulating batch 16
+ Simulating batch 17
+ Simulating batch 18
+ Simulating batch 19
+ Simulating batch 20
+ Simulating batch 21
+ Simulating batch 22
+ Simulating batch 23
+ Simulating batch 24
+ Simulating batch 25
+ Simulating batch 26
+ Simulating batch 27
+ Simulating batch 28
+ Simulating batch 29
+ Simulating batch 30
+ Simulating batch 31
+ Simulating batch 32
+ Simulating batch 33
+ Simulating batch 34
+ Simulating batch 35
+ Simulating batch 36
+ Simulating batch 37
+ Simulating batch 38
+ Simulating batch 39
+ Simulating batch 40
+ Simulating batch 41
+ Simulating batch 42
+ Simulating batch 43
+ Simulating batch 44
+ Simulating batch 45
+ Simulating batch 46
+ Simulating batch 47
+ Simulating batch 48
+ Simulating batch 49
+ Simulating batch 50
+ Simulating batch 51
+ Simulating batch 52
+ Simulating batch 53
+ Simulating batch 54
+ Simulating batch 55
+ Simulating batch 56
+ Simulating batch 57
+ Simulating batch 58
+ Simulating batch 59
+ Simulating batch 60
+ Simulating batch 61
+ Simulating batch 62
+ Simulating batch 63
+ Simulating batch 64
+ Simulating batch 65
+ Simulating batch 66
+ Simulating batch 67
+ Simulating batch 68
+ Simulating batch 69
+ Simulating batch 70
+ Simulating batch 71
+ Simulating batch 72
+ Simulating batch 73
+ Simulating batch 74
+ Simulating batch 75
+ Simulating batch 76
+ Simulating batch 77
+ Simulating batch 78
+ Simulating batch 79
+ Simulating batch 80
+ Simulating batch 81
+ Simulating batch 82
+ Simulating batch 83
+ Simulating batch 84
+ Simulating batch 85
+ Simulating batch 86
+ Simulating batch 87
+ Simulating batch 88
+ Simulating batch 89
+ Simulating batch 90
+ Simulating batch 91
+ Simulating batch 92
+ Simulating batch 93
+ Simulating batch 94
+ Simulating batch 95
+ Simulating batch 96
+ Simulating batch 97
+ Simulating batch 98
+ Simulating batch 99
+ Simulating batch 100
+ Creating state point statepoint.100.h5...
+
+ =======================>     TIMING STATISTICS     <=======================
+
+ Total time for initialization     = 6.0024e-02 seconds
+   Reading cross sections          = 3.8804e-02 seconds
+ Total time in simulation          = 3.2660e+03 seconds
+   Time in transport only          = 3.2648e+03 seconds
+   Time in active batches          = 3.2660e+03 seconds
+   Time accumulating tallies       = 1.1522e+00 seconds
+   Time writing statepoints        = 4.6857e-03 seconds
+ Total time for finalization       = 1.4155e-02 seconds
+ Total time elapsed                = 3.2661e+03 seconds
+ Calculation Rate (active)         = 3.06185e+06 particles/second
+
+ ============================>     RESULTS     <============================
+
+ Leakage Fraction            = 1.00022 +/- 0.00000
+
+
+Reaction rates for Li_60 (per source neutron):
+  (n,2n)         : 6.333865e-05 +/- 1.972881e-11
+  (n,3n)         : 0.000000e+00 +/- 0.000000e+00
+  (n,elastic)    : 4.641450e-03 +/- 1.119110e-08
+  absorption     : 1.193713e-04 +/- 1.463513e-09
+  (n,gamma)      : 3.907252e-08 +/- 6.296489e-14
+  (n,Xt)         : 6.854133e-04 +/- 1.597645e-09
+  fission        : 0.000000e+00 +/- 0.000000e+00
+  (n,n')         : 2.177190e-03 +/- 1.399308e-09
+
+============================================================
+  Target: Li_90  |  Directory: Li_90
+============================================================
+                                %%%%%%%%%%%%%%%
+                           %%%%%%%%%%%%%%%%%%%%%%%%
+                        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                                    %%%%%%%%%%%%%%%%%%%%%%%%
+                                     %%%%%%%%%%%%%%%%%%%%%%%%
+                 ###############      %%%%%%%%%%%%%%%%%%%%%%%%
+                ##################     %%%%%%%%%%%%%%%%%%%%%%%
+                ###################     %%%%%%%%%%%%%%%%%%%%%%%
+                ####################     %%%%%%%%%%%%%%%%%%%%%%
+                #####################     %%%%%%%%%%%%%%%%%%%%%
+                ######################     %%%%%%%%%%%%%%%%%%%%
+                #######################     %%%%%%%%%%%%%%%%%%
+                 #######################     %%%%%%%%%%%%%%%%%
+                 ######################     %%%%%%%%%%%%%%%%%
+                  ####################     %%%%%%%%%%%%%%%%%
+                    #################     %%%%%%%%%%%%%%%%%
+                     ###############     %%%%%%%%%%%%%%%%
+                       ############     %%%%%%%%%%%%%%%
+                          ########     %%%%%%%%%%%%%%
+                                      %%%%%%%%%%%
+
+                 | The OpenMC Monte Carlo Code
+       Copyright | 2011-2025 MIT, UChicago Argonne LLC, and contributors
+         License | https://docs.openmc.org/en/latest/license.html
+         Version | 0.15.3
+     Commit Hash | 27e38e894697bb32a1dac7848d2618818b6b8daf
+       Date/Time | 2026-05-25 15:57:21
+   MPI Processes | 1
+  OpenMP Threads | 48
+
+ Reading settings XML file...
+ Reading cross sections XML file...
+ Reading materials XML file...
+ Reading geometry XML file...
+ Reading Li6 from /scratch/gpfs/RJG/data/endf-b8.0-hdf5/neutron/Li6.h5
+ Reading Li7 from /scratch/gpfs/RJG/data/endf-b8.0-hdf5/neutron/Li7.h5
+ Minimum neutron data temperature: 294 K
+ Maximum neutron data temperature: 294 K
+ Reading tallies XML file...
+ Preparing distributed cell instances...
+ Reading plot XML file...
+ Writing summary.h5 file...
+ Maximum neutron transport energy: 20000000 eV for Li6
+
+ ===============>     FIXED SOURCE TRANSPORT SIMULATION     <===============
+
+ Simulating batch 1
+ Simulating batch 2
+ Simulating batch 3
+ Simulating batch 4
+ Simulating batch 5
+ Simulating batch 6
+ Simulating batch 7
+ Simulating batch 8
+ Simulating batch 9
+ Simulating batch 10
+ Simulating batch 11
+ Simulating batch 12
+ Simulating batch 13
+ Simulating batch 14
+ Simulating batch 15
+ Simulating batch 16
+ Simulating batch 17
+ Simulating batch 18
+ Simulating batch 19
+ Simulating batch 20
+ Simulating batch 21
+ Simulating batch 22
+ Simulating batch 23
+ Simulating batch 24
+ Simulating batch 25
+ Simulating batch 26
+ Simulating batch 27
+ Simulating batch 28
+ Simulating batch 29
+ Simulating batch 30
+ Simulating batch 31
+ Simulating batch 32
+ Simulating batch 33
+ Simulating batch 34
+ Simulating batch 35
+ Simulating batch 36
+ Simulating batch 37
+ Simulating batch 38
+ Simulating batch 39
+ Simulating batch 40
+ Simulating batch 41
+ Simulating batch 42
+ Simulating batch 43
+ Simulating batch 44
+ Simulating batch 45
+ Simulating batch 46
+ Simulating batch 47
+ Simulating batch 48
+ Simulating batch 49
+ Simulating batch 50
+ Simulating batch 51
+ Simulating batch 52
+ Simulating batch 53
+ Simulating batch 54
+ Simulating batch 55
+ Simulating batch 56
+ Simulating batch 57
+ Simulating batch 58
+ Simulating batch 59
+ Simulating batch 60
+ Simulating batch 61
+ Simulating batch 62
+ Simulating batch 63
+ Simulating batch 64
+ Simulating batch 65
+ Simulating batch 66
+ Simulating batch 67
+ Simulating batch 68
+ Simulating batch 69
+ Simulating batch 70
+ Simulating batch 71
+ Simulating batch 72
+ Simulating batch 73
+ Simulating batch 74
+ Simulating batch 75
+ Simulating batch 76
+ Simulating batch 77
+ Simulating batch 78
+ Simulating batch 79
+ Simulating batch 80
+ Simulating batch 81
+ Simulating batch 82
+ Simulating batch 83
+ Simulating batch 84
+ Simulating batch 85
+ Simulating batch 86
+ Simulating batch 87
+ Simulating batch 88
+ Simulating batch 89
+ Simulating batch 90
+ Simulating batch 91
+ Simulating batch 92
+ Simulating batch 93
+ Simulating batch 94
+ Simulating batch 95
+ Simulating batch 96
+ Simulating batch 97
+ Simulating batch 98
+ Simulating batch 99
+ Simulating batch 100
+ Creating state point statepoint.100.h5...
+
+ =======================>     TIMING STATISTICS     <=======================
+
+ Total time for initialization     = 5.8248e-02 seconds
+   Reading cross sections          = 3.9644e-02 seconds
+ Total time in simulation          = 3.1899e+03 seconds
+   Time in transport only          = 3.1886e+03 seconds
+   Time in active batches          = 3.1899e+03 seconds
+   Time accumulating tallies       = 1.3342e+00 seconds
+   Time writing statepoints        = 4.5281e-03 seconds
+ Total time for finalization       = 1.3035e-02 seconds
+ Total time elapsed                = 3.1900e+03 seconds
+ Calculation Rate (active)         = 3.13488e+06 particles/second
+
+ ============================>     RESULTS     <============================
+
+ Leakage Fraction            = 1.00024 +/- 0.00000
+
+
+Reaction rates for Li_90 (per source neutron):
+  (n,2n)         : 1.660863e-05 +/- 5.542755e-12
+  (n,3n)         : 0.000000e+00 +/- 0.000000e+00
+  (n,elastic)    : 4.633936e-03 +/- 1.143989e-08
+  absorption     : 1.613292e-04 +/- 2.302154e-09
+  (n,gamma)      : 5.063440e-08 +/- 8.333356e-14
+  (n,Xt)         : 2.855823e-04 +/- 2.283814e-09
+  fission        : 0.000000e+00 +/- 0.000000e+00
+  (n,n')         : 2.457425e-03 +/- 1.732280e-09
+
+============================================================
+  Target: U  |  Directory: U
+============================================================
+  Statepoint already exists — skipping build & run.
+
+Reaction rates for U (per source neutron):
+  (n,2n)         : 4.288430e-03 +/- 6.512890e-09
+  (n,3n)         : 2.170856e-03 +/- 2.116173e-09
+  (n,elastic)    : 1.605456e-02 +/- 2.202502e-07
+  absorption     : 5.775819e-03 +/- 1.437655e-08
+  (n,gamma)      : 3.920088e-05 +/- 4.796117e-09
+  (n,Xt)         : 1.030263e-07 +/- 4.369844e-13
+  fission        : 5.735496e-03 +/- 1.259225e-08
+  (n,n')         : 3.514668e-03 +/- 5.864659e-08
+
+============================================================
+  Target: Th  |  Directory: Th
+============================================================
+  Statepoint already exists — skipping build & run.
+
+Reaction rates for Th (per source neutron):
+  (n,2n)         : 4.509572e-03 +/- 5.402396e-09
+  (n,3n)         : 1.979270e-03 +/- 1.499228e-09
+  (n,elastic)    : 9.014270e-03 +/- 1.216138e-07
+  absorption     : 1.123504e-03 +/- 3.713282e-09
+  (n,gamma)      : 1.964790e-05 +/- 3.437172e-09
+  (n,Xt)         : 0.000000e+00 +/- 0.000000e+00
+  fission        : 1.100079e-03 +/- 1.569070e-09
+  (n,n')         : 2.084659e-03 +/- 2.553325e-08
+
+Saved compare.png
+Saved compare_n2n.png
+Saved compare_nnp.png
+Saved compare_nufission.png
+Saved compare_stacked.png
+Saved spectra.csv
+
+========================================================================================================================
+Reaction                        Be                Pb            Li_7.5             Li_60             Li_90                 U                Th
+------------------------------------------------------------------------------------------------------------------------
+(n,2n)              6.0722e-03 ± 2e-08    7.2841e-03 ± 6e-09    1.3543e-04 ± 5e-11    6.3339e-05 ± 2e-11    1.6609e-05 ± 6e-12    4.2884e-03 ± 7e-09    4.5096e-03 ± 5e-09
+(n,3n)              0.0000e+00 ± 0e+00    0.0000e+00 ± 0e+00    0.0000e+00 ± 0e+00    0.0000e+00 ± 0e+00    0.0000e+00 ± 0e+00    2.1709e-03 ± 2e-09    1.9793e-03 ± 1e-09
+(n,elastic)         1.3100e-02 ± 1e-07    9.7348e-03 ± 1e-07    4.6514e-03 ± 1e-08    4.6414e-03 ± 1e-08    4.6339e-03 ± 1e-08    1.6055e-02 ± 2e-07    9.0143e-03 ± 1e-07
+absorption          3.9564e-04 ± 2e-09    1.3063e-05 ± 1e-10    5.5092e-05 ± 2e-10    1.1937e-04 ± 1e-09    1.6133e-04 ± 2e-09    5.7758e-03 ± 1e-08    1.1235e-03 ± 4e-09
+(n,gamma)           2.1198e-08 ± 1e-13    4.0382e-06 ± 1e-10    2.1272e-08 ± 4e-14    3.9073e-08 ± 6e-14    5.0634e-08 ± 8e-14    3.9201e-05 ± 5e-09    1.9648e-05 ± 3e-09
+(n,Xt)              2.5715e-04 ± 1e-10    6.3340e-08 ± 5e-14    1.3018e-03 ± 1e-09    6.8541e-04 ± 2e-09    2.8558e-04 ± 2e-09    1.0303e-07 ± 4e-13    0.0000e+00 ± 0e+00
+fission             0.0000e+00 ± 0e+00    0.0000e+00 ± 0e+00    0.0000e+00 ± 0e+00    0.0000e+00 ± 0e+00    0.0000e+00 ± 0e+00    5.7355e-03 ± 1e-08    1.1001e-03 ± 2e-09
+(n,n')              0.0000e+00 ± 0e+00    1.2709e-03 ± 7e-09    1.7463e-03 ± 1e-09    2.1772e-03 ± 1e-09    2.4574e-03 ± 2e-09    3.5147e-03 ± 6e-08    2.0847e-03 ± 3e-08
+
+Done. All files in ./
