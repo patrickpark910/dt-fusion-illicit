@@ -1,12 +1,12 @@
 """
-Thin-target secondary neutron spectra for Be-9, Pb, Li-7, natural U, and Th-232.
+Thin-target secondary neutron spectra for Be-9, Pb, Li (enriched), natural U, and Th-232.
 
 Runs separate OpenMC fixed-source calculations (one per target) in
 dedicated subdirectories, then overlays the results on the same plots.
 
 Each target tallies reaction-specific outgoing spectra:
-  - Be-9, Pb, Li-7 : (n,2n) and inelastic (MT 51-91)
-  - U, Th          : (n,2n), inelastic (MT 51-91), and nu-fission
+  - Be-9, Pb, Li (7.5/60/90 at% Li-6) : (n,2n) and inelastic (MT 51-91)
+  - U, Th                               : (n,2n), inelastic (MT 51-91), and nu-fission
   Discrete inelastic levels are summed in post-processing.
 """
 
@@ -24,7 +24,9 @@ from params import *
 # ============================================================
 # USER SETTINGS
 # ============================================================
-TARGETS = ['Be', 'Pb', 'Li7', 'U', 'Th']
+TARGETS = ['Be', 'Pb', #'Li7',
+           'Li_7.5', 'Li_60', 'Li_90',
+           'U', 'Th']
 THICKNESS = 0.1        # cm — thin shell (keep << MFP)
 INNER_R   = 1.0        # cm
 PARTICLES = int(1e8)
@@ -32,7 +34,7 @@ BATCHES = int(1e2)
 
 # Mask plot bins whose relative statistical error exceeds this value.
 # Set to None or float('inf') to disable masking.
-REL_ERR_THRESHOLD = 0.15
+REL_ERR_THRESHOLD = 0.05
 
 # Fine energy bins: 1 keV to 16 MeV, 1000 log-spaced bins (eV)
 E_BINS = np.logspace(3, 7.21, 1000)
@@ -50,20 +52,26 @@ RUN_DIR.mkdir(exist_ok=True)
 INELASTIC_MTS = [str(mt) for mt in range(51, 92)]
 
 SPECIFIC_SCORES = {
-    'Be':  ['(n,2n)'] + INELASTIC_MTS,
-    'Pb':  ['(n,2n)'] + INELASTIC_MTS,
-    'Li7': ['(n,2n)'] + INELASTIC_MTS,
-    'U':   ['(n,2n)', 'nu-fission'] + INELASTIC_MTS,
-    'Th':  ['(n,2n)', 'nu-fission'] + INELASTIC_MTS,
+    'Be':      ['(n,2n)'] + INELASTIC_MTS,
+    'Pb':      ['(n,2n)'] + INELASTIC_MTS,
+    #'Li7':    ['(n,2n)'] + INELASTIC_MTS,
+    'Li_7.5':  ['(n,2n)'] + INELASTIC_MTS,
+    'Li_60':   ['(n,2n)'] + INELASTIC_MTS,
+    'Li_90':   ['(n,2n)'] + INELASTIC_MTS,
+    'U':       ['(n,2n)', 'nu-fission'] + INELASTIC_MTS,
+    'Th':      ['(n,2n)', 'nu-fission'] + INELASTIC_MTS,
 }
 
 # Which curves to show on the plot
 PLOT_CURVES = {
-    'Be':  ['(n,2n)'],
-    'Pb':  ['(n,2n)', "(n,n')"],
-    'Li7': ['(n,2n)', "(n,n')"],
-    'U':   ['nu-fission', '(n,2n)', "(n,n')"],
-    'Th':  ['nu-fission', '(n,2n)', "(n,n')"],
+    'Be':      ['(n,2n)'],
+    'Pb':      ['(n,2n)', "(n,n')"],
+    #'Li7':    ['(n,2n)', "(n,n')"],
+    'Li_7.5':  ['(n,2n)', "(n,n')"],
+    'Li_60':   ['(n,2n)', "(n,n')"],
+    'Li_90':   ['(n,2n)', "(n,n')"],
+    'U':       ['nu-fission', '(n,2n)', "(n,n')"],
+    'Th':      ['nu-fission', '(n,2n)', "(n,n')"],
 }
 
 def log_buffer(lo, hi, buf=0.03):
@@ -176,6 +184,18 @@ def run_target(target_name):
     elif target_name == 'Li7':
         mat.add_nuclide('Li7', 1.0)
         mat.set_density('g/cm3', 0.534)
+    elif target_name == 'Li_7.5':
+        mat.add_nuclide('Li6', 0.075)
+        mat.add_nuclide('Li7', 0.925)
+        mat.set_density('g/cm3', 0.534)
+    elif target_name == 'Li_60':
+        mat.add_nuclide('Li6', 0.60)
+        mat.add_nuclide('Li7', 0.40)
+        mat.set_density('g/cm3', 0.534)
+    elif target_name == 'Li_90':
+        mat.add_nuclide('Li6', 0.90)
+        mat.add_nuclide('Li7', 0.10)
+        mat.set_density('g/cm3', 0.534)
     elif target_name == 'U':
         mat.add_element('U', 1.0)
         mat.set_density('g/cm3', 19.1)
@@ -259,6 +279,8 @@ os.chdir(RUN_DIR)
 # --- Single plot: reaction-specific outgoing spectra ---
 fig1, ax1 = plt.subplots(figsize=(7.0, 3.0))
 
+cmap = plt.get_cmap('tab20')
+
 color_idx = 0
 for tgt in TARGETS:
     for score_name in PLOT_CURVES[tgt]:
@@ -276,7 +298,7 @@ for tgt in TARGETS:
         if mask.any():
             label = f"{tgt} {score_name}"
             ax1.step(E_CENTERS[mask], spec[mask], where='mid', lw=0.75,
-                     color=f'C{color_idx}', label=label)
+                     color=cmap(color_idx % 20), label=label)  # color=f'C{color_idx}'
         color_idx += 1
 
 ax1.set_xscale('log')
@@ -300,6 +322,107 @@ fig1.savefig('compare.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
 fig1.savefig('compare.png', bbox_inches='tight', pad_inches=0.01, format='png', dpi=300)
 
 print(f"\nSaved {RUN_DIR / 'compare.png'}")
+
+# --- Three more plots, one per reaction ---
+REACTIONS_SPLIT = ['(n,2n)', "(n,n')", 'nu-fission']
+REACTION_FILENAME = {
+    '(n,2n)':     'n2n',
+    "(n,n')":     'nnp',
+    'nu-fission': 'nufission',
+}
+
+# One fixed color per target, shared across all three split plots.
+TARGET_COLOR = {tgt: cmap(i % 20) for i, tgt in enumerate(TARGETS)}
+
+for reaction in REACTIONS_SPLIT:
+    fig, ax = plt.subplots(figsize=(7.0, 3.0))
+    plotted_any = False
+    for tgt in TARGETS:
+        if reaction not in PLOT_CURVES[tgt]:
+            continue
+        sdata = results[tgt]['spectra'][reaction]
+        spec = sdata['vals']
+        errs = sdata['errs']
+
+        mask = spec > 0
+        if REL_ERR_THRESHOLD is not None:
+            with np.errstate(divide='ignore', invalid='ignore'):
+                rel_err = np.where(spec > 0, errs / spec, np.inf)
+            mask &= rel_err < REL_ERR_THRESHOLD
+
+        if mask.any():
+            ax.step(E_CENTERS[mask], spec[mask], where='mid', lw=0.75,
+                    color=TARGET_COLOR[tgt], label=f"{tgt} {reaction}")
+            plotted_any = True
+
+    if not plotted_any:
+        plt.close(fig)
+        print(f"  No data to plot for {reaction}, skipping.")
+        continue
+
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.set_xlabel('Outgoing neutron energy [eV]')
+    ax.set_ylabel(r'Produced neutrons$/$src-n$/$eV')
+    leg = ax.legend(loc='lower left', fontsize=7, ncol=2,
+                    fancybox=False, edgecolor='black',
+                    frameon=True, framealpha=0.75)
+    leg.get_frame().set_linewidth(0.5)
+    ax.set_xlim(log_buffer(1e4, 14e6, buf=0.03))
+    ax.set_ylim(log_buffer(1e-11, 1e-8, buf=0.03))
+    ax.xaxis.set_major_formatter(sci_fmt)
+    ax.yaxis.set_major_formatter(sci_fmt)
+    fig.tight_layout()
+
+    stem = f"compare_{REACTION_FILENAME[reaction]}"
+    fig.savefig(f'{stem}.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+    fig.savefig(f'{stem}.png', bbox_inches='tight', pad_inches=0.01, format='png', dpi=300)
+    plt.close(fig)
+    print(f"Saved {RUN_DIR / (stem + '.png')}")
+
+# --- Stacked figure: the three split plots in one column ---
+fig_s, axes_s = plt.subplots(len(REACTIONS_SPLIT), 1,
+                             figsize=(7.0, 8.5), sharex=False, sharey=False)
+
+for ax_s, reaction in zip(axes_s, REACTIONS_SPLIT):
+    plotted_any = False
+    for tgt in TARGETS:
+        if reaction not in PLOT_CURVES[tgt]:
+            continue
+        sdata = results[tgt]['spectra'][reaction]
+        spec = sdata['vals']
+        errs = sdata['errs']
+
+        mask = spec > 0
+        if REL_ERR_THRESHOLD is not None:
+            with np.errstate(divide='ignore', invalid='ignore'):
+                rel_err = np.where(spec > 0, errs / spec, np.inf)
+            mask &= rel_err < REL_ERR_THRESHOLD
+
+        if mask.any():
+            ax_s.step(E_CENTERS[mask], spec[mask], where='mid', lw=0.75,
+                      color=TARGET_COLOR[tgt], label=f"{tgt} {reaction}")
+            plotted_any = True
+
+    ax_s.set_xscale('log')
+    ax_s.set_yscale('log')
+    ax_s.set_xlabel('Outgoing neutron energy [eV]')
+    ax_s.set_ylabel(r'Produced neutrons$/$src-n$/$eV')
+    if plotted_any:
+        leg = ax_s.legend(loc='lower left', fontsize=7, ncol=2,
+                          fancybox=False, edgecolor='black',
+                          frameon=True, framealpha=0.75)
+        leg.get_frame().set_linewidth(0.5)
+    ax_s.set_xlim(log_buffer(1e4, 14e6, buf=0.03))
+    ax_s.set_ylim(log_buffer(1e-11, 1e-8, buf=0.03))
+    ax_s.xaxis.set_major_formatter(sci_fmt)
+    ax_s.yaxis.set_major_formatter(sci_fmt)
+
+fig_s.tight_layout()
+fig_s.savefig('compare_stacked.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+fig_s.savefig('compare_stacked.png', bbox_inches='tight', pad_inches=0.01, format='png', dpi=300)
+plt.close(fig_s)
+print(f"Saved {RUN_DIR / 'compare_stacked.png'}")
 
 # --- Export all spectra to CSV ---
 csv_data = {}
