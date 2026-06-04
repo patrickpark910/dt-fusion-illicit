@@ -3,15 +3,16 @@ MATPLOTLIB SETTINGS
 """
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
+from pathlib import Path
 
-# Fonts
+# Fonts — resolve relative to this file so os.chdir() doesn't break it
 # try:
 #     font_path = './Python/fonts/DIN-Regular.ttf' # DIN-Regular.ttf' # './Python/arial.ttf'
 #     fm.fontManager.addfont(font_path)
 #     prop = fm.FontProperties(fname=font_path)
 #     plt.rcParams['font.family'] = prop.get_name()
 # except:
-font_path = './fonts/arial.ttf' # './arial.ttf'
+font_path = str(Path(__file__).resolve().parent / 'fonts' / 'arial.ttf')
 fm.fontManager.addfont(font_path)
 prop = fm.FontProperties(fname=font_path)
 plt.rcParams['font.family'] = prop.get_name()

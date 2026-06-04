@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import openmc
 from scipy.optimize import curve_fit
+from scipy.signal import find_peaks
 
 from Python.parameters import *
 # from parameters import *
@@ -450,3 +451,97 @@ if __name__ == "__main__":
     print(f"Neutron wall loading for FLiBe: {(P_NEUTRON_MW / (A_FW_FLiBe[2]/1e4))} MW/m²")   
     print(f"Neutron wall loading for DCLL:  {(P_NEUTRON_MW / (A_FW_DCLL[2]/1e4))} MW/m²")
     print(f"Neutron wall loading for HCPB:  {(P_NEUTRON_MW / (A_FW_HCPB[2]/1e4))} MW/m²")
+
+
+def spectrum_stats(E, y, mode_weight=None, quantiles=(0.10, 0.25, 0.75, 0.90)):
+    """
+    Characteristic energies of a binned spectrum, in the units of E.
+
+    E           : bin-midpoint energies
+    y           : per-bin weighting for mean, median & quantiles
+                  (flux, leakage current, reaction contribution, ...)
+    mode_weight : optional separate weighting whose peak defines the mode
+                  (e.g. per-lethargy flux). Defaults to y.
+    quantiles   : cumulative-y fractions whose energies are returned in `q`
+                  (default 10/25/75/90 %).
+
+      mean   = sum(E*y)/sum(y)            (weighted average)
+      median = E at 50% of cumulative y   (interpolated)
+      mode   = E of the largest mode_weight bin
+      q[p]   = E at fraction p of cumulative y (interpolated), for each p
+
+    Returns (mean_E, median_E, mode_E, q), where q is a dict {p: E_p}
+    keyed by the requested fractions. All values are NaN if there is no
+    positive y. (median_E equals the 0.50 point.)
+    """
+    E = np.asarray(E, dtype=float)
+    y = np.asarray(y, dtype=float)
+    w = y if mode_weight is None else np.asarray(mode_weight, dtype=float)
+
+    good = np.isfinite(E) & np.isfinite(y) & (y > 0)
+    if not good.any() or y[good].sum() == 0:
+        return np.nan, np.nan, np.nan, {p: np.nan for p in quantiles}
+    E_g, y_g, w_g = E[good], y[good], w[good]
+
+    mean_E = np.sum(E_g * y_g) / np.sum(y_g)
+
+    order = np.argsort(E_g)
+    E_sorted = E_g[order]
+    cum = np.cumsum(y_g[order])
+    cum /= cum[-1]
+    median_E = float(np.interp(0.5, cum, E_sorted))
+    q = {p: float(np.interp(p, cum, E_sorted)) for p in quantiles}
+
+    mode_E = float(E_g[np.argmax(w_g)])
+    return mean_E, median_E, mode_E, q
+
+
+def second_mode(E, y, source_eV=14.07e6, guard=1.3, min_prominence=0.1):
+    """
+    Second mode of a spectrum: the tallest *genuine* local maximum of y(E)
+    lying below the D-T source peak near `source_eV`.
+
+    Built for fusion-blanket flux spectra whose global mode is the
+    14.07 MeV source peak; this returns the next peak down in energy
+    (the slowing-down / scattered-neutron feature inside the plotted range).
+
+    Peaks are detected on log10(y), so a peak's prominence is measured in
+    decades to match a log-scaled axis. Any peak at E >= source_eV/guard is
+    taken to be the source peak (or its shoulder) and discarded.
+    `min_prominence` is the minimum topographic prominence, in decades, for
+    a bump to count (this rejects Monte-Carlo noise). Among the surviving
+    sub-source peaks the tallest (largest y) is returned.
+
+    Note: maxima sitting exactly at the array edges (e.g. a thermal upturn
+    at the lowest bin) are not detected by design.
+
+    Returns (E2, y2) of the chosen peak, or (nan, nan) if none qualifies.
+    """
+    E = np.asarray(E, dtype=float)
+    y = np.asarray(y, dtype=float)
+
+    order = np.argsort(E)
+    E, y = E[order], y[order]
+    good = np.isfinite(E) & np.isfinite(y) & (y > 0)
+    E, y = E[good], y[good]
+    if E.size < 3:
+        return np.nan, np.nan
+
+    peaks, _ = find_peaks(np.log10(y), prominence=min_prominence)
+    if peaks.size == 0:
+        return np.nan, np.nan
+
+    peaks = peaks[E[peaks] < source_eV / guard]      # keep only sub-source peaks
+    if peaks.size == 0:
+        return np.nan, np.nan
+
+    best = peaks[np.argmax(y[peaks])]                # tallest secondary peak
+    return float(E[best]), float(y[best])
+
+
+def strip_latex(s):
+    """Render simple matplotlib LaTeX markup as plain/unicode text for the console."""
+    return (s.replace('$_4$', '4').replace('$_2$', '2')
+             .replace('$^6$', '⁶').replace('$^7$', '⁷')
+             .replace(r'$\gamma$', 'γ')
+             .replace('$', ''))          # extend as more markup appears

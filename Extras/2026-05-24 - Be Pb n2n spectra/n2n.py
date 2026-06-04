@@ -1,8 +1,11 @@
 """
 Thin-target secondary neutron spectra for Be-9, Pb, Li (enriched), natural U, and Th-232.
 
-Runs separate OpenMC fixed-source calculations (one per target) in
-dedicated subdirectories, then overlays the results on the same plots.
+Multiple source scenarios:
+  - 14MeV      : monoenergetic 14.1 MeV (all targets)
+  - DCLL_U/Th  : realistic DCLL blanket flux on U / Th
+  - HCPB_U/Th  : realistic HCPB blanket flux on U / Th
+  - FLiBe_U/Th : realistic FLiBe blanket flux on U / Th
 
 Each target tallies reaction-specific outgoing spectra:
   - Be-9, Pb, Li (7.5/60/90 at% Li-6) : (n,2n) and inelastic (MT 51-91)
@@ -24,24 +27,25 @@ from params import *
 # ============================================================
 # USER SETTINGS
 # ============================================================
-TARGETS = ['Be', 'Pb', 'U', 'Th', 'Li_7.5', 'Li_60', 'Li_90',] # Li7 
 THICKNESS = 0.1        # cm — thin shell (keep << MFP)
 INNER_R   = 1.0        # cm
-PARTICLES = int(1e8)
+PARTICLES = int(1e6)
 BATCHES = int(1e2)
 
 # Mask plot bins whose relative statistical error exceeds this value.
 # Set to None or float('inf') to disable masking.
-REL_ERR_THRESHOLD = 0.05
+REL_ERR_THRESHOLD = 1 # 0.33
 
-# Fine energy bins: 1 keV to 16 MeV, 1000 log-spaced bins (eV)
-E_BINS = np.logspace(3, 7.21, 1000)
+# Fine energy bins: 1 eV to 16 MeV, 1000 log-spaced bins (eV)
+E_BINS = np.logspace(0, 7.21, 1000)
 E_CENTERS = 0.5 * (E_BINS[:-1] + E_BINS[1:])
 E_WIDTHS = np.diff(E_BINS)
 
 ORIG_DIR = Path.cwd()
 RUN_DIR = Path('./')
 RUN_DIR.mkdir(exist_ok=True)
+
+FLUX_DATA_DIR = Path(__file__).resolve().parent.parent.parent / 'Figures' / 'Data'
 
 # ============================================================
 # Per-target scores for the outgoing-energy spectrum tally
@@ -50,26 +54,26 @@ RUN_DIR.mkdir(exist_ok=True)
 INELASTIC_MTS = [str(mt) for mt in range(51, 92)]
 
 SPECIFIC_SCORES = {
-    'Be':      ['(n,2n)'] + INELASTIC_MTS,
-    'Pb':      ['(n,2n)'] + INELASTIC_MTS,
-    'U':       ['(n,2n)', 'nu-fission'] + INELASTIC_MTS,
-    'Th':      ['(n,2n)', 'nu-fission'] + INELASTIC_MTS,
-    'Li7':    ['(n,2n)'] + INELASTIC_MTS,
-    'Li_7.5':  ['(n,2n)'] + INELASTIC_MTS,
-    'Li_60':   ['(n,2n)'] + INELASTIC_MTS,
-    'Li_90':   ['(n,2n)'] + INELASTIC_MTS,
+    'Be':      ['(n,2n)', '(n,elastic)'] + INELASTIC_MTS,
+    'Pb':      ['(n,2n)', '(n,elastic)'] + INELASTIC_MTS,
+    'U':       ['(n,2n)', 'nu-fission', '(n,elastic)'] + INELASTIC_MTS,
+    'Th':      ['(n,2n)', 'nu-fission', '(n,elastic)'] + INELASTIC_MTS,
+    'Li7':     ['(n,2n)', '(n,elastic)'] + INELASTIC_MTS,
+    'Li_7.5':  ['(n,2n)', '(n,elastic)'] + INELASTIC_MTS,
+    'Li_60':   ['(n,2n)', '(n,elastic)'] + INELASTIC_MTS,
+    'Li_90':   ['(n,2n)', '(n,elastic)'] + INELASTIC_MTS,
 }
 
 # Which curves to show on the plot
 PLOT_CURVES = {
-    'Be':      ['(n,2n)'],
-    'Pb':      ['(n,2n)', "(n,n')"],
-    'U':       ['nu-fission', '(n,2n)', "(n,n')"],
-    'Th':      ['nu-fission', '(n,2n)', "(n,n')"],
-    'Li7':    ['(n,2n)', "(n,n')"],
-    'Li_7.5':  ['(n,2n)', "(n,n')"],
-    'Li_60':   ['(n,2n)', "(n,n')"],
-    'Li_90':   ['(n,2n)', "(n,n')"],
+    'Be':      ['(n,2n)', '(n,elastic)'],
+    'Pb':      ['(n,2n)', "(n,n')", '(n,elastic)'],
+    'U':       ['nu-fission', '(n,2n)', "(n,n')", '(n,elastic)'],
+    'Th':      ['nu-fission', '(n,2n)', "(n,n')", '(n,elastic)'],
+    'Li7':     ['(n,2n)', "(n,n')", '(n,elastic)'],
+    'Li_7.5':  ['(n,2n)', "(n,n')", '(n,elastic)'],
+    'Li_60':   ['(n,2n)', "(n,n')", '(n,elastic)'],
+    'Li_90':   ['(n,2n)', "(n,n')", '(n,elastic)'],
 }
 
 PLOT_LABELS = {'Be': 'Be-9', 'Pb': 'Pb-nat', 'Li7': 'Li-7', 'Li_7.5': 'Li-nat', 'Li_60': 'Li-60%e', 'Li_90': 'Li-90%e', 'U': 'U-nat', 'Th': 'Th-232'}
@@ -87,9 +91,87 @@ TARGET_COLOR = {
     'Li_90':  "#75CAFF",   # light blue    (90 at% Li-6)
 }
 
+REACTIONS_SPLIT = ['(n,2n)', "(n,n')", '(n,elastic)', 'nu-fission']
+REACTION_FILENAME = {
+    '(n,2n)':       'n2n',
+    "(n,n')":       'n-inel',
+    '(n,elastic)':  'n-el',
+    'nu-fission':   'nu-fis',
+}
+
+# ============================================================
+# SCENARIOS
+# ============================================================
+SCENARIOS = [
+    # {
+    #     'prefix':  '14MeV',
+    #     'targets': ['Be', 'Pb', 'U', 'Th', 'Li_7.5', 'Li_60', 'Li_90'],
+    #     'source_type': 'mono',
+    # },
+    {
+        'prefix': 'DCLL_U',
+        'targets': ['U'],
+        'source_type': 'csv',
+        'source_csv': FLUX_DATA_DIR / 'DCLL_900K_Li90.0_U238_flux.csv',
+    },
+    # {
+    #     'prefix': 'DCLL_Th',
+    #     'targets': ['Th'],
+    #     'source_type': 'csv',
+    #     'source_csv': FLUX_DATA_DIR / 'DCLL_900K_Li90.0_Th232_flux.csv',
+    # },
+    {
+        'prefix': 'HCPB_U',
+        'targets': ['U'],
+        'source_type': 'csv',
+        'source_csv': FLUX_DATA_DIR / 'HCPB_900K_Li60.0_U238_flux.csv',
+    },
+    # {
+    #     'prefix': 'HCPB_Th',
+    #     'targets': ['Th'],
+    #     'source_type': 'csv',
+    #     'source_csv': FLUX_DATA_DIR / 'HCPB_900K_Li60.0_Th232_flux.csv',
+    # },
+    {
+        'prefix': 'FLiBe_U',
+        'targets': ['U'],
+        'source_type': 'csv',
+        'source_csv': FLUX_DATA_DIR / 'FLiBe_900K_Li07.5_U238_flux.csv',
+    },
+    # {
+    #     'prefix': 'FLiBe_Th',
+    #     'targets': ['Th'],
+    #     'source_type': 'csv',
+    #     'source_csv': FLUX_DATA_DIR / 'FLiBe_900K_Li07.5_Th232_flux.csv',
+    # },
+]
+
+
 def log_buffer(lo, hi, buf=0.03):
     f = (hi / lo) ** buf
     return (lo / f, hi * f)
+
+
+# ============================================================
+# Load flux from CSV for use as source distribution
+# ============================================================
+def load_flux_source(csv_path):
+    """Read a flux CSV, pick the 0 kg/m³ (unperturbed) concentration,
+    and return (edges_eV, flux) arrays suitable for openmc.stats.Tabular."""
+    df = pd.read_csv(csv_path)
+    # Use the unperturbed (0 kg/m³) concentration as the source spectrum
+    min_conc = df['fertile_kg/m3'].min()
+    df = df[df['fertile_kg/m3'] == min_conc].copy()
+    df = df.sort_values('energy low [eV]').reset_index(drop=True)
+
+    e_lo = df['energy low [eV]'].values
+    e_hi = df['energy high [eV]'].values
+    flux = df['mean'].values
+
+    # Build contiguous edge array: [e_lo[0], e_lo[1], ..., e_hi[-1]]
+    edges = np.append(e_lo, e_hi[-1])
+    return edges, flux
+
 
 # ============================================================
 # Extract results from a statepoint file
@@ -132,7 +214,7 @@ def _extract_results(target_name, sp_file):
     spectra = {}
 
     # Scores to extract individually (not summed into inelastic)
-    individual_scores = {'(n,2n)', 'nu-fission'}
+    individual_scores = {'(n,2n)', 'nu-fission', '(n,elastic)'}
     for score in t_ns.scores:
         if score in individual_scores:
             vals = t_ns.get_values(scores=[score]).flatten()
@@ -169,16 +251,17 @@ def _extract_results(target_name, sp_file):
 # ============================================================
 # Build, run, and extract results for one target
 # ============================================================
-def run_target(target_name):
+def run_target(target_name, scenario):
     """Build model, run OpenMC, return dict of results."""
 
     openmc.reset_auto_ids()
 
-    sub_dir = RUN_DIR / target_name
-    sub_dir.mkdir(exist_ok=True)
+    sub_dir = RUN_DIR / scenario['prefix'] / target_name
+    sub_dir.mkdir(parents=True, exist_ok=True)
     os.chdir(sub_dir)
     print(f"\n{'='*60}")
-    print(f"  Target: {target_name}  |  Directory: {sub_dir}")
+    print(f"  Scenario: {scenario['prefix']}  |  Target: {target_name}")
+    print(f"  Directory: {sub_dir}")
     print(f"{'='*60}")
 
     sp_file = Path(f'statepoint.{BATCHES}.h5')
@@ -235,8 +318,16 @@ def run_target(target_name):
     # --- Source ---
     source = openmc.IndependentSource()
     source.space = openmc.stats.Point((0, 0, 0))
-    source.energy = openmc.stats.Discrete([14.1e6], [1.0])
     source.particle = 'neutron'
+
+    if scenario['source_type'] == 'mono':
+        source.energy = openmc.stats.Discrete([14.1e6], [1.0])
+        e_in_bounds = [14.0e6, 14.2e6]
+    else:
+        edges, flux = load_flux_source(scenario['source_csv'])
+        p = np.append(flux, 0.0)   # histogram: len(x) == len(p), last p ignored
+        source.energy = openmc.stats.Tabular(edges, p, interpolation='histogram')
+        e_in_bounds = [float(edges[0]), float(edges[-1])]
 
     settings = openmc.Settings()
     settings.source = [source]
@@ -246,7 +337,7 @@ def run_target(target_name):
 
     # --- Tallies ---
     cell_filter  = openmc.CellFilter(cell_target)
-    e_in_filter  = openmc.EnergyFilter([14.0e6, 14.2e6])
+    e_in_filter  = openmc.EnergyFilter(e_in_bounds)
     e_out_filter = openmc.EnergyoutFilter(E_BINS)
 
     # 1) Integral reaction rates in the target cell
@@ -277,264 +368,273 @@ def run_target(target_name):
 
 
 # ============================================================
-# Run all targets
+# Run all scenarios
 # ============================================================
-results = {}
-for tgt in TARGETS:
-    results[tgt] = run_target(tgt)
-
-
-# ============================================================
-# Combined plots
-# ============================================================
-os.chdir(RUN_DIR)
-
-# --- Single plot: reaction-specific outgoing spectra ---
-fig1, ax1 = plt.subplots(figsize=(7.0, 3.0))
-
-for tgt in TARGETS:
-    for score_name in PLOT_CURVES[tgt]:
-        sdata = results[tgt]['spectra'][score_name]
-        spec = sdata['vals']
-        errs = sdata['errs']
-
-        # Mask: keep bins with positive value AND relative error below threshold
-        mask = spec > 0
-        if REL_ERR_THRESHOLD is not None:
-            with np.errstate(divide='ignore', invalid='ignore'):
-                rel_err = np.where(spec > 0, errs / spec, np.inf)
-            mask &= rel_err < REL_ERR_THRESHOLD
-
-        if mask.any():
-            nuc   = PLOT_LABELS.get(tgt, tgt)
-            label = f"{nuc} {score_name}"
-            ax1.step(E_CENTERS[mask], spec[mask], where='mid', lw=0.75,
-                     color=TARGET_COLOR[tgt], label=label)
-
-ax1.set_xscale('log')
-ax1.set_yscale('log')
-ax1.set_xlabel('Outgoing neutron energy [eV]')
-ax1.set_ylabel(r'Produced neutrons$/$src-n$/$eV')
-leg = ax1.legend(loc='lower left', fontsize=7, ncol=2,
-                 fancybox=False, edgecolor='black',
-                 frameon=True, framealpha=0.75)
-leg.get_frame().set_linewidth(0.5)
-ax1.set_xlim(log_buffer(1e4, 14e6, buf=0.03))
-ax1.set_ylim(log_buffer(1e-12, 1e-8, buf=0.03))
-
-
 # Format tick labels as 1eX scientific notation on both axes
 sci_fmt = FuncFormatter(lambda x, _: f'1e{int(round(np.log10(x)))}' if x > 0 else '0')
-ax1.xaxis.set_major_formatter(sci_fmt)
-ax1.yaxis.set_major_formatter(sci_fmt)
-fig1.tight_layout()
-fig1.savefig('compare.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
-fig1.savefig('compare.png', bbox_inches='tight', pad_inches=0.01, format='png', dpi=300)
 
-print(f"\nSaved {RUN_DIR / 'compare.png'}")
+for scenario in SCENARIOS:
+    prefix  = scenario['prefix']
+    targets = scenario['targets']
 
-# --- Three more plots, one per reaction ---
-REACTIONS_SPLIT = ['(n,2n)', "(n,n')", 'nu-fission']
-REACTION_FILENAME = {
-    '(n,2n)':     'n2n',
-    "(n,n')":     'n-inel',
-    'nu-fission': 'nu-fis',
-}
+    print(f"\n{'#'*60}")
+    print(f"  SCENARIO: {prefix}")
+    print(f"{'#'*60}")
 
-for reaction in REACTIONS_SPLIT:
-    fig, ax = plt.subplots(figsize=(7.0, 3.0))
-    plotted_any = False
-    for tgt in TARGETS:
-        if reaction not in PLOT_CURVES[tgt]:
-            continue
-        sdata = results[tgt]['spectra'][reaction]
-        spec = sdata['vals']
-        errs = sdata['errs']
+    results = {}
+    for tgt in targets:
+        results[tgt] = run_target(tgt, scenario)
 
-        mask = spec > 0
+    # ========================================================
+    # Combined plots
+    # ========================================================
+    out_dir = RUN_DIR / prefix
+    out_dir.mkdir(parents=True, exist_ok=True)
+    os.chdir(out_dir)
 
-        nuc   = tgt if tgt not in PLOT_LABELS else PLOT_LABELS[tgt]
-        label = f"{nuc} {reaction}"
-        
-        if REL_ERR_THRESHOLD is not None:
-            with np.errstate(divide='ignore', invalid='ignore'):
-                rel_err = np.where(spec > 0, errs / spec, np.inf)
-            mask &= rel_err < REL_ERR_THRESHOLD
+    # --- Single plot: reaction-specific outgoing spectra ---
+    fig1, ax1 = plt.subplots(figsize=(7.0, 3.0))
 
-        if mask.any():
-            ax.step(E_CENTERS[mask], spec[mask], where='mid', lw=0.75,
-                    color=TARGET_COLOR[tgt], label=label)
-            plotted_any = True
+    for tgt in targets:
+        for score_name in PLOT_CURVES[tgt]:
+            sdata = results[tgt]['spectra'][score_name]
+            spec = sdata['vals']
+            errs = sdata['errs']
 
-    if not plotted_any:
-        plt.close(fig)
-        print(f"  No data to plot for {reaction}, skipping.")
-        continue
+            # Mask: keep bins with positive value AND relative error below threshold
+            mask = spec > 0
+            if REL_ERR_THRESHOLD is not None:
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    rel_err = np.where(spec > 0, errs / spec, np.inf)
+                mask &= rel_err < REL_ERR_THRESHOLD
 
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    ax.set_xlabel('Outgoing neutron energy [eV]')
-    ax.set_ylabel(r'Produced neutrons$/$src-n$/$eV')
-    leg = ax.legend(loc='lower left', fontsize=7, ncol=2,
-                    fancybox=False, edgecolor='black',
-                    frameon=True, framealpha=0.75)
+            if mask.any():
+                nuc   = PLOT_LABELS.get(tgt, tgt)
+                label = f"{nuc} {score_name}"
+                ax1.step(E_CENTERS[mask], spec[mask], where='mid', lw=0.75,
+                         color=TARGET_COLOR[tgt], label=label)
+
+    ax1.set_xscale('log')
+    ax1.set_yscale('log')
+    ax1.set_xlabel('Outgoing neutron energy [eV]')
+    ax1.set_ylabel(r'Produced neutrons$/$src-n$/$eV')
+    leg = ax1.legend(loc='lower left', fontsize=7, ncol=2,
+                     fancybox=False, edgecolor='black',
+                     frameon=True, framealpha=0.75)
     leg.get_frame().set_linewidth(0.5)
-    ax.set_xlim(log_buffer(1e4, 14e6, buf=0.03))
-    ax.set_ylim(log_buffer(1e-12, 1e-8, buf=0.03))
-    ax.xaxis.set_major_formatter(sci_fmt)
-    ax.yaxis.set_major_formatter(sci_fmt)
-    fig.tight_layout()
+    ax1.set_xlim(log_buffer(1e4, 14e6, buf=0.03))
+    ax1.set_ylim(log_buffer(1e-12, 1e-8, buf=0.03))
+    ax1.xaxis.set_major_formatter(sci_fmt)
+    ax1.yaxis.set_major_formatter(sci_fmt)
+    fig1.tight_layout()
+    fig1.savefig(f'{prefix}_compare.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+    fig1.savefig(f'{prefix}_compare.png', bbox_inches='tight', pad_inches=0.01, format='png', dpi=300)
+    plt.close(fig1)
+    print(f"\nSaved {out_dir / f'{prefix}_compare.png'}")
 
-    stem = f"compare_{REACTION_FILENAME[reaction]}"
-    fig.savefig(f'{stem}.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
-    fig.savefig(f'{stem}.png', bbox_inches='tight', pad_inches=0.01, format='png', dpi=300)
-    plt.close(fig)
-    print(f"Saved {RUN_DIR / (stem + '.png')}")
+    # --- Three more plots, one per reaction ---
+    for reaction in REACTIONS_SPLIT:
+        fig, ax = plt.subplots(figsize=(7.0, 3.0))
+        plotted_any = False
+        for tgt in targets:
+            if reaction not in PLOT_CURVES[tgt]:
+                continue
+            sdata = results[tgt]['spectra'][reaction]
+            spec = sdata['vals']
+            errs = sdata['errs']
 
-# --- Stacked figure: the three split plots in one column ---
-fig_s, axes_s = plt.subplots(len(REACTIONS_SPLIT), 1,
-                             figsize=(7.0, 8.5), sharex=False, sharey=False)
+            mask = spec > 0
 
-for ax_s, reaction in zip(axes_s, REACTIONS_SPLIT):
-    plotted_any = False
-    for tgt in TARGETS:
-        if reaction not in PLOT_CURVES[tgt]:
+            nuc   = tgt if tgt not in PLOT_LABELS else PLOT_LABELS[tgt]
+            label = f"{nuc} {reaction}"
+
+            if REL_ERR_THRESHOLD is not None:
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    rel_err = np.where(spec > 0, errs / spec, np.inf)
+                mask &= rel_err < REL_ERR_THRESHOLD
+
+            if mask.any():
+                ax.step(E_CENTERS[mask], spec[mask], where='mid', lw=0.75,
+                        color=TARGET_COLOR[tgt], label=label)
+                plotted_any = True
+
+        if not plotted_any:
+            plt.close(fig)
+            print(f"  No data to plot for {reaction}, skipping.")
             continue
-        sdata = results[tgt]['spectra'][reaction]
-        spec = sdata['vals']
-        errs = sdata['errs']
 
-        mask = spec > 0
-        if REL_ERR_THRESHOLD is not None:
-            with np.errstate(divide='ignore', invalid='ignore'):
-                rel_err = np.where(spec > 0, errs / spec, np.inf)
-            mask &= rel_err < REL_ERR_THRESHOLD
-
-        if mask.any():
-            nuc = PLOT_LABELS.get(tgt, tgt)
-            ax_s.step(E_CENTERS[mask], spec[mask], where='mid', lw=0.75,
-                      color=TARGET_COLOR[tgt], label=f"{nuc} {reaction}")
-            plotted_any = True
-
-    ax_s.set_xscale('log')
-    ax_s.set_yscale('log')
-    ax_s.set_xlabel('Outgoing neutron energy [eV]')
-    ax_s.set_ylabel(r'Produced neutrons$/$src-n$/$eV')
-    if plotted_any:
-        leg = ax_s.legend(loc='lower left', fontsize=7, ncol=2,
-                          fancybox=False, edgecolor='black',
-                          frameon=True, framealpha=0.75)
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        ax.set_xlabel('Outgoing neutron energy [eV]')
+        ax.set_ylabel(r'Produced neutrons$/$src-n$/$eV')
+        leg = ax.legend(loc='lower left', fontsize=7, ncol=2,
+                        fancybox=False, edgecolor='black',
+                        frameon=True, framealpha=0.75)
         leg.get_frame().set_linewidth(0.5)
-    ax_s.set_xlim(log_buffer(1e4, 14e6, buf=0.03))
-    ax_s.set_ylim(log_buffer(1e-12, 1e-8, buf=0.03))
-    ax_s.xaxis.set_major_formatter(sci_fmt)
-    ax_s.yaxis.set_major_formatter(sci_fmt)
+        # ax.set_xlim(log_buffer(1e4, 14e6, buf=0.03))
+        ax.set_ylim(log_buffer(1e-12, 1e-8, buf=0.03))
+        ax.xaxis.set_major_formatter(sci_fmt)
+        ax.yaxis.set_major_formatter(sci_fmt)
+        fig.tight_layout()
 
-fig_s.tight_layout()
-fig_s.savefig('compare_stacked.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
-fig_s.savefig('compare_stacked.png', bbox_inches='tight', pad_inches=0.01, format='png', dpi=300)
-plt.close(fig_s)
-print(f"Saved {RUN_DIR / 'compare_stacked.png'}")
+        stem = f"{prefix}_compare_{REACTION_FILENAME[reaction]}"
+        fig.savefig(f'{stem}.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+        fig.savefig(f'{stem}.png', bbox_inches='tight', pad_inches=0.01, format='png', dpi=300)
+        plt.close(fig)
+        print(f"Saved {out_dir / (stem + '.png')}")
 
-# --- Spectral statistics for each curve on the stacked plots ---
-print(f"\n{'='*120}")
-print("Spectral statistics for each curve on the stacked plots")
-print(f"{'='*120}")
+    # --- Stacked figure: the three split plots in one column ---
+    # Only create if at least two reactions are present for this scenario
+    active_reactions = [r for r in REACTIONS_SPLIT
+                        if any(r in PLOT_CURVES[t] for t in targets)]
+    if len(active_reactions) >= 2:
+        fig_s, axes_s = plt.subplots(len(active_reactions), 1,
+                                     figsize=(7.0, 2.8 * len(active_reactions)),
+                                     sharex=False, sharey=False)
+        if len(active_reactions) == 1:
+            axes_s = [axes_s]
 
-stats_rows = []
+        for ax_s, reaction in zip(axes_s, active_reactions):
+            plotted_any = False
+            for tgt in targets:
+                if reaction not in PLOT_CURVES[tgt]:
+                    continue
+                sdata = results[tgt]['spectra'][reaction]
+                spec = sdata['vals']
+                errs = sdata['errs']
 
-for reaction in REACTIONS_SPLIT:
-    print(f"\n  Reaction: {reaction}")
-    print(f"  {'Target':<12s} {'Integral':>12s} {'Mean E':>12s} {'Median E':>12s}"
-          f" {'Peak E':>12s} {'Std Dev':>12s} {'E_10':>12s} {'E_90':>12s}")
-    print(f"  {'':─<12s} {'(n/src-n)':>12s} {'(MeV)':>12s} {'(MeV)':>12s}"
-          f" {'(MeV)':>12s} {'(MeV)':>12s} {'(MeV)':>12s} {'(MeV)':>12s}")
+                mask = spec > 0
+                if REL_ERR_THRESHOLD is not None:
+                    with np.errstate(divide='ignore', invalid='ignore'):
+                        rel_err = np.where(spec > 0, errs / spec, np.inf)
+                    mask &= rel_err < REL_ERR_THRESHOLD
 
-    for tgt in TARGETS:
-        if reaction not in PLOT_CURVES[tgt]:
-            continue
-        if reaction not in results[tgt]['spectra']:
-            continue
+                if mask.any():
+                    nuc = PLOT_LABELS.get(tgt, tgt)
+                    ax_s.step(E_CENTERS[mask], spec[mask], where='mid', lw=0.75,
+                              color=TARGET_COLOR[tgt], label=f"{nuc} {reaction}")
+                    plotted_any = True
 
-        sdata = results[tgt]['spectra'][reaction]
-        spec = sdata['vals']          # neutrons / src-n / eV
+            ax_s.set_xscale('log')
+            ax_s.set_yscale('log')
+            ax_s.set_xlabel('Outgoing neutron energy [eV]')
+            ax_s.set_ylabel(r'Produced neutrons$/$src-n$/$eV')
+            if plotted_any:
+                leg = ax_s.legend(loc='lower left', fontsize=7, ncol=2,
+                                  fancybox=False, edgecolor='black',
+                                  frameon=True, framealpha=0.75)
+                leg.get_frame().set_linewidth(0.5)
+            # ax_s.set_xlim(log_buffer(1e4, 14e6, buf=0.03))
+            ax_s.set_ylim(log_buffer(1e-12, 1e-8, buf=0.03))
+            ax_s.xaxis.set_major_formatter(sci_fmt)
+            ax_s.yaxis.set_major_formatter(sci_fmt)
 
-        # Use all positive bins for statistics (not the display mask)
-        pos = spec > 0
-        if not pos.any():
-            continue
+        fig_s.tight_layout()
+        fig_s.savefig(f'{prefix}_compare_stacked.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+        fig_s.savefig(f'{prefix}_compare_stacked.png', bbox_inches='tight', pad_inches=0.01, format='png', dpi=300)
+        plt.close(fig_s)
+        print(f"Saved {out_dir / f'{prefix}_compare_stacked.png'}")
 
-        E = E_CENTERS[pos]            # eV
-        phi = spec[pos]               # neutrons / src-n / eV
-        dE = E_WIDTHS[pos]            # eV
+    # --- Spectral statistics for each curve ---
+    print(f"\n{'='*120}")
+    print(f"Spectral statistics for scenario: {prefix}")
+    print(f"{'='*120}")
 
-        # Differential counts per bin: phi(E)*dE  [neutrons / src-n]
-        counts = phi * dE
+    stats_rows = []
 
-        integral = counts.sum()
-        mean_E   = np.sum(E * counts) / integral
-        var_E    = np.sum((E - mean_E)**2 * counts) / integral
-        std_E    = np.sqrt(var_E)
+    for reaction in REACTIONS_SPLIT:
+        print(f"\n  Reaction: {reaction}")
+        print(f"  {'Target':<12s} {'Integral':>12s} {'Mean E':>12s} {'Median E':>12s}"
+              f" {'Peak E':>12s} {'Std Dev':>12s} {'E_10':>12s} {'E_90':>12s}")
+        print(f"  {'':─<12s} {'(n/src-n)':>12s} {'(MeV)':>12s} {'(MeV)':>12s}"
+              f" {'(MeV)':>12s} {'(MeV)':>12s} {'(MeV)':>12s} {'(MeV)':>12s}")
 
-        # Peak energy (mode): bin with highest differential count
-        peak_E = E[np.argmax(counts)]
+        for tgt in targets:
+            if reaction not in PLOT_CURVES[tgt]:
+                continue
+            if reaction not in results[tgt]['spectra']:
+                continue
 
-        # Cumulative distribution for median and percentiles
-        cdf = np.cumsum(counts) / integral
-        median_E = np.interp(0.50, cdf, E)
-        E_10     = np.interp(0.10, cdf, E)
-        E_90     = np.interp(0.90, cdf, E)
+            sdata = results[tgt]['spectra'][reaction]
+            spec = sdata['vals']          # neutrons / src-n / eV
 
-        nuc = PLOT_LABELS.get(tgt, tgt)
-        print(f"  {nuc:<12s} {integral:>12.4e} {mean_E/1e6:>12.4f} {median_E/1e6:>12.4f}"
-              f" {peak_E/1e6:>12.4f} {std_E/1e6:>12.4f} {E_10/1e6:>12.4f} {E_90/1e6:>12.4f}")
+            # Use all positive bins for statistics (not the display mask)
+            pos = spec > 0
+            if not pos.any():
+                continue
 
-        stats_rows.append({
-            'target':           nuc,
-            'reaction':         reaction,
-            'integral_n_per_src': integral,
-            'mean_E_MeV':       mean_E / 1e6,
-            'median_E_MeV':     median_E / 1e6,
-            'peak_E_MeV':       peak_E / 1e6,
-            'std_dev_E_MeV':    std_E / 1e6,
-            'E10_MeV':          E_10 / 1e6,
-            'E90_MeV':          E_90 / 1e6,
-        })
+            E = E_CENTERS[pos]            # eV
+            phi = spec[pos]               # neutrons / src-n / eV
+            dE = E_WIDTHS[pos]            # eV
 
-df_stats = pd.DataFrame(stats_rows)
-df_stats.to_csv('spectral_stats.csv', index=False)
-print(f"\nSaved {RUN_DIR / 'spectral_stats.csv'}")
+            # Differential counts per bin: phi(E)*dE  [neutrons / src-n]
+            counts = phi * dE
 
-# --- Export all spectra to CSV ---
-csv_data = {}
-for tgt in TARGETS:
-    for score_name, sdata in results[tgt]['spectra'].items():
-        csv_data[f"{tgt} {score_name}"] = sdata['vals']
-        csv_data[f"{tgt} {score_name} err"] = sdata['errs']
+            integral = counts.sum()
+            mean_E   = np.sum(E * counts) / integral
+            var_E    = np.sum((E - mean_E)**2 * counts) / integral
+            std_E    = np.sqrt(var_E)
 
-df = pd.DataFrame(csv_data, index=E_CENTERS)
-df.index.name = 'energy_mid_eV'
-df.to_csv('spectra.csv')
-print(f"Saved {RUN_DIR / 'spectra.csv'}")
+            # Peak energy (mode): bin with highest differential count
+            peak_E = E[np.argmax(counts)]
 
-# --- Print reaction rate comparison ---
-print(f"\n{'='*120}")
-print(f"{'Reaction':<16s}", end='')
-for tgt in TARGETS:
-    print(f"  {tgt:>16s}", end='')
-print()
-print('-' * 120)
+            # Cumulative distribution for median and percentiles
+            cdf = np.cumsum(counts) / integral
+            median_E = np.interp(0.50, cdf, E)
+            E_10     = np.interp(0.10, cdf, E)
+            E_90     = np.interp(0.90, cdf, E)
 
-all_scores = list(results[TARGETS[0]]['rxn_rates'].keys())
-for score in all_scores:
-    print(f"{score:<16s}", end='')
-    for tgt in TARGETS:
-        try:
-            val, err = results[tgt]['rxn_rates'][score]
-            print(f"  {val:>12.4e} ± {err:.0e}", end='')
-        except KeyError:
-            print(f"  {'N/A':>16s}", end='')
+            nuc = PLOT_LABELS.get(tgt, tgt)
+            print(f"  {nuc:<12s} {integral:>12.4e} {mean_E/1e6:>12.4f} {median_E/1e6:>12.4f}"
+                  f" {peak_E/1e6:>12.4f} {std_E/1e6:>12.4f} {E_10/1e6:>12.4f} {E_90/1e6:>12.4f}")
+
+            stats_rows.append({
+                'target':           nuc,
+                'reaction':         reaction,
+                'integral_n_per_src': integral,
+                'mean_E_MeV':       mean_E / 1e6,
+                'median_E_MeV':     median_E / 1e6,
+                'peak_E_MeV':       peak_E / 1e6,
+                'std_dev_E_MeV':    std_E / 1e6,
+                'E10_MeV':          E_10 / 1e6,
+                'E90_MeV':          E_90 / 1e6,
+            })
+
+    df_stats = pd.DataFrame(stats_rows)
+    df_stats.to_csv(f'{prefix}_spectral_stats.csv', index=False)
+    print(f"\nSaved {out_dir / f'{prefix}_spectral_stats.csv'}")
+
+    # --- Export all spectra to CSV ---
+    csv_data = {}
+    for tgt in targets:
+        for score_name, sdata in results[tgt]['spectra'].items():
+            csv_data[f"{tgt} {score_name}"] = sdata['vals']
+            csv_data[f"{tgt} {score_name} err"] = sdata['errs']
+
+    df = pd.DataFrame(csv_data, index=E_CENTERS)
+    df.index.name = 'energy_mid_eV'
+    df.to_csv(f'{prefix}_spectra.csv')
+    print(f"Saved {out_dir / f'{prefix}_spectra.csv'}")
+
+    # --- Print reaction rate comparison ---
+    print(f"\n{'='*120}")
+    print(f"{'Reaction':<16s}", end='')
+    for tgt in targets:
+        print(f"  {tgt:>16s}", end='')
     print()
+    print('-' * 120)
 
-os.chdir(ORIG_DIR)
-print(f"\nDone. All files in {RUN_DIR}/")
+    all_scores = list(results[targets[0]]['rxn_rates'].keys())
+    for score in all_scores:
+        print(f"{score:<16s}", end='')
+        for tgt in targets:
+            try:
+                val, err = results[tgt]['rxn_rates'][score]
+                print(f"  {val:>12.4e} ± {err:.0e}", end='')
+            except KeyError:
+                print(f"  {'N/A':>16s}", end='')
+        print()
+
+    os.chdir(ORIG_DIR)
+
+print(f"\nDone. All output in {RUN_DIR}/")

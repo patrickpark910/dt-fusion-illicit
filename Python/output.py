@@ -216,36 +216,47 @@ class OutputMixin:
         Be9_n2n_Ebin = sum_over_cells(raw['Be_spec'], 'Be9', '(n,2n)') if raw['Be_spec'] is not None else None
         Pb_n2n_Ebin  = sum_over_cells(raw['Pb_spec'], ['Pb204','Pb206','Pb207','Pb208'], '(n,2n)') if raw['Pb_spec'] is not None else None
 
-        # Fertile inelastic scattering (MT 4 -> '(n,level)') and Be/Pb elastic scattering ('(n,elastic)')
+        # Fertile inelastic scattering (MT 4 -> '(n,level)') and elastic scattering ('(n,elastic)')
         U235_inel_Ebin  = sum_over_cells(raw['fertile_spec'], 'U235',  '(n,level)')
         U238_inel_Ebin  = sum_over_cells(raw['fertile_spec'], 'U238',  '(n,level)')
         Th232_inel_Ebin = sum_over_cells(raw['fertile_spec'], 'Th232', '(n,level)')
+
+        U235_elas_Ebin  = sum_over_cells(raw['fertile_spec'], 'U235',  '(n,elastic)')
+        U238_elas_Ebin  = sum_over_cells(raw['fertile_spec'], 'U238',  '(n,elastic)')
+        Th232_elas_Ebin = sum_over_cells(raw['fertile_spec'], 'Th232', '(n,elastic)')
+        Li6_elas_Ebin   = sum_over_cells(raw['Li_spec'], 'Li6', '(n,elastic)')
+        Li7_elas_Ebin   = sum_over_cells(raw['Li_spec'], 'Li7', '(n,elastic)')
         Be9_elas_Ebin   = sum_over_cells(raw['Be_spec'], 'Be9', '(n,elastic)') if raw['Be_spec'] is not None else None
         Pb_elas_Ebin    = sum_over_cells(raw['Pb_spec'], ['Pb204','Pb206','Pb207','Pb208'], '(n,elastic)') if raw['Pb_spec'] is not None else None
 
         rxns_df = U235_ng_Ebin[['energy low [eV]', 'energy high [eV]', 'energy mid [eV]']].copy()
 
-        channels = { 'U235_ng':   U235_ng_Ebin,
-                     'U238_ng':   U238_ng_Ebin,
-                     'Th232_ng':  Th232_ng_Ebin,
-                     'U235_fis':  U235_fis_Ebin,
-                     'U238_fis':  U238_fis_Ebin,
-                     'Th232_fis': Th232_fis_Ebin,
-                     'U235_nufis':  U235_nufis_Ebin,
-                     'U238_nufis':  U238_nufis_Ebin,
-                     'Th232_nufis': Th232_nufis_Ebin,
-                     'Li6_nt':    Li6_nt_Ebin,
-                     'Li7_nt':    Li7_nt_Ebin,
-                     'Be9_n2n':   Be9_n2n_Ebin,
-                     'Pb_n2n':    Pb_n2n_Ebin,
-                     'U235_n2n':  U235_n2n_Ebin,
-                     'U238_n2n':  U238_n2n_Ebin,
-                     'Th232_n2n': Th232_n2n_Ebin,
-                     'U235_inel':  U235_inel_Ebin,
-                     'U238_inel':  U238_inel_Ebin,
-                     'Th232_inel': Th232_inel_Ebin,
-                     'Be9_elas':   Be9_elas_Ebin,
-                     'Pb_elas':    Pb_elas_Ebin,
+        channels = { 'U235(n,g)':     U235_ng_Ebin,
+                     'U238(n,g)':     U238_ng_Ebin,
+                     'Th232(n,g)':    Th232_ng_Ebin,
+                     'U235(n,fis)':   U235_fis_Ebin,
+                     'U238(n,fis)':   U238_fis_Ebin,
+                     'Th232(n,fis)':  Th232_fis_Ebin,
+                     'U235(n,nufis)':  U235_nufis_Ebin,
+                     'U238(n,nufis)':  U238_nufis_Ebin,
+                     'Th232(n,nufis)': Th232_nufis_Ebin,
+                     'Li6(n,t)':     Li6_nt_Ebin,
+                     'Li7(n,t)':     Li7_nt_Ebin,
+                     'Be9(n,2n)':    Be9_n2n_Ebin,
+                     'Pb(n,2n)':     Pb_n2n_Ebin,
+                     'U235(n,2n)':   U235_n2n_Ebin,
+                     'U238(n,2n)':   U238_n2n_Ebin,
+                     'Th232(n,2n)':  Th232_n2n_Ebin,
+                     'U235(n,inel)':  U235_inel_Ebin,
+                     'U238(n,inel)':  U238_inel_Ebin,
+                     'Th232(n,inel)': Th232_inel_Ebin,
+                     'U235(n,el)':   U235_elas_Ebin,
+                     'U238(n,el)':   U238_elas_Ebin,
+                     'Th232(n,el)':  Th232_elas_Ebin,
+                     'Li6(n,el)':    Li6_elas_Ebin,
+                     'Li7(n,el)':    Li7_elas_Ebin,
+                     'Be9(n,el)':    Be9_elas_Ebin,
+                     'Pb(n,el)':     Pb_elas_Ebin,
                    } 
 
         for name, ch_df in channels.items():
@@ -254,11 +265,11 @@ class OutputMixin:
                     ch_df[['energy low [eV]', 'energy high [eV]', 'mean', 'std. dev.']],
                     on=['energy low [eV]', 'energy high [eV]'],
                     how='left')
-                rxns_df[name]            = merged['mean'].fillna(0.0)
-                rxns_df[f'{name}_stdev'] = merged['std. dev.'].fillna(0.0)
+                rxns_df[name]          = merged['mean'].fillna(0.0)
+                rxns_df[f'{name}_sd'] = merged['std. dev.'].fillna(0.0)
             else:
-                rxns_df[name]            = 0.0
-                rxns_df[f'{name}_stdev'] = 0.0
+                rxns_df[name]          = 0.0
+                rxns_df[f'{name}_sd'] = 0.0
 
         rxns_df.insert(0, 'fertile_kg/m3', self.fertile_kgm3)
         return rxns_df
@@ -285,17 +296,23 @@ class OutputMixin:
         Li6_nt = Li[(Li['nuclide']=='Li6') & (Li['score']=='(n,Xt)')][['cell','mean','std. dev.']]
         Li7_nt = Li[(Li['nuclide']=='Li7') & (Li['score']=='(n,Xt)')][['cell','mean','std. dev.']]
 
-        # Multiplier (n,2n) — write both, one is zero
+        # Multiplier (n,2n) and elastic — write both, one is zero
         if raw['Be'] is not None:
             Be = raw['Be']
             be9_n2n = Be[(Be['nuclide']=='Be9') & (Be['score']=='(n,2n)')][['cell','mean','std. dev.']]
             be9_list, be9_err = be9_n2n['mean'].tolist(), be9_n2n['std. dev.'].tolist()
+            be9_el = Be[(Be['nuclide']=='Be9') & (Be['score']=='(n,elastic)')][['cell','mean','std. dev.']]
+            be9_list_el, be9_err_el = be9_el['mean'].tolist() if len(be9_el) else zeros, be9_el['std. dev.'].tolist() if len(be9_el) else zeros
             pb_list,  pb_err  = zeros, zeros
+            pb_list_el, pb_err_el = zeros, zeros
         else:
             Pb = raw['Pb']
             pb_n2n = sum_over_nuclides(Pb, '(n,2n)')
             pb_list,  pb_err  = pb_n2n['mean'].tolist(), pb_n2n['std. dev.'].tolist()
+            pb_el = sum_over_nuclides(Pb, '(n,elastic)')
+            pb_list_el, pb_err_el = pb_el['mean'].tolist(), pb_el['std. dev.'].tolist()
             be9_list, be9_err = zeros, zeros
+            be9_list_el, be9_err_el = zeros, zeros
 
         # Fertile capture — write both U238 and Th232, one is zero
         u238_ng  = fertile[(fertile['nuclide']=='U238')  & (fertile['score']=='(n,gamma)')][['cell','mean','std. dev.']]
@@ -312,6 +329,20 @@ class OutputMixin:
         u238_inel_err   = u238_inel['std. dev.'].tolist()  if len(u238_inel)  else zeros
         th232_inel_list = th232_inel['mean'].tolist() if len(th232_inel) else zeros
         th232_inel_err  = th232_inel['std. dev.'].tolist() if len(th232_inel) else zeros
+
+        # Elastic scattering
+        u235_elas  = fertile[(fertile['nuclide']=='U235')  & (fertile['score']=='(n,elastic)')][['cell','mean','std. dev.']]
+        u238_elas  = fertile[(fertile['nuclide']=='U238')  & (fertile['score']=='(n,elastic)')][['cell','mean','std. dev.']]
+        th232_elas = fertile[(fertile['nuclide']=='Th232') & (fertile['score']=='(n,elastic)')][['cell','mean','std. dev.']]
+        li6_elas = Li[(Li['nuclide']=='Li6') & (Li['score']=='(n,elastic)')][['cell','mean','std. dev.']]
+        li7_elas = Li[(Li['nuclide']=='Li7') & (Li['score']=='(n,elastic)')][['cell','mean','std. dev.']]
+
+        u235_elas_list  = u235_elas['mean'].tolist()       if len(u235_elas)  else zeros
+        u235_elas_err   = u235_elas['std. dev.'].tolist()  if len(u235_elas)  else zeros
+        u238_elas_list  = u238_elas['mean'].tolist()       if len(u238_elas)  else zeros
+        u238_elas_err   = u238_elas['std. dev.'].tolist()  if len(u238_elas)  else zeros
+        th232_elas_list = th232_elas['mean'].tolist()      if len(th232_elas) else zeros
+        th232_elas_err  = th232_elas['std. dev.'].tolist() if len(th232_elas) else zeros
 
         # Total fission summed over all nuclides
         all_fis   = sum_over_nuclides(fertile, 'fission')
@@ -350,6 +381,20 @@ class OutputMixin:
             'U238(n,inel)_stdev':  u238_inel_err,
             'Th232(n,inel)':       th232_inel_list,
             'Th232(n,inel)_stdev': th232_inel_err,
+            'U235(n,el)':          u235_elas_list,
+            'U235(n,el)_stdev':    u235_elas_err,
+            'U238(n,el)':          u238_elas_list,
+            'U238(n,el)_stdev':    u238_elas_err,
+            'Th232(n,el)':         th232_elas_list,
+            'Th232(n,el)_stdev':   th232_elas_err,
+            'Li6(n,el)':           li6_elas['mean'].tolist()       if len(li6_elas) else zeros,
+            'Li6(n,el)_stdev':     li6_elas['std. dev.'].tolist()  if len(li6_elas) else zeros,
+            'Li7(n,el)':           li7_elas['mean'].tolist()       if len(li7_elas) else zeros,
+            'Li7(n,el)_stdev':     li7_elas['std. dev.'].tolist()  if len(li7_elas) else zeros,
+            'Be9(n,el)':           be9_list_el,
+            'Be9(n,el)_stdev':     be9_err_el,
+            'Pb(n,el)':            pb_list_el,
+            'Pb(n,el)_stdev':      pb_err_el,
             'Pu239_kg/yr':         [x * pu_scaling   for x in u238_ng_list],
             'Pu239_kg/yr_stdev':   [x * pu_scaling   for x in u238_ng_err],
             'U233_kg/yr':          [x * u233_scaling  for x in th232_ng_list],
@@ -454,6 +499,20 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich, temp_k, vol_m3):
             'U238(n,inel)_sd': tot['U238(n,inel)_stdev'].values[0],
             'Th232(n,inel)':    tot['Th232(n,inel)'].values[0],
             'Th232(n,inel)_sd': tot['Th232(n,inel)_stdev'].values[0],
+            'U235(n,el)':      tot['U235(n,el)'].values[0]       if 'U235(n,el)' in tot.columns else 0.0,
+            'U235(n,el)_sd':   tot['U235(n,el)_stdev'].values[0] if 'U235(n,el)_stdev' in tot.columns else 0.0,
+            'U238(n,el)':      tot['U238(n,el)'].values[0]       if 'U238(n,el)' in tot.columns else 0.0,
+            'U238(n,el)_sd':   tot['U238(n,el)_stdev'].values[0] if 'U238(n,el)_stdev' in tot.columns else 0.0,
+            'Th232(n,el)':     tot['Th232(n,el)'].values[0]      if 'Th232(n,el)' in tot.columns else 0.0,
+            'Th232(n,el)_sd':  tot['Th232(n,el)_stdev'].values[0] if 'Th232(n,el)_stdev' in tot.columns else 0.0,
+            'Li6(n,el)':       tot['Li6(n,el)'].values[0]        if 'Li6(n,el)' in tot.columns else 0.0,
+            'Li6(n,el)_sd':    tot['Li6(n,el)_stdev'].values[0]  if 'Li6(n,el)_stdev' in tot.columns else 0.0,
+            'Li7(n,el)':       tot['Li7(n,el)'].values[0]        if 'Li7(n,el)' in tot.columns else 0.0,
+            'Li7(n,el)_sd':    tot['Li7(n,el)_stdev'].values[0]  if 'Li7(n,el)_stdev' in tot.columns else 0.0,
+            'Be9(n,el)':       tot['Be9(n,el)'].values[0]        if 'Be9(n,el)' in tot.columns else 0.0,
+            'Be9(n,el)_sd':    tot['Be9(n,el)_stdev'].values[0]  if 'Be9(n,el)_stdev' in tot.columns else 0.0,
+            'Pb(n,el)':        tot['Pb(n,el)'].values[0]         if 'Pb(n,el)' in tot.columns else 0.0,
+            'Pb(n,el)_sd':     tot['Pb(n,el)_stdev'].values[0]   if 'Pb(n,el)_stdev' in tot.columns else 0.0,
             'tot(n,fis)':      tot['tot(n,fis)'].values[0],
             'tot(n,fis)_sd':   tot['tot(n,fis)_stdev'].values[0],
             'tot(n,nufis)':    tot['tot(n,nufis)'].values[0],
@@ -513,10 +572,10 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich, temp_k, vol_m3):
     # Export collated files
     if rows_all:
         df_all = pd.DataFrame(rows_all).sort_values(by='fertile_kg/m3', ascending=True)
-        df_all.to_csv(f"{dst}_rxns.csv", index=False)
+        df_all.to_csv(f"{dst}_summary.csv", index=False)
 
     if rxnsE_list:
-        pd.concat(rxnsE_list, ignore_index=True).to_csv(f"{dst}_Ebins_rxns.csv", index=False)
+        pd.concat(rxnsE_list, ignore_index=True).to_csv(f"{dst}_rxns.csv", index=False)
 
     if fluxE_list:
         df_fluxE_collated = pd.concat(fluxE_list, ignore_index=True)

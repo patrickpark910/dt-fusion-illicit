@@ -12,24 +12,27 @@ from scipy.optimize import curve_fit
 from Python.utilities import *
 from Python.parameters import *
 
+
+
+
 class Plot:
 
     def __init__(self, show=True, save=False, ):
 
         # Dataframes of reaction rates (rr)
-        self.flibe_u_rr_df  = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_U238_rxns.csv")
-        self.flibe_th_rr_df = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_Th232_rxns.csv")
-        self.dcll_u_rr_df   = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_U238_rxns.csv")
-        self.dcll_th_rr_df  = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_Th232_rxns.csv")
-        self.hcpb_u_rr_df   = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_U238_rxns.csv")
-        self.hcpb_th_rr_df  = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_Th232_rxns.csv")
+        self.flibe_u_rr_df  = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_U238_summary.csv")
+        self.flibe_th_rr_df = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_Th232_summary.csv")
+        self.dcll_u_rr_df   = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_U238_summary.csv")
+        self.dcll_th_rr_df  = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_Th232_summary.csv")
+        self.hcpb_u_rr_df   = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_U238_summary.csv")
+        self.hcpb_th_rr_df  = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_Th232_summary.csv")
 
-        self.flibe_u_ebins_df  = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_U238_Ebins_rxns.csv")
-        self.flibe_th_ebins_df = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_Th232_Ebins_rxns.csv")
-        self.dcll_u_ebins_df   = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_U238_Ebins_rxns.csv")
-        self.dcll_th_ebins_df  = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_Th232_Ebins_rxns.csv")
-        self.hcpb_u_ebins_df   = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_U238_Ebins_rxns.csv")
-        self.hcpb_th_ebins_df  = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_Th232_Ebins_rxns.csv")
+        self.flibe_u_ebins_df  = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_U238_rxns.csv")
+        self.flibe_th_ebins_df = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_Th232_rxns.csv")
+        self.dcll_u_ebins_df   = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_U238_rxns.csv")
+        self.dcll_th_ebins_df  = read_and_sort("./Figures/Data/DCLL_900K_Li90.0_Th232_rxns.csv")
+        self.hcpb_u_ebins_df   = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_U238_rxns.csv")
+        self.hcpb_th_ebins_df  = read_and_sort("./Figures/Data/HCPB_900K_Li60.0_Th232_rxns.csv")
 
         # Dataframes of energy-binned flux spectra (for flux ratio plot)
         self.flibe_u_flux_df  = read_and_sort("./Figures/Data/FLiBe_900K_Li07.5_U238_flux.csv")
@@ -307,7 +310,7 @@ class Plot:
 
         titles  = [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$", r"HCPB-UO$_2$", r"HCPB-ThO$_2$", r"DCLL-UO$_2$", r"DCLL-ThO$_2$",]
         dfs     = [self.flibe_u_ebins_df, self.flibe_th_ebins_df, self.hcpb_u_ebins_df, self.hcpb_th_ebins_df, self.dcll_u_ebins_df, self.dcll_th_ebins_df,]
-        ng_cols = ['U238_ng', 'Th232_ng', 'U238_ng', 'Th232_ng', 'U238_ng', 'Th232_ng']
+        ng_cols = ['U238(n,g)', 'Th232(n,g)', 'U238(n,g)', 'Th232(n,g)', 'U238(n,g)', 'Th232(n,g)']
 
         densities_to_plot = [0.1, 10, 100, 999.99]
         colors = {0.1: '#ff1f5b', 10: '#f48628', 100: '#04cc6c', 999.99: '#0c9edd'}
@@ -331,19 +334,11 @@ class Plot:
                 sub = df[df['fertile_kg/m3'] == d]
                 ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', linewidth=0.75, color=colors[d], label=labels[d])
 
-                # Compute mean, median, mode
-                energies = sub['energy mid [eV]'].values
-                weights = sub['norm_mean'].values
-                idx = np.argsort(energies)
-                energies, weights = energies[idx], weights[idx]
+                # Mean / median / mode energy of this spectrum
+                w_mean, w_median, w_mode, _ = spectrum_stats(
+                    sub['energy mid [eV]'].values, sub['norm_mean'].values)
 
-                w_mean = np.average(energies, weights=weights)
-                cumw = np.cumsum(weights)
-                w_median = energies[np.searchsorted(cumw, 0.5 * cumw[-1])]
-                w_mode = energies[np.argmax(weights)]
-
-                # Strip LaTeX for clean printing
-                clean_title = title.replace(r'$_4$', '4').replace(r'$_2$', '2')
+                clean_title = strip_latex(title)
                 d_label = f"{d:.1f}" if d < 999 else "1000.0"
                 print(f"{clean_title:<20} {d_label:>16} {w_mean:>12.2e} {w_median:>13.2e} {w_mode:>12.2e}")
 
@@ -482,15 +477,23 @@ class Plot:
         plt.close('all')
 
 
-    def plot_flux_spectrum(self):
+    def plot_flux_spectrum(self):   
         """
         Flux spectrum plot: phi(E) vs. energy.
 
         3x2 grid (rows = FLiBe / HCPB / DCLL, cols = U238 / Th232).
         Each panel overlays the flux at several fertile loadings
         (0, 10, 100, 1000 kg/m³).
+
+        Also prints the characteristic energies of every spectrum drawn:
+        the flux-weighted MEAN energy, the cumulative-flux MEDIAN energy,
+        the MODE (energy of the peak flux bin, i.e. the 14.07 MeV source),
+        and the 2ND MODE (tallest peak below the source), all in eV.
+        The second mode is also marked on each curve with a triangle.
         """
         print(f"\nPlotting flux spectra vs. energy...")
+
+        from matplotlib.lines import Line2D
 
         panels = [
             (self.flibe_u_flux_df,  r'FLiBe-UF$_4$',  0, 0),
@@ -504,10 +507,18 @@ class Plot:
         densities_to_plot = [0, 10, 100, 999.99]
         colors = {0: '#ff1f5b', 10: '#f48628', 100: '#04cc6c', 999.99: '#0c9edd'}
         labels = {0: r'0 kg$/$m³', 10: r'10 kg$/$m³', 100: r'100 kg$/$m³', 999.99: r'1000 kg$/$m³'}
-        row_ylim = {0: log_buffer(1e-4, 1e1), 1: log_buffer(1e-4, 1e1), 2: log_buffer(1e-6, 1e1)}
+        labels_plain = {0: '0 kg/m3', 10: '10 kg/m3', 100: '100 kg/m3', 999.99: '1000 kg/m3'}
+        row_ylim = {0: log_buffer(1e-3, 1e1), 1: log_buffer(1e-3, 1e1), 2: log_buffer(1e-3, 1e1)}  # 2: log_buffer(1e-5, 1e1)}
+
+        # ---- printed-statistics table header ----
+        print("\nFlux-spectrum characteristic energies [eV]")
+        print("  (mean = flux-weighted; 5/25/median/75/95 % = energy at that fraction of")
+        print("   cumulative flux; mode = peak bin; 2nd mode = tallest peak below 14.07 MeV,")
+        print("   also marked on the plot)\n")
+        print(f"  {'Panel':<12s} {'Loading':<11s} {'Mean E':>11s} {'5%':>11s} {'25%':>11s} {'Median E':>11s} {'75%':>11s} {'95%':>11s} {'Mode E':>11s} {'2nd Mode':>11s}")
+        print("  " + "-" * 120)
 
         fig, axes = plt.subplots(3, 2, figsize=(7, 9), sharex=True, sharey=False)
-        
 
         for df_flux, title, row, col in panels:
             ax = axes[row, col]
@@ -521,11 +532,26 @@ class Plot:
                 E_mid = spec['energy mid [eV]'].values
                 phi   = spec['mean'].values.copy()
 
+                # --- characteristic energies of this spectrum ---
+                mean_E, median_E, mode_E, q = spectrum_stats(E_mid, phi, quantiles=(0.05, 0.25, 0.75, 0.95))
+                mode2_E, mode2_phi = second_mode(E_mid, phi)   # tallest peak below 14.07 MeV
+                print(f"  {strip_latex(title):<12s} {labels_plain[rho]:<11s} "
+                      f"{mean_E:>11.3e} {q[0.05]:>11.3e} {q[0.25]:>11.3e} {median_E:>11.3e} "
+                      f"{q[0.75]:>11.3e} {q[0.95]:>11.3e} {mode_E:>11.3e} {mode2_E:>11.3e}")
+                
                 # Mask zeros / negatives to avoid log-scale artifacts
                 phi[phi <= 0] = np.nan
 
-                ax.loglog(E_mid, phi,
-                          color=colors[rho], linewidth=0.75, label=labels[rho])
+                ax.loglog(E_mid, phi, color=colors[rho], linewidth=0.75, label=labels[rho])
+
+                # Mark the second mode (peak below the 14.07 MeV source peak)
+                # if np.isfinite(mode2_E):
+                #     ax.plot(mode2_E, mode2_phi, marker='v', markersize=5,
+                #             color=colors[rho], markeredgecolor='black',
+                #             markeredgewidth=0.4, linestyle='None', zorder=5,
+                #             label='_nolegend_')
+
+            print("  " + "-" * 120)  # separate panels in the table
 
             # Axis formatting
             ax.xaxis.set_ticks_position('both')
@@ -545,8 +571,12 @@ class Plot:
             if ax.get_subplotspec().is_first_col():
                 ax.set_ylabel(r'Flux [n$/$cm²$/$src-n]')
 
-            # Legend with panel title
-            leg = ax.legend(title=title, loc='lower right', fontsize=7, ncol=1,
+            # Legend with panel title (+ one proxy entry for the 2nd-mode markers)
+            handles, lbls = ax.get_legend_handles_labels()
+            handles.append(Line2D([], [], marker='v', linestyle='None', markersize=5,
+                                   color='0.4', markeredgecolor='black', markeredgewidth=0.4))
+            # lbls.append('2nd mode')
+            leg = ax.legend(handles, lbls, title=title, loc='lower right', fontsize=7, ncol=1,
                             fancybox=False, edgecolor='black',
                             frameon=True, framealpha=1)
             leg.get_frame().set_linewidth(0.5)
@@ -595,12 +625,12 @@ class Plot:
         row_minor = {0: 0.025,         1: 0.025,          2: 0.01}
 
         panels = [
-            (self.flibe_u_ebins_df,  'U238_ng',  r'FLiBe-UF$_4$',  0, 0),
-            (self.flibe_th_ebins_df, 'Th232_ng', r'FLiBe-ThF$_4$', 0, 1),
-            (self.hcpb_u_ebins_df,   'U238_ng',  r'HCPB-UO$_2$',   1, 0),
-            (self.hcpb_th_ebins_df,  'Th232_ng', r'HCPB-ThO$_2$',  1, 1),
-            (self.dcll_u_ebins_df,   'U238_ng',  r'DCLL-UO$_2$',   2, 0),
-            (self.dcll_th_ebins_df,  'Th232_ng', r'DCLL-ThO$_2$',  2, 1),
+            (self.flibe_u_ebins_df,  'U238(n,g)',  r'FLiBe-UF$_4$',  0, 0),
+            (self.flibe_th_ebins_df, 'Th232(n,g)', r'FLiBe-ThF$_4$', 0, 1),
+            (self.hcpb_u_ebins_df,   'U238(n,g)',  r'HCPB-UO$_2$',   1, 0),
+            (self.hcpb_th_ebins_df,  'Th232(n,g)', r'HCPB-ThO$_2$',  1, 1),
+            (self.dcll_u_ebins_df,   'U238(n,g)',  r'DCLL-UO$_2$',   2, 0),
+            (self.dcll_th_ebins_df,  'Th232(n,g)', r'DCLL-ThO$_2$',  2, 1),
         ]
 
         rho_ref = 0.1                            # reference density for CDF difference
@@ -902,17 +932,11 @@ class Plot:
             counts = spec["mean"].values                # leakage current per bin [n/src-n]
             flux_per_lethargy = counts / (dE / E_mid)
 
-            # ── Spectral statistics ──────────────────────────
-            total = counts.sum()
-            if total > 0:
-                mean_E   = np.sum(E_mid * counts) / total
-                cdf      = np.cumsum(counts) / total
-                median_E = np.interp(0.5, cdf, E_mid)
-                mode_E   = E_mid[np.argmax(flux_per_lethargy)]   # peak of per-lethargy spectrum
-            else:
-                mean_E = median_E = mode_E = 0.0
+            # ── Spectral statistics (per-lethargy peak defines the mode) ──
+            mean_E, median_E, mode_E, _ = spectrum_stats(
+                E_mid, counts, mode_weight=flux_per_lethargy)
 
-            short_label = case["label"].replace(r"$^6$", "⁶")   # for terminal printing
+            short_label = strip_latex(case["label"])   # for terminal printing
             print(f"  {short_label:<45s} {mean_E:14.4e} {median_E:14.4e} {mode_E:14.4e}")
 
             ax.loglog(E_mid, flux_per_lethargy,
@@ -1029,19 +1053,19 @@ class Plot:
                 # Neutron-weighted channels
 
                 # Multiplier (n,2n): +1 per reaction
-                n2n = (+1) * (spec['Be9_n2n'].values + spec['Pb_n2n'].values)
+                n2n = (+1) * (spec['Be9(n,2n)'].values + spec['Pb(n,2n)'].values)
 
-                # Actinide (n,2n): +1 per reaction
-                n2n_act = (+1) * (spec['U235_n2n'].values + spec[f'{fert_iso}_n2n'].values)
- 
+                # U/Th (n,2n): +1 per reaction
+                n2n_act = (+1) * (spec['U235(n,2n)'].values + spec[f'{fert_iso}(n,2n)'].values)
+
                 # Fission: +(nu-1) for fertile + +(nu_U235 - 1) for U235
-                fis = (spec[f'{fert_iso}_nufis'].values + spec['U235_nufis'].values)
- 
+                fis = (spec[f'{fert_iso}(n,nufis)'].values + spec['U235(n,nufis)'].values)
+
                 # Fertile (n,gamma): -1 per reaction
-                ng = (-1) * spec[f'{fert_iso}_ng'].values
- 
+                ng = (-1) * spec[f'{fert_iso}(n,g)'].values
+
                 # Li-6 (n,t): -1 per reaction
-                li6 = (-1) * spec['Li6_nt'].values
+                li6 = (-1) * spec['Li6(n,t)'].values
  
                 # Cumulative sum from low to high energy
                 for key, vals in [('n2n', n2n), ('fis', fis), ('ng', ng), ('li6', li6)]: # ('n2n_act', n2n_act), 
@@ -1103,7 +1127,7 @@ class Plot:
 
           Be/Pb (n,2n)          -- multiplier material
           Be/Pb (n,elastic)     -- multiplier elastic scattering
-          Actinide (n,2n)       -- fertile + U235
+          U/Th  (n,2n)          -- fertile + U235
           Fertile (n,inelastic) -- fertile MT 4
           Fission               -- total (fertile + U235), raw rate
           Fertile (n,gamma)     -- capture / fissile breeding
@@ -1144,13 +1168,13 @@ class Plot:
         legend_handles = [
             Line2D([0], [0], color=colors['mult_n2n'],  lw=1.5, label=r'Be$/$Pb $($n,2n$)$'),
             Line2D([0], [0], color=colors['mult_elas'], lw=1.5, label=r'Be$/$Pb elastic'),
-            Line2D([0], [0], color=colors['fert_n2n'],  lw=1.5, label=r'Actinide $($n,2n$)$'),
+            Line2D([0], [0], color=colors['fert_n2n'],  lw=1.5, label=r'U$/$Th $($n,2n$)$'),
             Line2D([0], [0], color=colors['fert_inel'], lw=1.5, label=r'Fertile inelastic'),
             Line2D([0], [0], color='black', ls='-',     lw=1.0, label=r'0.1 kg$/$m³'),
-            Line2D([0], [0], color=colors['fis'],       lw=1.5, label=r'Fission'),
+            Line2D([0], [0], color=colors['fis'],       lw=1.5, label=r'U$/$Th fission'),
             Line2D([0], [0], color=colors['ng'],        lw=1.5, label=r'Fertile $($n,$\gamma)$'),
-            Line2D([0], [0], color=colors['li'],        lw=1.5, label=r'Li $($n,t$)$'),
-            Line2D([0], [0], color='black', ls='--',    lw=1.0,  label=r'1000 kg$/$m³'),
+            Line2D([0], [0], color=colors['li'],        lw=1.5, label=r'Li $($n,Xt$)$'),
+            Line2D([0], [0], color='black', ls='--',    lw=1.0, label=r'1000 kg$/$m³'),
         ]
 
         fig, axes = plt.subplots(3, 2, figsize=(7, 9), sharex=True, sharey=True)
@@ -1175,13 +1199,13 @@ class Plot:
 
                 # Raw reaction-rate channels (no neutron weights)
                 channels = {
-                    'mult_n2n':  spec['Be9_n2n'].values + spec['Pb_n2n'].values,
-                    'mult_elas': spec['Be9_elas'].values + spec['Pb_elas'].values,
-                    'fert_n2n':  spec[f'{fert_iso}_n2n'].values  + spec['U235_n2n'].values,
-                    'fert_inel': spec[f'{fert_iso}_inel'].values + spec['U235_inel'].values,
-                    'fis':       spec[f'{fert_iso}_fis'].values  + spec['U235_fis'].values,
-                    'ng':        spec[f'{fert_iso}_ng'].values,
-                    'li':        spec['Li6_nt'].values + spec['Li7_nt'].values,
+                    'mult_n2n':  spec['Be9(n,2n)'].values + spec['Pb(n,2n)'].values,
+                    'mult_elas': spec['Be9(n,el)'].values + spec['Pb(n,el)'].values,
+                    'fert_n2n':  spec[f'{fert_iso}(n,2n)'].values  + spec['U235(n,2n)'].values,
+                    'fert_inel': spec[f'{fert_iso}(n,inel)'].values + spec['U235(n,inel)'].values,
+                    'fis':       spec[f'{fert_iso}(n,fis)'].values  + spec['U235(n,fis)'].values,
+                    'ng':        spec[f'{fert_iso}(n,g)'].values,
+                    'li':        spec['Li6(n,t)'].values + spec['Li7(n,t)'].values,
                 }
 
                 for key, vals in channels.items():
@@ -1279,11 +1303,11 @@ class Plot:
         from matplotlib.lines import Line2D
         legend_handles = [ Line2D([0], [0], color=colors['mult_n2n'],  lw=1.5, label=r'Be$/$Pb $($n,2n$)$'),
                            Line2D([0], [0], color=colors['mult_elas'], lw=1.5, label=r'Be$/$Pb elastic'),
-                           Line2D([0], [0], color=colors['fert_n2n'],  lw=1.5, label=r'Actinide $($n,2n$)$'),
+                           Line2D([0], [0], color=colors['fert_n2n'],  lw=1.5, label=r'U$/$Th $($n,2n$)$'),
                            Line2D([0], [0], color=colors['fert_inel'], lw=1.5, label=r'Fertile inelastic'),
-                           Line2D([0], [0], color=colors['fis'],       lw=1.5, label=r'Fission'),
+                           Line2D([0], [0], color=colors['fis'],       lw=1.5, label=r'U$/$Th fission'),
                            Line2D([0], [0], color=colors['ng'],        lw=1.5, label=r'Fertile $($n,$\gamma)$'),
-                           Line2D([0], [0], color=colors['li'],        lw=1.5, label=r'Li $($n,t$)$'),           ]
+                           Line2D([0], [0], color=colors['li'],        lw=1.5, label=r'Li $($n,Xt$)$'),           ]
 
         fig, axes = plt.subplots(3, 2, figsize=(7, 9), sharex=True, sharey=False)
 
@@ -1302,13 +1326,13 @@ class Plot:
             d_lnE_den  = (E_high_den - E_low_den) / E_mid_den
 
             den_channels = {
-                'mult_n2n':  den['Be9_n2n'].values  + den['Pb_n2n'].values,
-                'mult_elas': den['Be9_elas'].values  + den['Pb_elas'].values,
-                'fert_n2n':  den[f'{fert_iso}_n2n'].values  + den['U235_n2n'].values,
-                'fert_inel': den[f'{fert_iso}_inel'].values + den['U235_inel'].values,
-                'fis':       den[f'{fert_iso}_fis'].values  + den['U235_fis'].values,
-                'ng':        den[f'{fert_iso}_ng'].values,
-                'li':        den['Li6_nt'].values + den['Li7_nt'].values,
+                'mult_n2n':  den['Be9(n,2n)'].values  + den['Pb(n,2n)'].values,
+                'mult_elas': den['Be9(n,el)'].values  + den['Pb(n,el)'].values,
+                'fert_n2n':  den[f'{fert_iso}(n,2n)'].values  + den['U235(n,2n)'].values,
+                'fert_inel': den[f'{fert_iso}(n,inel)'].values + den['U235(n,inel)'].values,
+                'fis':       den[f'{fert_iso}(n,fis)'].values  + den['U235(n,fis)'].values,
+                'ng':        den[f'{fert_iso}(n,g)'].values,
+                'li':        den['Li6(n,t)'].values + den['Li7(n,t)'].values,
             }
 
             # ---- numerator (1000 kg/m³) ----
@@ -1321,13 +1345,13 @@ class Plot:
             d_lnE_num  = (E_high_num - E_low_num) / E_mid_num
 
             num_channels = {
-                'mult_n2n':  num['Be9_n2n'].values  + num['Pb_n2n'].values,
-                'mult_elas': num['Be9_elas'].values  + num['Pb_elas'].values,
-                'fert_n2n':  num[f'{fert_iso}_n2n'].values  + num['U235_n2n'].values,
-                'fert_inel': num[f'{fert_iso}_inel'].values + num['U235_inel'].values,
-                'fis':       num[f'{fert_iso}_fis'].values  + num['U235_fis'].values,
-                'ng':        num[f'{fert_iso}_ng'].values,
-                'li':        num['Li6_nt'].values + num['Li7_nt'].values,
+                'mult_n2n':  num['Be9(n,2n)'].values  + num['Pb(n,2n)'].values,
+                'mult_elas': num['Be9(n,el)'].values  + num['Pb(n,el)'].values,
+                'fert_n2n':  num[f'{fert_iso}(n,2n)'].values  + num['U235(n,2n)'].values,
+                'fert_inel': num[f'{fert_iso}(n,inel)'].values + num['U235(n,inel)'].values,
+                'fis':       num[f'{fert_iso}(n,fis)'].values  + num['U235(n,fis)'].values,
+                'ng':        num[f'{fert_iso}(n,g)'].values,
+                'li':        num['Li6(n,t)'].values + num['Li7(n,t)'].values,
             }
 
             for key in colors:
@@ -1351,7 +1375,7 @@ class Plot:
             ax.set_xscale('log')
             ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f'1e{int(np.log10(x))}' if x > 0 else ''))
             ax.set_xlim(log_buffer(1e1, 1e7))
-            ax.set_yscale('log')
+            # ax.set_yscale('log')
             ax.set_ylim(row_ylim[row])
             # ax.yaxis.set_major_locator(MultipleLocator(row_major[row]))
             # ax.yaxis.set_minor_locator(MultipleLocator(row_minor[row]))
@@ -1418,6 +1442,7 @@ class Plot:
             'mult_n2n':  '#1D9E75',   # teal        -- Be/Pb (n,2n)
             'mult_elas': '#85C77E',   # light green -- Be/Pb elastic
             'fert_n2n':  '#7B2D8E',   # purple      -- actinide (n,2n)
+            'fert_elas': '#D4775A',   # terracotta  -- actinide elastic
             'fert_inel': '#C77DBA',   # lilac       -- fertile inelastic
             'fis':       '#b41f24',   # red         -- fission
             'ng':        '#0047ba',   # blue        -- fertile capture
@@ -1427,17 +1452,21 @@ class Plot:
         from matplotlib.lines import Line2D
         legend_handles = [
             Line2D([0], [0], color=colors['mult_n2n'],  lw=1.5, label=r'Be$/$Pb $($n,2n$)$'),
-            # Line2D([0], [0], color=colors['mult_elas'], lw=1.5, label=r'Be$/$Pb elastic'),
-            Line2D([0], [0], color=colors['fert_n2n'],  lw=1.5, label=r'Actinide $($n,2n$)$'),
+            Line2D([0], [0], color=colors['mult_elas'], lw=1.5, label=r'Be$/$Pb elastic'),
+            Line2D([0], [0], color=colors['fert_n2n'],  lw=1.5, label=r'U$/$Th $($n,2n$)$'),
+            Line2D([0], [0], color=colors['fert_elas'], lw=1.5, label=r'U$/$Th elastic'),
             Line2D([0], [0], color=colors['fert_inel'], lw=1.5, label=r'Fertile inelastic'),
             Line2D([0], [0], color='black', ls='-',     lw=1.0, label=r'0.1 kg$/$m³'),
-            Line2D([0], [0], color=colors['fis'],       lw=1.5, label=r'Fission'),
+            Line2D([0], [0], color=colors['fis'],       lw=1.5, label=r'U$/$Th fission'),
             Line2D([0], [0], color=colors['ng'],        lw=1.5, label=r'Fertile $($n,$\gamma)$'),
-            Line2D([0], [0], color=colors['li'],        lw=1.5, label=r'Li $($n,t$)$'),
+            Line2D([0], [0], color=colors['li'],        lw=1.5, label=r'Li $($n,Xt$)$'),
             Line2D([0], [0], color='black', ls='--',    lw=1.0, label=r'1000 kg$/$m³'),
         ]
 
         fig, axes = plt.subplots(3, 2, figsize=(7, 9), sharex=True, sharey=True)
+
+        print(f"\n{'Panel':<20} {'rho [kg/m3]':>12} {'Be/Pb(n,2n)':>12} {'Be/Pb elas':>12} {'U/Th(n,2n)':>12} {'U/Th elas':>12} {'Fert inel':>12} {'U/Th fis':>12} {'Fert(n,g)':>12} {'Li(n,Xt)':>12}")
+        print("-" * 130)
 
         for df_Erxn, title, fert_iso, row, col in panels:
             ax = axes[row, col]
@@ -1456,14 +1485,20 @@ class Plot:
 
                 # Raw reaction-rate channels (no neutron weights, no per-lethargy)
                 channels = {
-                    'mult_n2n':  spec['Be9_n2n'].values  + spec['Pb_n2n'].values,
-                    # 'mult_elas': spec['Be9_elas'].values + spec['Pb_elas'].values,
-                    'fert_n2n':  spec[f'{fert_iso}_n2n'].values  + spec['U235_n2n'].values,
-                    'fert_inel': spec[f'{fert_iso}_inel'].values + spec['U235_inel'].values,
-                    'fis':       spec[f'{fert_iso}_fis'].values  + spec['U235_fis'].values,
-                    'ng':        spec[f'{fert_iso}_ng'].values,
-                    'li':        spec['Li6_nt'].values + spec['Li7_nt'].values,
+                    'mult_n2n':  spec['Be9(n,2n)'].values  + spec['Pb(n,2n)'].values,
+                    'mult_elas': spec['Be9(n,el)'].values  + spec['Pb(n,el)'].values,
+                    'fert_n2n':  spec[f'{fert_iso}(n,2n)'].values  + spec['U235(n,2n)'].values,
+                    'fert_elas': spec[f'{fert_iso}(n,el)'].values  + spec['U235(n,el)'].values,
+                    'fert_inel': spec[f'{fert_iso}(n,inel)'].values + spec['U235(n,inel)'].values,
+                    'fis':       spec[f'{fert_iso}(n,fis)'].values  + spec['U235(n,fis)'].values,
+                    'ng':        spec[f'{fert_iso}(n,g)'].values,
+                    'li':        spec['Li6(n,t)'].values + spec['Li7(n,t)'].values,
                 }
+
+                clean_title = strip_latex(title)
+                rho_label = f"{closest:.1f}" if closest < 999 else "1000.0"
+                totals = {k: v.sum() for k, v in channels.items()}
+                print(f"{clean_title:<20} {rho_label:>12} {totals['mult_n2n']:>12.4e} {totals['mult_elas']:>12.4e} {totals['fert_n2n']:>12.4e} {totals['fert_elas']:>12.4e} {totals['fert_inel']:>12.4e} {totals['fis']:>12.4e} {totals['ng']:>12.4e} {totals['li']:>12.4e}")
 
                 for key, vals in channels.items():
                     cumulative = np.cumsum(vals)
@@ -1512,6 +1547,131 @@ class Plot:
 
 
 
+    def plot_rxn_vs_density(self):
+        """
+        Total reaction rate vs. fertile mass density.
+
+        3x2 grid (rows = FLiBe / HCPB / DCLL, cols = U238 / Th232).
+        Each panel shows the energy-integrated (total) reaction rate
+        [rxns / src-n] for six channels as a function of fertile loading
+        from 0 to 1000 kg/m³:
+
+          Be/Pb (n,2n)          -- multiplier material
+          U/Th (n,2n)           -- fertile + U235
+          U/Th elastic          -- fertile + U235
+          U/Th inelastic        -- fertile + U235
+          U/Th fission          -- fertile + U235
+          Fertile (n,gamma)     -- capture / fissile breeding
+          Li-6 (n,t)            -- tritium breeding from Li-6
+          Li-7 (n,Xt)           -- tritium breeding from Li-7
+        """
+        print(f"\nPlotting total reaction rates vs fertile density...")
+
+        panels = [
+            (self.flibe_u_ebins_df,  r'FLiBe-UF$_4$',  'U238',  0, 0),
+            (self.flibe_th_ebins_df, r'FLiBe-ThF$_4$', 'Th232', 0, 1),
+            (self.hcpb_u_ebins_df,   r'HCPB-UO$_2$',   'U238',  1, 0),
+            (self.hcpb_th_ebins_df,  r'HCPB-ThO$_2$',  'Th232', 1, 1),
+            (self.dcll_u_ebins_df,   r'DCLL-UO$_2$',   'U238',  2, 0),
+            (self.dcll_th_ebins_df,  r'DCLL-ThO$_2$',  'Th232', 2, 1),
+        ]
+
+        # Channel colors — same scheme as plot_rxn_spectra / plot_rxn_cumulative
+        colors = {
+            'mult_n2n':  '#1D9E75',   # teal        -- Be/Pb (n,2n)
+            'mult_elas': '#85C77E',   # light green -- Be/Pb elastic
+            'fert_n2n':  '#7B2D8E',   # purple      -- actinide (n,2n)
+            'fert_elas': '#D4775A',   # terracotta  -- actinide elastic
+            'fert_inel': '#C77DBA',   # lilac       -- actinide inelastic
+            'fis':       '#b41f24',   # red         -- fission
+            'ng':        '#0047ba',   # blue        -- fertile capture
+            'li6':       '#EF9F27',   # amber       -- Li-6 (n,t)
+            'li7':       '#D4A017',   # dark gold   -- Li-7 (n,Xt)
+        }
+
+        from matplotlib.lines import Line2D
+        legend_handles = [
+            Line2D([0], [0], color=colors['mult_n2n'],  lw=1.5, label=r'Be$/$Pb $($n,2n$)$'),
+            Line2D([0], [0], color=colors['mult_elas'], lw=1.5, label=r'Be$/$Pb elastic'),
+            Line2D([0], [0], color=colors['fert_n2n'],  lw=1.5, label=r'U$/$Th $($n,2n$)$'),
+            Line2D([0], [0], color=colors['fert_elas'], lw=1.5, label=r'U$/$Th elastic'),
+            Line2D([0], [0], color=colors['fert_inel'], lw=1.5, label=r'U$/$Th inelastic'),
+            Line2D([0], [0], color=colors['fis'],       lw=1.5, label=r'U$/$Th fission'),
+            Line2D([0], [0], color=colors['ng'],        lw=1.5, label=r'Fertile $($n,$\gamma)$'),
+            Line2D([0], [0], color=colors['li6'],       lw=1.5, label=r'Li-6 $($n,t$)$'),
+            Line2D([0], [0], color=colors['li7'],       lw=1.5, label=r'Li-7 $($n,Xt$)$'),
+        ]
+
+        fig, axes = plt.subplots(3, 2, figsize=(7, 9), sharex=True, sharey=False)
+
+        for df_Erxn, title, fert_iso, row, col in panels:
+            ax = axes[row, col]
+
+            # Get all available densities and sort
+            densities = np.sort(df_Erxn['fertile_kg/m3'].unique())
+
+            # Sum reaction rates across all energy bins for each density
+            totals = {key: np.zeros(len(densities)) for key in colors}
+
+            for i, rho in enumerate(densities):
+                spec = df_Erxn[df_Erxn['fertile_kg/m3'] == rho]
+
+                totals['mult_n2n'][i]  = (spec['Be9(n,2n)'].values + spec['Pb(n,2n)'].values).sum()
+                totals['mult_elas'][i] = (spec['Be9(n,el)'].values + spec['Pb(n,el)'].values).sum()
+                totals['fert_n2n'][i]  = (spec[f'{fert_iso}(n,2n)'].values + spec['U235(n,2n)'].values).sum()
+                totals['fert_elas'][i] = (spec[f'{fert_iso}(n,el)'].values + spec['U235(n,el)'].values).sum()
+                totals['fert_inel'][i] = (spec[f'{fert_iso}(n,inel)'].values + spec['U235(n,inel)'].values).sum()
+                totals['fis'][i]       = (spec[f'{fert_iso}(n,fis)'].values + spec['U235(n,fis)'].values).sum()
+                totals['ng'][i]        = spec[f'{fert_iso}(n,g)'].values.sum()
+                totals['li6'][i]       = spec['Li6(n,t)'].values.sum()
+                totals['li7'][i]       = spec['Li7(n,t)'].values.sum()
+
+            # Plot each channel vs density
+            for key in colors:
+                ax.plot(densities, totals[key],
+                        color=colors[key], linewidth=0.75, marker='', markersize=3)
+
+            # Axis formatting
+            # ax.set_ylim(0, 0.7)
+            ax.xaxis.set_ticks_position('both')
+            ax.yaxis.set_ticks_position('both')
+            ax.grid(axis='both', which='major', linestyle='-', linewidth=0.5)
+            ax.set_xlim(-25, 1025)
+            ax.xaxis.set_major_locator(MultipleLocator(100))
+            ax.xaxis.set_minor_locator(MultipleLocator(50))
+            # ax.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
+            
+
+            if ax.get_subplotspec().is_last_row():
+                ax.set_xlabel(r'Fertile isotope density [kg$/$m³]')
+            if ax.get_subplotspec().is_first_col():
+                ax.set_ylabel(r'Total reaction rate [rxns$/$src-n]')
+
+            # Panel title
+            ax.text(0.02, 0.97, title, transform=ax.transAxes,
+                    va='top', ha='left')
+
+            # Legend
+            leg = ax.legend(handles=legend_handles, loc='upper left',
+                            bbox_to_anchor=(0.00, 0.935),
+                            fontsize=6, ncol=2,
+                            fancybox=False, edgecolor='black',
+                            frameon=False, framealpha=0.75)
+
+        fig.tight_layout()
+
+        if self.save:
+            plt.savefig('./Figures/PDF/fig_rxn_vs_density.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+            plt.savefig('./Figures/PNG/fig_rxn_vs_density.png', bbox_inches='tight', pad_inches=0.01, format='png')
+            print("Exported total reaction rate vs density plot: fig_rxn_vs_density")
+        else:
+            print("Did not export reaction rate vs density plot due to user setting.")
+
+        if self.show:
+            plt.show()
+        plt.close('all')
+
+
 if __name__ == "__main__":
 
     for sd in ['PNG','PDF','Data']:
@@ -1520,7 +1680,7 @@ if __name__ == "__main__":
         os.makedirs(sd_path, exist_ok=True)
 
 
-    plot_types = ['tbr','fpr','hist','histd','fluxr','fluxs','rxns','rxnr','dfis','fisn']
+    plot_types = ['tbr','fpr','hist','histd','fluxr','fluxs','rxns','rxnr','dfis','fisn','rxnd']
 
     parser = argparse.ArgumentParser(description=f"Choose plots with -p flag, multiple separated by spaces: {plot_types}")
 
@@ -1571,5 +1731,7 @@ if __name__ == "__main__":
             combined_plot.plot_rxn_ratio()
         elif p == 'rxnc':
             combined_plot.plot_rxn_cumulative()
+        elif p == 'rxnd':
+            combined_plot.plot_rxn_vs_density()
 
     print("\nComment. <plot.py/plot_all()> All plotting commands completed.")
