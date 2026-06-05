@@ -185,7 +185,7 @@ class DCLL(Reactor):
         
         # Blanket material
         self.blanket = openmc.Material.mix_materials([biso, pbli, self.f82h, sic, he], [vf_biso_bl, vf_pbli_bl, DCLL_VF_FS_NOM, DCLL_VF_SI_NOM, DCLL_VF_HE_NOM], 'vo') 
-        self.blanket.set_density('atom/b-cm', 0.03541604638)  # from Glaser et al. (2025) MCNP
+        # !! this should not have been set, fixed 2026-06-05 --ppark -- self.blanket.set_density('atom/b-cm', 0.03541604638)  # from Glaser et al. (2025) MCNP
         self.blanket.temperature = self.temp_k
         self.blanket.name = (f"{self.fertile_kgm3:06.2f} kg/m3"
                              f" | {biso_per_cc_br:.4f} spheres/cc = {(vf_biso_br*100):.4f} vol% in breeder"
