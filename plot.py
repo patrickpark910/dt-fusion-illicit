@@ -79,13 +79,13 @@ class Plot:
         # -------------------------------------------------------------
 
         # Load the dataframes to plot, label, color, marker, markersize, linestyle, and polynomial fit
-        LONG_DASH = (0, (10, 2))
-        datasets = [ (self.flibe_u_rr_df,  r'FLiBe-UF$_4$',  '#66b420', 'o',  5,  '-',  'makima'),
-                     (self.hcpb_u_rr_df,   r'HCPB-UO$_2$',   '#b41f24', 's',  6,  '-',  2),
-                     (self.dcll_u_rr_df,   r'DCLL-UO$_2$',   '#0047ba', '^',  8,  '-',  2),
-                     (self.flibe_th_rr_df, r'FLiBe-ThF$_4$', '#66b420', '+', 12, LONG_DASH,  'makima'),
+        datasets = [ (self.flibe_th_rr_df, r'FLiBe-ThF$_4$', '#66b420', '+', 12, LONG_DASH,  'makima'),
                      (self.hcpb_th_rr_df,  r'HCPB-ThO$_2$',  '#b41f24', '1', 13, LONG_DASH,  2),
                      (self.dcll_th_rr_df,  r'DCLL-ThO$_2$',  '#0047ba', 'x', 10, LONG_DASH,  2),
+                     (self.flibe_u_rr_df,  r'FLiBe-UF$_4$',  '#66b420', 'o',  5,  '-',  'makima'),
+                     (self.hcpb_u_rr_df,   r'HCPB-UO$_2$',   '#b41f24', 's',  6,  '-',  2),
+                     (self.dcll_u_rr_df,   r'DCLL-UO$_2$',   '#0047ba', '^',  8,  '-',  2),
+
                    ]
 
         # Select a subset of fertile kg/m3 to SHOW to avoid cluttering the low end with markers
@@ -126,7 +126,7 @@ class Plot:
                 y_fine = np.poly1d(coeffs)(x_fine)
 
             # Plot interpolation
-            plt.plot(x_fine, y_fine, linestyle=linestyle, linewidth=0.75, color=color)
+            plt.plot(x_fine, y_fine, linestyle=linestyle, linewidth=0.75, color=color, label=label)
 
             # Dummy plots for legend -- bit of a hack lmao -- ppark
             # plt.plot([9e8,9e9], [9e8,9e9], marker+linestyle, markersize=markersize, linewidth=0.75, color=color, label=label)
@@ -152,8 +152,9 @@ class Plot:
 
         plt.tight_layout()
         # leg = plt.legend(loc=v['leg_loc'], fancybox=False, edgecolor='black', frameon=True, framealpha=.75, ncol=3)
-        # leg = plt.legend(loc=v['leg_loc'], fancybox=False, edgecolor='none', frameon=True, framealpha=1.0, ncol=3)
-        # leg.get_frame().set_linewidth(0.5) 
+        leg = plt.legend(loc='lower left', fancybox=False, edgecolor='none',
+                         frameon=True, framealpha=0.0, ncol=2, fontsize=6.5)
+        leg.get_frame().set_linewidth(0.5)
 
         if self.save:
             plt.savefig(f'./Figures/PDF/fig_tbr_{v["suffix"]}.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
@@ -240,7 +241,7 @@ class Plot:
                     y_fine = np.poly1d(coeffs)(x_fine)
 
                 # Plot interpolation
-                plt.plot(x_fine, y_fine, linestyle=linestyle, linewidth=0.75, color=color)
+                plt.plot(x_fine, y_fine, linestyle=linestyle, linewidth=0.75, color=color, label=label)
 
                 # Dummy plots for legend -- bit of a hack lmao -- ppark
                 # plt.plot([9e8,9e9], [9e8,9e9], marker+linestyle, markersize=markersize, linewidth=0.75, color=color, label=label)
@@ -265,8 +266,9 @@ class Plot:
             ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
 
             plt.tight_layout()
-            # leg = plt.legend(loc=v['leg_loc'], fancybox=False, edgecolor='black', frameon=False, framealpha=.75, ncol=2)
-            # leg.get_frame().set_linewidth(0.5) 
+            leg = plt.legend(loc='upper left', fancybox=False, edgecolor='none',
+                            frameon=True, framealpha=0.0, ncol=2, fontsize=6.5)
+            leg.get_frame().set_linewidth(0.5)
 
             if self.save:
                 plt.savefig(f'./Figures/PDF/fig_fpr_{v["suffix"]}.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
@@ -312,7 +314,7 @@ class Plot:
         dfs     = [self.flibe_u_ebins_df, self.flibe_th_ebins_df, self.hcpb_u_ebins_df, self.hcpb_th_ebins_df, self.dcll_u_ebins_df, self.dcll_th_ebins_df,]
         ng_cols = ['U238(n,g)', 'Th232(n,g)', 'U238(n,g)', 'Th232(n,g)', 'U238(n,g)', 'Th232(n,g)']
 
-        densities_to_plot = [0.1, 10, 100, 999.99]
+        densities_to_plot = [0.1, 100, 999.99] # 10, 
         colors = {0.1: '#ff1f5b', 10: '#f48628', 100: '#04cc6c', 999.99: '#0c9edd'}
         labels = {0.1: r'0.1 kg$/$m³', 10: r'10 kg$/$m³', 100: r'100 kg$/$m³', 999.99: r'1000 kg$/$m³'}
 

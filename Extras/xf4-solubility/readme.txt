@@ -1,0 +1,40 @@
+This appendix details the confidence with which we know the solubility limits of UF$_4$ or ThF$_4$ in FLiBe using public information. In our paper, for a 2(LiF)-BeF$_2$ ``FLiBe'' system at 900~K and 1~atm, we claim these limits to be in 23~mol\% UF$_4$ and 19~mol\% ThF$_4$. We will now briefly describe the provenance of these values.
+
+and our attempts to reproduce them using evaluated data in Oak Ridge's Molten Salt Database, Thermochemical, version 4.1 (MSD-TC V4.1), released in March 2026, and their open-source solver, Thermochimica. The chief takeaway is this slightly paradoxical situation: The experimental data for UF$_4$ may have noteworthy measurement errors but Thermochimica reproduces this data very closely. In contrast, the original data for ThF$_4$ is far more confident but Thermochimica seems very far off the mark.
+
+\section{Considerations for Liquidus Data of LiF-BeF$_2$-XF$_4$ systems}\label{app:ternary}
+
+
+
+\subsection{Provenance of UF$_4$ Experimental Data}
+
+\subsubsection{L.~V.~Jones, experiment, 1960}
+
+A ternary phase diagram of LiF-BeF$_2$-UF$_4$, which we shorten here to LBU, was first studied and published in 1962 by L.~V.~Jones et al.~of the Mound Laboratory (a subsidiary of Monsanto Chemical Company) and Oak Ridge National Laboratory (ORNL)~\cite{jones62}. Their data showed the saturation limit of UF$_4$ at 900~K was about 23~mol\%.
+
+Jones et al.~determined the liquidus of the LiF-BeF$_2$-UF$_4$ system by heating-cycle differential thermal analysis (DTA). A given salt composition was homogenized and slowly heated. As each solid phase melted in sequence, the enthalpy of fusion produced a deflection in the temperature trace; the final deflection, corresponding to the dissolution of the last remaining crystal (the primary phase), was recorded as the liquidus temperature. However, in the LiF$\cdot$4(UF$_4$) primary-phase field between 10--20~mol\% UF$_4$, the dense crystals sank away from the thermocouples as the melt viscosity dropped near the liquidus, preventing proper detection. For this region, Jones et al.~instead used a cooling-cycle DTA in which the sample cooled from 1000$^\circ$C in open-topped, mechanically-stirred containers under dry argon, with phase changes detected by deflections from the enthalpy of freezing.
+
+The cooling-cycle method has its own drawback: the LiF--BeF$_2$--UF$_4$ system is susceptible to supercooling, in which nucleation of the primary phase is delayed below the true equilibrium liquidus temperature, biasing the measured liquidus low. Jones et al.~used the heating-cycle method for most compositions precisely to avoid this, except in the LiF$\cdot$4(UF$_4$) field where the heating-cycle failed. Mechanical stirring promotes nucleation closer to the true liquidus but does not eliminate supercooling entirely, and the magnitude of any residual bias in the 10--20~mol\% UF$_4$ region was not reported.
+
+Because the cooling-cycle method was used exclusively in the 10--20~mol\% UF$_4$ range, the liquidus data for LiF--BeF$_2$--UF$_4$ in that region may be systematically biased low by residual supercooling, and a systematic offset may exist where the heating-cycle and cooling-cycle datasets meet. The 23~mol\% saturation limit at 900~K should therefore be understood as approximate, with higher uncertainty than elsewhere in the phase diagram.
+
+\subsubsection{Van der Meer, FactSage calculations, ITU Karlsruhe, 2006}
+
+Van der Meer et al.~performed a series of calculations with FactSage~5.3 software to construct LiF-BeF$_2$-UF$_4$ and -ThF$_4$ ternary phase diagrams. Thermodynamic data for the individual and intermediate compounds came from NIST-JANAF, an internal report at ITU Karlsruhe, and prior experiments. The combined Gibbs energy parameters of each binary subsystem was optimized until their calculated phase boundaries matched experimental liquidus curves. The binary Gibbs energy functions were extrapolated for ternary compositions using the Kohler-Toop method, which weighs the contribution of each binary according to their relative reactivities. Minimizing the total Gibbs energy at the given composition and temperature determined which phases were stable, and the composition's liquidus temperature was the highest temperature at which any solid phase still appears in the calculation.
+
+
+\subsection{Provenance of ThF$_4$ Experimental Data}
+
+The ternary phase diagram of LiF-BeF$_2$-ThF$_4$, which we shorten here to LBT, was determined by Thoma et al.~of Oak Ridge National Laboratory and published in 1960~\cite{thoma60}. 
+
+Their method differed from that of Jones et al.~in the LBU system. Thoma et al.~relied on thermal gradient quenching rather than differential thermal analysis. In this technique, a thin LBT sample was placed in a furnace with a known temperature gradient along its length, so that different segments of the tube sat at different temperatures. After equilibration, the tube was quenched, sectioned, and examined with a polarizing microscope or by X-ray diffraction. Sections equilibrated above the liquidus contained only glass or quench-growth artifacts; sections equilibrated below the liquidus contained primary-phase crystals. The liquidus temperature was identified as the boundary between these two conditions. Cooling-cycle DTA was used only for compositions above approximately 40~mol\% ThF$_4$ or above 80~mol\% LiF, where it was judged reliable; elsewhere, Thoma et al.~considered cooling-curve measurements likely to be in error because of undercooling effects and sluggish crystallization of BeF$_2$-rich compositions.
+
+The temperature calibration in Thoma et al.'s experiments was more extensively documented than in the Jones et al.~study. Six nearly identical sets of measurement apparatuses were used, each incorporating 18 thermocouples whose independent readings were used to construct a temperature calibration curve of the thermal gradient within the furnace. This arrangement made errors in any single thermocouple readily apparent. Standard deviations in the measurement of invariant temperatures were reported as $\pm 1$~K, and the thermocouple manufacturer's stated accuracy was $\pm 5$~K over the 673--1073~K range.
+
+The thermal gradient quenching method avoids several of the error sources identified in the Jones et al.~UF$_4$ data. Because the sample is held at a fixed temperature until equilibrium is reached and then quenched, rather than cooled through the liquidus, supercooling does not bias the liquidus determination. The liquidus is identified by direct microscopic observation of the presence or absence of equilibrium crystals, rather than by inference from a thermal signal. There is no methodological boundary analogous to the one in the Jones et al.~data, since the same technique was applied across the composition range of interest. The ThF$_4$ solubility data should therefore be regarded as carrying smaller and better-characterized uncertainty than the corresponding UF$_4$ data.
+
+
+
+\subsection{Modern Evaluations}
+
+The ternary liquidus plot for the LiF-BeF$_2$-UF$_4$ system was computed using the Thermochimica open-source solver developed at ORNL, with data and Gibbs energy functions for flouride salts from ORNL's Molten Salt Database-Thermochemical (MSD-TC), version 4.1. All calculations were performed at a fixed pressure of 1~atm. For each ternary composition, Thermochimica was programmed to find the liquidus temperature by sweeping downward from 1400~K in 25~K increments until a solid-phase precipitate was detected. Approximately 8,000~compositions were sampled: a uniform triangular grid of 120~points per diagram edge, plus 480~additional points along each of the LiF-BeF$_2$ and 2(LiF)-BeF$_2$ molar ratio lines to improve resolution in compositions of our practical interest. Isoclines were drawn at 50~K intervals.
