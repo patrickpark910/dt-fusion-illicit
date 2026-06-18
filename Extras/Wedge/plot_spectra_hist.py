@@ -24,22 +24,37 @@ import os
 import glob
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from matplotlib.ticker import MultipleLocator
 
 from prism_utilities import *
 
-# ──────────────────────────────────────────────────────────────────────────────
-# FONTS & RCPARAMS  (same style as plot_hist.py)
-# ──────────────────────────────────────────────────────────────────────────────
+plt.rcParams.update({
+    'font.size':        8,
+    'axes.titlesize':   9,
+    'axes.labelsize':   8,
+    'xtick.labelsize':  7,
+    'ytick.labelsize':  7,
+    'legend.fontsize':  7,
+    'axes.linewidth':   0.6,
+    'xtick.direction':  'in',
+    'ytick.direction':  'in',
+    'xtick.major.width': 0.6,
+    'ytick.major.width': 0.6,
+    'xtick.major.size':  3.5,
+    'ytick.major.size':  3.5,
+    'xtick.minor.size':  2.0,
+    'ytick.minor.size':  2.0,
+    'grid.color':       '#DBDBDB',
+})
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # USER CONFIGURATION
 # ──────────────────────────────────────────────────────────────────────────────
 
-ISOTOPE = 'U238'
-FERTILE_LOADINGS = [0.1, 999.99]
-OPENMC_BASE = './OpenMC_test'
+ISOTOPES = ['U238', 'Th232']
+OPENMC_BASE = './OpenMC'
 LINEWIDTH = 0.8
 
 BLANKETS = {
@@ -60,47 +75,17 @@ TALLY_FLUX    = 'flux spectrum'
 TALLY_FERTILE = 'Fertile rxn rates spectrum'
 TALLY_LI      = 'Li rxn rates spectrum'
 
-# Cross-section underlay paths
-XS_LI6_PATH       = './Figures/XSPlot/Li6nt.txt'
-XS_LI7_PATH       = './Figures/XSPlot/Li7nt.txt'
-XS_U238_FPR_PATH  = './Figures/XSPlot/U238gamma.txt'
-XS_U238_FIS_PATH  = './Figures/XSPlot/U238fis.txt'
-
 # ──────────────────────────────────────────────────────────────────────────────
 # HELPER FUNCTIONS
 # ──────────────────────────────────────────────────────────────────────────────
 
-def read_xs_txt(filepath):
-    """Read two-column XS text file -> (energy, log10_xs)."""
-    energy, xs = [], []
-    with open(filepath, 'r') as f:
-        for i, line in enumerate(f):
-            if i < 2:
-                continue
-            parts = line.split()
-            if len(parts) >= 2:
-                e, x = float(parts[0]), float(parts[1])
-                if x > 0:
-                    energy.append(e)
-                    xs.append(np.log10(x))
-    return np.array(energy), np.array(xs)
-
-
-def shift_to_01(arr, lo=0.1, hi=0.9):
-    """Min-max scale into [lo, hi]."""
-    mn, mx = arr.min(), arr.max()
-    if mx == mn:
-        return np.full_like(arr, 0.5 * (lo + hi))
-    return (arr - mn) * (hi - lo) / (mx - mn) + lo
-
-
-def find_statepoint(blanket_key, case, fertile_kgm3):
+def find_statepoint(blanket_key, case, fertile_kgm3, isotope):
     """Locate the latest statepoint file."""
     info = BLANKETS[blanket_key]
     fertile_str = f"{fertile_kgm3:06.2f}"
     pattern = os.path.join(
         OPENMC_BASE,
-        f"{info['prefix']}_Li{info['enrich']}_wedge{case}_{ISOTOPE}_{fertile_str}kgm3_*",
+        f"{info['prefix']}_Li{info['enrich']}_wedge{case}_{isotope}_{fertile_str}kgm3_*",
         "statepoint.*.h5",
     )
     matches = sorted(glob.glob(pattern))
@@ -205,13 +190,22 @@ def cum_norm_hist(ax, energy_mid, mean, bins, **kwargs):
 # ──────────────────────────────────────────────────────────────────────────────
 # Each entry: (label, tally_name, score, nuclides, color, linestyle)
 
-SPECTRA = [
-    ('Flux',               TALLY_FLUX,    'flux',      None,                '#888888', '-'),
-    (r'U238 (n,$\gamma$)', TALLY_FERTILE, '(n,gamma)', ['U238'],            '#ff1f5b', '-'),
-    ('(n,Xt)',             TALLY_LI,      '(n,Xt)',    ['Li6', 'Li7'],      '#0c9edd', '-'),
-    ('U fis.',             TALLY_FERTILE, 'fission',   ['U235', 'U238'],    '#f48628', '-'),
-    (r'U (n,2n)',          TALLY_FERTILE, '(n,2n)',    ['U235', 'U238'],    '#04cc6c', '--'),
-]
+SPECTRA = {
+    'U238': [
+        ('Flux',               TALLY_FLUX,    'flux',      None,                '#888888', '-'),
+        (r'U238 (n,$\gamma$)', TALLY_FERTILE, '(n,gamma)', ['U238'],            '#ff1f5b', '-'),
+        ('(n,Xt)',             TALLY_LI,      '(n,Xt)',    ['Li6', 'Li7'],      '#0c9edd', '-'),
+        ('U fis.',             TALLY_FERTILE, 'fission',   ['U235', 'U238'],    '#f48628', '-'),
+        (r'U (n,2n)',          TALLY_FERTILE, '(n,2n)',    ['U235', 'U238'],    '#04cc6c', '--'),
+    ],
+    'Th232': [
+        ('Flux',                 TALLY_FLUX,    'flux',      None,              '#888888', '-'),
+        (r'Th232 (n,$\gamma$)',  TALLY_FERTILE, '(n,gamma)', ['Th232'],         '#ff1f5b', '-'),
+        ('(n,Xt)',               TALLY_LI,      '(n,Xt)',    ['Li6', 'Li7'],    '#0c9edd', '-'),
+        ('Th fis.',              TALLY_FERTILE, 'fission',   ['Th232'],         '#f48628', '-'),
+        (r'Th (n,2n)',           TALLY_FERTILE, '(n,2n)',    ['Th232'],         '#04cc6c', '--'),
+    ],
+}
 
 # ──────────────────────────────────────────────────────────────────────────────
 # MAIN
@@ -219,102 +213,100 @@ SPECTRA = [
 
 def main():
 
-    # ── Cross-section underlays ───────────────────────────────────────────
-    # li6_energy,  li6_logxs  = read_xs_txt(XS_LI6_PATH)
-    # li7_energy,  li7_logxs  = read_xs_txt(XS_LI7_PATH)
-    # li6_shifted = shift_to_01(li6_logxs)
-    # li7_shifted = shift_to_01(li7_logxs)
-    # 
-    # u238g_energy, u238g_logxs = read_xs_txt(XS_U238_FPR_PATH)
-    # u238g_shifted = shift_to_01(u238g_logxs)
-    # 
-    # u238f_energy, u238f_logxs = read_xs_txt(XS_U238_FIS_PATH)
-    # u238f_shifted = shift_to_01(u238f_logxs)
-
     # ── Panel layout ──────────────────────────────────────────────────────
     # Rows = blanket type, Cols = fertile loading
     # Each panel overlays Case A (homog., solid) vs Case C (lattice, dashed)
-    # (row, col, blanket_key, loading, title)
+    # (row, col, blanket_key, loading)
     panels = [
-        (0, 0, 'HCPB',   0.1, r'HCPB — 0.1 kg/m³ (breeding channels)'),
-        (0, 1, 'HCPB', 999.99, r'HCPB — 1000 kg/m³ (breeding channels)'),
-        (1, 0, 'DCLL',   0.1, r'DCLL — 0.1 kg/m³ (breeding channels)'),
-        (1, 1, 'DCLL', 999.99, r'DCLL — 1000 kg/m³ (breeding channels)'),
+        (0, 0, 'HCPB',   0.1),
+        (0, 1, 'HCPB', 999.99),
+        (1, 0, 'DCLL',   0.1),
+        (1, 1, 'DCLL', 999.99),
     ]
 
     CASES = [
         ('A', '-',  'homog.'),
-        ('C', '--', 'lattice'),
+        ('C', (0, (8, 2)), 'lattice'),
     ]
 
-    fig, axes = plt.subplots(2, 2, figsize=(16, 12), sharex=True, sharey=True)
-
-    for row, col, blanket_key, loading, title in panels:
-        ax = axes[row, col]
-        cell_ids = BREEDING_CELL_IDS[blanket_key]
-
-        # ── Gray XS underlays ────────────────────────────────────────────
-        # ax.plot(li6_energy,   li6_shifted,   lw=0.8, color='gray', alpha=0.20, label=r'Li-6 (n,t) xs')
-        # ax.plot(li7_energy,   li7_shifted,   lw=0.8, color='gray', alpha=0.20, ls='--', label=r'Li-7 (n,t) xs')
-        # ax.plot(u238g_energy, u238g_shifted, lw=0.8, color='gray', alpha=0.20, ls=':', label=r'U-238 (n,$\gamma$) xs')
-        # ax.plot(u238f_energy, u238f_shifted, lw=0.8, color='gray', alpha=0.20, ls='-.', label=r'U-238 (n,f) xs')
-
-        # ── Loop over cases (A=homog, C=lattice) ─────────────────────────
-        bins = None
-        for case, case_ls, case_tag in CASES:
-            sp_path = find_statepoint(blanket_key, case, loading)
-            loading_tag = f'{loading:.1f}' if loading < 1 else f'{loading:.0f}'
-            print(f"  {blanket_key} case {case} | {loading_tag} kg/m³ → {sp_path}")
-
-            for label, tally_name, score, nuclides, color, _unused_ls in SPECTRA:
-
-                # Flux is special (no nuclide filter)
-                if score == 'flux':
-                    elo, ehi, emid, mean = extract_flux_cells(sp_path, cell_ids)
-                else:
-                    elo, ehi, emid, mean = extract_spectrum_cells(
-                        sp_path, tally_name, score, nuclides, cell_ids
-                    )
-
-                if bins is None:
-                    bins = np.sort(np.unique(np.concatenate([elo, ehi])))
-
-                hist_label = f'{label} — {case_tag}'
-                cum_norm_hist(ax, emid, mean, bins,
-                              color=color, linestyle=case_ls,
-                              label=hist_label)
-
-        # ── Axis formatting ───────────────────────────────────────────────
-        ax.set_xscale('log')
-        ax.set_xlim(0.5e1, 1.5e7)
-        ax.set_ylim(-0.03, 1.03)
-
-        ax.xaxis.set_ticks_position('both')
-        ax.yaxis.set_ticks_position('both')
-        ax.yaxis.set_minor_locator(MultipleLocator(0.05))
-        ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
-        ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
-
-        leg = ax.legend(title=title, title_fontsize=12, fontsize=7,
-                        fancybox=False, edgecolor='black', frameon=True,
-                        framealpha=0.75, ncol=2, loc='upper left')
-        leg.get_frame().set_linewidth(0.5)
-
-    # ── Shared axis labels ────────────────────────────────────────────────
-    for ax in axes[1, :]:
-        ax.set_xlabel('Incident neutron energy [eV]', fontsize=14)
-    for ax in axes[:, 0]:
-        ax.set_ylabel('Cumulative fraction of reactions', fontsize=14)
-
-    fig.tight_layout()
-
-    # ── Save ──────────────────────────────────────────────────────────────
     os.makedirs('./Figures/PDF', exist_ok=True)
     os.makedirs('./Figures/PNG', exist_ok=True)
-    plt.savefig(f'./Figures/PDF/fig_spectra_hist_{ISOTOPE}.pdf', bbox_inches='tight')
-    plt.savefig(f'./Figures/PNG/fig_spectra_hist_{ISOTOPE}.png', bbox_inches='tight')
-    print(f"\nSaved to ./Figures/PDF/ and ./Figures/PNG/")
-    plt.show()
+
+    for isotope in ISOTOPES:
+        print(f"\n{'='*60}\n  Isotope: {isotope}\n{'='*60}")
+
+        fig, axes = plt.subplots(2, 2, figsize=(7.5, 5.5), sharex=True, sharey=True)
+
+        for row, col, blanket_key, loading in panels:
+            ax = axes[row, col]
+            cell_ids = BREEDING_CELL_IDS[blanket_key]
+
+            bins = None
+            for case, case_ls, case_tag in CASES:
+                loading_tag = f'{loading:.1f}' if loading < 1 else f'{loading:.0f}'
+                try:
+                    sp_path = find_statepoint(blanket_key, case, loading, isotope)
+                except FileNotFoundError:
+                    print(f"  {blanket_key} case {case} | {loading_tag} kg/m³ → SKIPPED (no data)")
+                    continue
+                print(f"  {blanket_key} case {case} | {loading_tag} kg/m³ → {sp_path}")
+
+                for label, tally_name, score, nuclides, color, _unused_ls in SPECTRA[isotope]:
+
+                    if score == 'flux':
+                        elo, ehi, emid, mean = extract_flux_cells(sp_path, cell_ids)
+                    else:
+                        elo, ehi, emid, mean = extract_spectrum_cells(
+                            sp_path, tally_name, score, nuclides, cell_ids
+                        )
+
+                    if bins is None:
+                        bins = np.sort(np.unique(np.concatenate([elo, ehi])))
+
+                    cum_norm_hist(ax, emid, mean, bins,
+                                  color=color, linestyle=case_ls)
+
+            # ── Axis formatting ───────────────────────────────────────────
+            ax.set_xscale('log')
+            ax.set_xlim(0.5e1, 1.5e7)
+            ax.set_ylim(-0.03, 1.03)
+
+            ax.xaxis.set_ticks_position('both')
+            ax.yaxis.set_ticks_position('both')
+            ax.yaxis.set_minor_locator(MultipleLocator(0.05))
+            ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
+            ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
+
+            # ── Custom legend: reaction colors + linestyle keys ───────────
+            handles = []
+            for label, _, _, _, color, _ in SPECTRA[isotope]:
+                handles.append(Line2D([], [], color=color, lw=LINEWIDTH, label=label))
+            handles.append(Line2D([], [], color='black', lw=LINEWIDTH,
+                                  linestyle='-', label='Homog.'))
+            handles.append(Line2D([], [], color='black', lw=LINEWIDTH,
+                                  linestyle=(0, (8, 2)), label='Lattice'))
+
+            loading_str = f'{loading:.1f}' if loading < 1 else f'{round(loading)}'
+            oxide = r'UO$_2$' if isotope == 'U238' else r'ThO$_2$'
+            panel_title = f'{blanket_key}-{oxide}\n({loading_str} kg/m³)'
+            leg = ax.legend(handles=handles, title=panel_title, title_fontsize=7,
+                            fontsize=6, fancybox=False, edgecolor='black',
+                            frameon=True, framealpha=0.75, loc='upper left')
+            leg.get_frame().set_linewidth(0.5)
+
+        # ── Shared axis labels ────────────────────────────────────────────
+        for ax in axes[1, :]:
+            ax.set_xlabel('Incident neutron energy [eV]')
+        for ax in axes[:, 0]:
+            ax.set_ylabel('Cumulative fraction of reactions')
+
+        fig.tight_layout()
+
+        # ── Save ──────────────────────────────────────────────────────────
+        plt.savefig(f'./Figures/PDF/fig_wedge_spectra_hist_{isotope}.pdf', bbox_inches='tight')
+        plt.savefig(f'./Figures/PNG/fig_wedge_spectra_hist_{isotope}.png', bbox_inches='tight')
+        print(f"\n  Saved fig_wedge_spectra_hist_{isotope} to ./Figures/PDF/ and ./Figures/PNG/")
+        plt.show()
 
 
 if __name__ == '__main__':

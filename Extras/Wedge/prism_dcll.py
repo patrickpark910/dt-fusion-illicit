@@ -59,7 +59,7 @@ class Prism():
 
         # Coolant 
         self.coolant = openmc.Material.mix_materials([self.f82h, he], [0.170, 0.830], 'vo')
-        self.coolant.set_density('atom/b-cm', 0.01471892350) # from Glaser et al. (2025) MCNP
+        # self.coolant.set_density('atom/b-cm', 0.01471892350) # from Glaser et al. (2025) MCNP
         self.coolant.temperature = TEMP_K
         self.coolant.name = "coolant (17.0 vol% F82H, 83.0 vol% He-4)" 
 
@@ -614,9 +614,9 @@ if __name__ == '__main__':
 
     os.makedirs(f"./OpenMC/", exist_ok=True)
 
-    CASES    = ['C', 'A']
-    ISOTOPES = ['U238', 'Th232']
-    FERTILE  = [0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99]
+    CASES    = ['C'] # , 'A'
+    ISOTOPES = ['U238'] # , 'Th232'
+    FERTILE  = [500, 750, 999.99] # 0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 
     ENRICH   = [90.0]
 
     parser = argparse.ArgumentParser(description="Run Wedge OpenMC calculations")
