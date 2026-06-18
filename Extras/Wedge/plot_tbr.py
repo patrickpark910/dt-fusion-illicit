@@ -52,10 +52,10 @@ if __name__ == '__main__':
 
             if len(xh) >= 2:
                 ax.plot(x_fine, Akima1DInterpolator(xh, yh, method='makima')(x_fine),
-                        linestyle=ls_h, lw=0.75, color=color, label=f'Homog. {label_iso}')
+                        linestyle=ls_h, lw=0.75, color=color, label=f'{label_iso} homog.')
             if len(xl) >= 2:
                 ax.plot(x_fine, Akima1DInterpolator(xl, yl, method='makima')(x_fine),
-                        linestyle=ls_l, lw=0.75, color=color, alpha=0.5, label=f'Lattice {label_iso}')
+                        linestyle=ls_l, lw=0.75, color=color, alpha=0.5, label=f'{label_iso} lattice')
 
         ax.text(0.97, 0.97, name, transform=ax.transAxes, fontweight='bold',
                 fontsize=10, ha='right', va='top')
@@ -70,12 +70,12 @@ if __name__ == '__main__':
         ax.xaxis.set_minor_locator(MultipleLocator(50))
         ax.yaxis.set_major_locator(MultipleLocator(0.05))
         ax.yaxis.set_minor_locator(MultipleLocator(0.01))
-        ax.tick_params(which='both', top=True, right=True)
+        ax.tick_params(which='both', top=True, right=True, direction='in')
         ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
         ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
         ax.legend(loc='lower left', frameon=False, fontsize=8)
 
-    plt.tight_layout(pad=0.3)
+    plt.tight_layout(pad=0.01)
     fig.subplots_adjust(wspace=0.225)
-    plt.savefig('./Figures/PDF/fig_wedge_tbr.pdf', bbox_inches='tight', pad_inches=0.02)
+    plt.savefig('./Figures/PDF/fig_wedge_tbr.pdf', bbox_inches='tight', pad_inches=0.01)
     plt.show()
