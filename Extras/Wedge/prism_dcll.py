@@ -614,9 +614,9 @@ if __name__ == '__main__':
 
     os.makedirs(f"./OpenMC/", exist_ok=True)
 
-    CASES    = ['C'] # , 'A'
-    ISOTOPES = ['U238'] # , 'Th232'
-    FERTILE  = [500, 750, 999.99] # 0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 
+    CASES    = ['C','A'] # 
+    ISOTOPES = ['U238', 'Th232'] # 
+    FERTILE  = [0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99] #  
     ENRICH   = [90.0]
 
     parser = argparse.ArgumentParser(description="Run Wedge OpenMC calculations")

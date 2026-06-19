@@ -36,7 +36,7 @@
       <nuclide name="N15" wo="5.49190136698608e-06"/>
     </material>
     <material id="4" name="coolant (17.0 vol% F82H, 83.0 vol% He-4)" temperature="900">
-      <density value="0.0147189235" units="atom/b-cm"/>
+      <density value="1.3259200000000002" units="g/cm3"/>
       <nuclide name="Fe54" ao="0.050594159252660795"/>
       <nuclide name="Fe56" ao="0.7942201006105454"/>
       <nuclide name="Fe57" ao="0.018342005723932967"/>
