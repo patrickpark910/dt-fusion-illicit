@@ -284,6 +284,75 @@ class Plot:
 
 
 
+    def stats(self):
+        """Print spectral statistics for flux and fertile (n,gamma) capture, plus TBR and FPR."""
+
+        # Conversion factors: rxns/src-n  →  kg/yr
+        #   1. NPS_FUS [n/s] × 3.156e7 [s/yr]  =  source neutrons per year
+        #   2. ÷ AVO [atoms/mol]                =  moles of fissile atoms per year
+        #   3. × AMU [g/mol]                    =  grams per year
+        #   4. ÷ 1e3                            =  kilograms per year
+        #   5. × BLANKET_COVERAGE               =  geometric correction
+        tot_n_per_yr = NPS_FUS * 3.156e+7
+        pu239_conv = (tot_n_per_yr / AVO * AMU_PU239 / 1e3) * BLANKET_COVERAGE
+        u233_conv  = (tot_n_per_yr / AVO * AMU_U233  / 1e3) * BLANKET_COVERAGE
+
+        titles  = [r"FLiBe-UF$_4$", r"FLiBe-ThF$_4$", r"HCPB-UO$_2$", r"HCPB-ThO$_2$", r"DCLL-UO$_2$", r"DCLL-ThO$_2$"]
+        ebins   = [self.flibe_u_ebins_df, self.flibe_th_ebins_df, self.hcpb_u_ebins_df, self.hcpb_th_ebins_df, self.dcll_u_ebins_df, self.dcll_th_ebins_df]
+        ng_cols = ['U238(n,g)', 'Th232(n,g)', 'U238(n,g)', 'Th232(n,g)', 'U238(n,g)', 'Th232(n,g)']
+        fis_amu = [AMU_PU239, AMU_U233, AMU_PU239, AMU_U233, AMU_PU239, AMU_U233]
+        convs   = [pu239_conv, u233_conv, pu239_conv, u233_conv, pu239_conv, u233_conv]
+        fluxes  = [self.flibe_u_flux_df, self.flibe_th_flux_df, self.hcpb_u_flux_df, self.hcpb_th_flux_df, self.dcll_u_flux_df, self.dcll_th_flux_df]
+        rr_dfs  = [self.flibe_u_rr_df, self.flibe_th_rr_df, self.hcpb_u_rr_df_corr, self.hcpb_th_rr_df_corr, self.dcll_u_rr_df, self.dcll_th_rr_df]
+
+        densities = [0, 150, 999.99]
+
+        print(f"\n{'Panel':<12} {'rho':>8}  "
+              f"{'TBR':>15} {'FPR [rxn/src]':>15} {'FPR [kg/yr]':>15}  "
+              f"{'Flux Mean':>15} {'Flux Med':>15} {'Flux Mode':>15}  "
+              f"{'(n,g) Mean':>15} {'(n,g) Med':>15} {'(n,g) Mode':>15}  "
+              f"{'(n,Xt) Mean':>15} {'(n,Xt) Med':>15} {'(n,Xt) Mode':>15}")
+        print("-" * 210)
+
+        for title, ebin_df, ng_col, conv, flux_df, rr_df in zip(titles, ebins, ng_cols, convs, fluxes, rr_dfs):
+            for d in densities:
+                clean_title = strip_latex(title)
+                d_label = f"{d:.1f}" if d < 999 else "1000.0"
+
+                # TBR and FPR from summary dataframe
+                rr_avail = rr_df['fertile_kg/m3'].unique()
+                rr_rho = min(rr_avail, key=lambda x: abs(x - d))
+                rr_row = rr_df[rr_df['fertile_kg/m3'] == rr_rho].iloc[0]
+                tbr = BLANKET_COVERAGE * rr_row['tbr']
+                fpr_rxn = rr_row[ng_col]
+                fpr_kg = fpr_rxn * conv
+
+                # Flux spectrum stats
+                flux_avail = flux_df['fertile_kg/m3'].unique()
+                flux_rho = min(flux_avail, key=lambda x: abs(x - d))
+                flux_sub = flux_df[flux_df['fertile_kg/m3'] == flux_rho].sort_values('energy mid [eV]')
+                f_mean, f_med, f_mode, _ = spectrum_stats(
+                    flux_sub['energy mid [eV]'].values, flux_sub['mean'].values)
+
+                # Fertile (n,gamma) capture spectrum stats
+                ebin_avail = ebin_df['fertile_kg/m3'].unique()
+                ebin_rho = min(ebin_avail, key=lambda x: abs(x - d))
+                ebin_sub = ebin_df[ebin_df['fertile_kg/m3'] == ebin_rho].sort_values('energy mid [eV]')
+                ng_mean, ng_med, ng_mode, _ = spectrum_stats(
+                    ebin_sub['energy mid [eV]'].values, ebin_sub[ng_col].values)
+
+                # Li(n,Xt) tritium production spectrum stats (Li-6 + Li-7)
+                li_vals = ebin_sub['Li6(n,t)'].values + ebin_sub['Li7(n,t)'].values
+                li_mean, li_med, li_mode, _ = spectrum_stats(
+                    ebin_sub['energy mid [eV]'].values, li_vals)
+
+                print(f"{clean_title:<12} {d_label:>8}  "
+                      f"{tbr:>15.4e} {fpr_rxn:>15.4e} {fpr_kg:>15.4e}  "
+                      f"{f_mean:>15.4e} {f_med:>15.4e} {f_mode:>15.4e}  "
+                      f"{ng_mean:>15.4e} {ng_med:>15.4e} {ng_mode:>15.4e}  "
+                      f"{li_mean:>15.4e} {li_med:>15.4e} {li_mode:>15.4e}")
+
+
     def plot_hist(self):
         """
         Plots cumulative, normalized Pu production vs. energy for contours of MTU.
@@ -314,19 +383,16 @@ class Plot:
         dfs     = [self.flibe_u_ebins_df, self.flibe_th_ebins_df, self.hcpb_u_ebins_df, self.hcpb_th_ebins_df, self.dcll_u_ebins_df, self.dcll_th_ebins_df,]
         ng_cols = ['U238(n,g)', 'Th232(n,g)', 'U238(n,g)', 'Th232(n,g)', 'U238(n,g)', 'Th232(n,g)']
 
-        densities_to_plot = [0.1, 100, 999.99] # 10, 
-        colors = {0.1: '#ff1f5b', 10: '#f48628', 100: '#04cc6c', 999.99: '#0c9edd'}
-        labels = {0.1: r'0.1 kg$/$m³', 10: r'10 kg$/$m³', 100: r'100 kg$/$m³', 999.99: r'1000 kg$/$m³'}
-
-        print(f"\n{'Panel':<20} {'Density [kg/m³]':>16} {'Mean [eV]':>12} {'Median [eV]':>13} {'Mode [eV]':>12}")
-        print("-" * 75)
+        densities_to_plot = [0.1, 150, 999.99] # 10, 
+        colors = {0.1: '#ff1f5b', 10: '#f48628', 100: '#04cc6c', 150: '#04cc6c', 999.99: '#0c9edd'}
+        labels = {0.1: r'0.1 kg$/$m³', 10: r'10 kg$/$m³', 100: r'100 kg$/$m³', 150: r'150 kg$/$m³', 999.99: r'1000 kg$/$m³'}
 
         for ax, df, title, ng_col in zip(axes.flatten(), dfs, titles, ng_cols):
 
             df = df[df["fertile_kg/m3"].isin(densities_to_plot)]
 
             df_sum = df.groupby("fertile_kg/m3")[ng_col].sum().to_frame()
-            df_sum.columns = ["sum"]   
+            df_sum.columns = ["sum"]
             df = df.merge(df_sum, on="fertile_kg/m3", how="left")
             df['norm_mean'] = df[ng_col] / df['sum']
 
@@ -335,14 +401,6 @@ class Plot:
             for d in densities_to_plot:
                 sub = df[df['fertile_kg/m3'] == d]
                 ax.hist(sub['energy mid [eV]'], bins=bins, weights=sub['norm_mean'], cumulative=True, histtype='step', linewidth=0.75, color=colors[d], label=labels[d])
-
-                # Mean / median / mode energy of this spectrum
-                w_mean, w_median, w_mode, _ = spectrum_stats(
-                    sub['energy mid [eV]'].values, sub['norm_mean'].values)
-
-                clean_title = strip_latex(title)
-                d_label = f"{d:.1f}" if d < 999 else "1000.0"
-                print(f"{clean_title:<20} {d_label:>16} {w_mean:>12.2e} {w_median:>13.2e} {w_mode:>12.2e}")
 
             ax.xaxis.set_ticks_position('both')
             ax.yaxis.set_ticks_position('both')
@@ -597,6 +655,129 @@ class Plot:
         plt.close('all')
 
 
+    def flux_nominal(self):
+        """
+        Nominal (0 kg/m³) flux spectra for FLiBe, HCPB, and DCLL.
+        Uses the U-series data since the clean blanket is identical for U and Th.
+
+        Produces two figures:
+          fig_flux_nominal       — clean spectra
+          fig_flux_nominal_stats — same spectra annotated with mean, median,
+                                   2nd mode, and quantiles from spectrum_stats
+        """
+        print(f"\nPlotting nominal (0 kg/m³) flux spectra...")
+
+        from matplotlib.ticker import LogLocator
+        from matplotlib.lines import Line2D
+
+        datasets = [
+            (self.flibe_u_flux_df, 'FLiBe', '#66b420'),
+            (self.hcpb_u_flux_df,  'HCPB',  '#b41f24'),
+            (self.dcll_u_flux_df,  'DCLL',  '#0047ba'),
+        ]
+
+        spectra = []
+        for df_flux, label, color in datasets:
+            available = df_flux['fertile_kg/m3'].unique()
+            closest = min(available, key=lambda x: abs(x - 0))
+            spec = df_flux[df_flux['fertile_kg/m3'] == closest].sort_values('energy mid [eV]')
+            spectra.append((spec['energy mid [eV]'].values,
+                            spec['mean'].values.copy(), label, color))
+
+        def setup_flux_axes(ax):
+            ax.set_xlabel('Neutron energy [eV]')
+            ax.set_ylabel(r'Flux [n$/$cm²$/$src-n]')
+            ax.set_xlim(log_buffer(1e0, 20e6))
+            ax.set_ylim(log_buffer(1e-3, 1e1))
+            ax.xaxis.set_ticks_position('both')
+            ax.yaxis.set_ticks_position('both')
+            ax.grid(axis='both', which='major', linestyle='-', linewidth=0.5)
+            ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f'1e{int(np.log10(x))}' if x > 0 else ''))
+            ax.yaxis.set_major_locator(LogLocator(base=10, numticks=20))
+            ax.yaxis.set_minor_locator(LogLocator(base=10, subs=np.arange(2, 10), numticks=100))
+            ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f'1e{int(np.log10(x))}' if x > 0 else ''))
+
+        def plot_spectra(ax):
+            for E_mid, phi, label, color in spectra:
+                phi_plot = phi.copy()
+                phi_plot[phi_plot <= 0] = np.nan
+                ax.loglog(E_mid, phi_plot, color=color, linewidth=0.75, label=label)
+
+        # ---- Figure 1: Clean spectra ----
+        plt.figure(figsize=(3.5, 3.0))
+        ax = plt.gca()
+        plot_spectra(ax)
+        setup_flux_axes(ax)
+        plt.tight_layout()
+        leg = plt.legend(loc='lower right', fancybox=False, edgecolor='none',
+                         frameon=True, framealpha=0.0, ncol=1, fontsize=6.5)
+        leg.get_frame().set_linewidth(0.5)
+
+        if self.save:
+            plt.savefig('./Figures/PDF/fig_flux_nominal.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+            plt.savefig('./Figures/PNG/fig_flux_nominal.png', bbox_inches='tight', pad_inches=0.01, format='png')
+            print("Exported nominal flux spectrum plot: fig_flux_nominal")
+        else:
+            print("Did not export nominal flux spectrum plot due to user setting.")
+        if self.show:
+            plt.show()
+        plt.close('all')
+
+        # ---- Figure 2: Annotated with spectral statistics ----
+        print(f"\n  {'Blanket':<8s} {'Mean':>11s} {'q10':>11s} {'q25':>11s} "
+              f"{'Median':>11s} {'q75':>11s} {'q90':>11s} {'2nd Mode':>11s}")
+        print("  " + "-" * 88)
+
+        plt.figure(figsize=(3.5, 3.0))
+        ax = plt.gca()
+        plot_spectra(ax)
+
+        for E_mid, phi, label, color in spectra:
+            mean_E, median_E, mode_E, q = spectrum_stats(
+                E_mid, phi, quantiles=(0.10, 0.25, 0.75, 0.90))
+            mode2_E, mode2_phi = second_mode(E_mid, phi)
+
+            print(f"  {label:<8s} {mean_E:>11.3e} {q[0.10]:>11.3e} {q[0.25]:>11.3e} "
+                  f"{median_E:>11.3e} {q[0.75]:>11.3e} {q[0.90]:>11.3e} {mode2_E:>11.3e}")
+
+            ax.axvline(mean_E,   color=color, linestyle='-',  linewidth=0.5, alpha=0.6)
+            ax.axvline(median_E, color=color, linestyle='--', linewidth=0.5, alpha=0.6)
+            for p_val in q.values():
+                ax.axvline(p_val, color=color, linestyle=':', linewidth=0.4, alpha=0.4)
+            if np.isfinite(mode2_E):
+                ax.plot(mode2_E, mode2_phi, marker='v', markersize=5,
+                        color=color, markeredgecolor='black',
+                        markeredgewidth=0.4, linestyle='None', zorder=5)
+
+        setup_flux_axes(ax)
+        plt.tight_layout()
+
+        blanket_handles = [Line2D([0], [0], color=c, lw=0.75, label=l)
+                           for _, _, l, c in spectra]
+        stat_handles = [
+            Line2D([0], [0], color='gray', ls='-',  lw=0.75, label='Mean'),
+            Line2D([0], [0], color='gray', ls='--', lw=0.75, label='Median'),
+            Line2D([], [], marker='v', linestyle='None', markersize=5,
+                   color='gray', markeredgecolor='black',
+                   markeredgewidth=0.4, label='2nd mode'),
+            Line2D([0], [0], color='gray', ls=':', lw=0.75, label='Quantiles'),
+        ]
+        leg = ax.legend(handles=blanket_handles + stat_handles,
+                        loc='lower right', fancybox=False, edgecolor='none',
+                        frameon=True, framealpha=0.0, ncol=2, fontsize=6.5)
+        leg.get_frame().set_linewidth(0.5)
+
+        if self.save:
+            plt.savefig('./Figures/PDF/fig_flux_nominal_stats.pdf', bbox_inches='tight', pad_inches=0.01, format='pdf')
+            plt.savefig('./Figures/PNG/fig_flux_nominal_stats.png', bbox_inches='tight', pad_inches=0.01, format='png')
+            print("Exported annotated nominal flux spectrum plot: fig_flux_nominal_stats")
+        else:
+            print("Did not export annotated nominal flux spectrum plot due to user setting.")
+        if self.show:
+            plt.show()
+        plt.close('all')
+
+
     def plot_hist_diff(self):
         """
         Differential cumulative capture distributions:
@@ -710,13 +891,13 @@ class Plot:
         tot_n_per_yr = NPS_FUS * 3.156e+7
 
         # Gotta then convert fissile atoms/yr to kg/yr
-        pu239_at_to_kg_per_yr = tot_n_per_yr / AVO * AMU_PU239 / 1e3
-        u233_at_to_kg_per_yr  = tot_n_per_yr / AVO * AMU_U233  / 1e3
+        pu239_at_to_kg_per_yr = (tot_n_per_yr / AVO * AMU_PU239 / 1e3) * BLANKET_COVERAGE
+        u233_at_to_kg_per_yr  = (tot_n_per_yr / AVO * AMU_U233  / 1e3) * BLANKET_COVERAGE
 
         # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
         # pebble bed
-        x6, y6 =     self.hcpb_u_rr_df['fertile_kg/m3'], pu239_at_to_kg_per_yr * self.hcpb_u_rr_df['U238(n,g)']
-        x5, y5 =    self.hcpb_th_rr_df['fertile_kg/m3'], u233_at_to_kg_per_yr * self.hcpb_th_rr_df['Th232(n,g)']
+        x6, y6 =     self.hcpb_u_rr_df_corr['fertile_kg/m3'], pu239_at_to_kg_per_yr * self.hcpb_u_rr_df_corr['U238(n,g)']
+        x5, y5 =    self.hcpb_th_rr_df_corr['fertile_kg/m3'], u233_at_to_kg_per_yr * self.hcpb_th_rr_df_corr['Th232(n,g)']
 
         # lead lithium     
         x4, y4 =   self.dcll_u_rr_df['fertile_kg/m3'],  pu239_at_to_kg_per_yr *  self.dcll_u_rr_df['U238(n,g)']
@@ -808,14 +989,14 @@ class Plot:
         tot_n_per_yr = NPS_FUS * 3.156e+7
 
         # Gotta then convert fissile atoms/yr to kg/yr
-        pu239_at_to_kg_per_yr = tot_n_per_yr / AVO * AMU_PU239 / 1e3
-        u233_at_to_kg_per_yr  = tot_n_per_yr / AVO * AMU_U233  / 1e3
+        pu239_at_to_kg_per_yr = (tot_n_per_yr / AVO * AMU_PU239 / 1e3) * BLANKET_COVERAGE
+        u233_at_to_kg_per_yr  = (tot_n_per_yr / AVO * AMU_U233  / 1e3) * BLANKET_COVERAGE
 
         # Setting up x, y separately here so you can remove the impurity/wppm-magnitude cases --ppark 2025-08-06
         # cut out the first point since dividing by zero.
         # helium cooled pebble bed
-        x6, y6 =     self.hcpb_u_rr_df['fertile_kg/m3'][1:], pu239_at_to_kg_per_yr * self.hcpb_u_rr_df['U238(n,g)'][1:]
-        x5, y5 =    self.hcpb_th_rr_df['fertile_kg/m3'][1:], u233_at_to_kg_per_yr * self.hcpb_th_rr_df['Th232(n,g)'][1:]
+        x6, y6 =     self.hcpb_u_rr_df_corr['fertile_kg/m3'][1:], pu239_at_to_kg_per_yr * self.hcpb_u_rr_df_corr['U238(n,g)'][1:]
+        x5, y5 =    self.hcpb_th_rr_df_corr['fertile_kg/m3'][1:], u233_at_to_kg_per_yr * self.hcpb_th_rr_df_corr['Th232(n,g)'][1:]
 
         # dual coolant lead lithium     
         x4, y4 =   self.dcll_u_rr_df['fertile_kg/m3'][1:],  pu239_at_to_kg_per_yr *  self.dcll_u_rr_df['U238(n,g)'][1:]
@@ -1682,7 +1863,7 @@ if __name__ == "__main__":
         os.makedirs(sd_path, exist_ok=True)
 
 
-    plot_types = ['tbr','fpr','hist','histd','fluxr','fluxs','rxns','rxnr','dfis','fisn','rxnd']
+    plot_types = ['stat','tbr','fpr','hist','histd','fluxr','fluxs','fluxn','rxns','rxnr','dfis','fisn','rxnd']
 
     parser = argparse.ArgumentParser(description=f"Choose plots with -p flag, multiple separated by spaces: {plot_types}")
 
@@ -1707,7 +1888,9 @@ if __name__ == "__main__":
     combined_plot = Plot(show=plot_show, save=plot_save)
 
     for p in plot_type:
-        if   p == 'tbr':
+        if   p == 'stat':
+            combined_plot.stats()
+        elif p == 'tbr':
             combined_plot.plot_tbr()
         elif p == 'fpr':
             combined_plot.plot_fpr()
@@ -1719,6 +1902,8 @@ if __name__ == "__main__":
             combined_plot.plot_flux_ratio()
         elif p == 'fluxs':
             combined_plot.plot_flux_spectrum()
+        elif p == 'fluxn':
+            combined_plot.flux_nominal()
         elif p == 'drdn':
             combined_plot.plot_dRdn()
         elif p == 'rn':

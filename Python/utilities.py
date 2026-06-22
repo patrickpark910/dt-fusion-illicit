@@ -489,8 +489,10 @@ def spectrum_stats(E, y, mode_weight=None, quantiles=(0.10, 0.25, 0.75, 0.90)):
     E_sorted = E_g[order]
     cum = np.cumsum(y_g[order])
     cum /= cum[-1]
-    median_E = float(np.interp(0.5, cum, E_sorted))
-    q = {p: float(np.interp(p, cum, E_sorted)) for p in quantiles}
+    cum = np.concatenate(([0.0], cum))
+    E_for_interp = np.concatenate(([E_sorted[0]], E_sorted))
+    median_E = float(np.interp(0.5, cum, E_for_interp))
+    q = {p: float(np.interp(p, cum, E_for_interp)) for p in quantiles}
 
     mode_E = float(E_g[np.argmax(w_g)])
     return mean_E, median_E, mode_E, q
