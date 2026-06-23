@@ -32,8 +32,8 @@ figures of merit over the energy interval  E_0 -> E_final  (default 10 MeV -> 1 
 All four are ELASTIC-only, classical-slowing-down quantities; see the caveats in
 the printed header (inelastic scattering, anisotropy, absorption are ignored).
 
-This file is STANDALONE: every constant and helper is copied in, so it imports
-nothing from the Python/ package.
+Constants and material builders live in common.py (imported below); this file
+handles the slowing-down computation.
 
 -----------------------------------------------------------------------------
 DATA INPUTS YOU NEED TO PROVIDE
@@ -65,6 +65,8 @@ import numpy as np
 import openmc
 import openmc.data
 
+from common import *
+
 
 # =============================================================================
 # CONFIGURATION
@@ -72,7 +74,6 @@ import openmc.data
 
 E0       = 10.0e6     # eV  -- start (top) energy of the slowing-down interval
 E_FINAL  = 1.0e3      # eV  -- final (bottom) energy
-TARGET_TEMP_K = 900   # K   -- match the model temperature
 
 # Loading at which the number densities are evaluated.  0.1 kg/m3 is the lowest
 # nonzero loading in your sweep and is effectively the pure-breeder matrix
@@ -97,16 +98,6 @@ TARGETS = [
 # to use the material-derived densities.
 NDENS_OVERRIDE = {}
 
-# Flux-spectrum CSVs (one per blanket).  Each file holds the energy-binned
-# blanket-averaged flux at every loading in the sweep.  When present the
-# moderation-power table uses the flux-weighted  <Sigma_el>_phi  instead of a
-# point evaluation at E0.  Set a path to None to fall back to the point value.
-FLUX_DIR = './Data'
-FLUX_FILES = {
-    'FLiBe': 'FLiBe_900K_Li07.5_U238_flux.csv',
-    'HCPB':  'HCPB_900K_Li60.0_U238_flux.csv',
-    'DCLL':  'DCLL_900K_Li90.0_U238_flux.csv',
-}
 
 
 # =============================================================================
@@ -125,288 +116,12 @@ if _trapz is None:                       # extremely old/odd NumPy: simple fallb
         return float(np.sum(0.5 * (y[1:] + y[:-1]) * np.diff(x)))
 
 
-# =============================================================================
-# MATERIAL CONSTANTS  (copied from Python/parameters.py and Python/utilities.py)
-# =============================================================================
-
-# --- FLiBe breeder ----------------------------------------------------------
-DENSITY_FLIBE = 1.9505   # [g/cm3]
-ENRICH_FLIBE  = 7.50     # [at%] Li-6
-DENSITY_UF4   = 6.88     # [g/cm3]
-
-# --- DCLL (Pb-17Li) blanket -------------------------------------------------
-DENSITY_DCLL   = 9.40    # [g/cm3]
-ENRICH_DCLL    = 90.00   # [at%] Li-6
-DCLL_VF_FS_NOM = 0.019
-DCLL_VF_LL_NOM = 0.808
-DCLL_VF_SI_NOM = 0.076
-DCLL_VF_HE_NOM = 0.097
-DCLL_BLANKET_NDENS = 0.03541604638   # [atom/b-cm] fixed total (Glaser 2025 MCNP)
-
-# --- HCPB (He-cooled pebble bed, Li4SiO4 + Be) blanket ---------------------
-DENSITY_LI4SIO4 = 2.42   # [g/cm3]  Li4SiO4 ceramic
-DENSITY_BE      = 1.85   # [g/cm3]  Beryllium metal
-ENRICH_HCPB     = 60.00  # [at%]    Li-6 enrichment in Li4SiO4
-HCPB_VF_LI_NOM = 0.1304  # Li4SiO4 (ceramic)
-HCPB_VF_BE_NOM = 0.3790  # Be (metal)
-HCPB_VF_EU_NOM = 0.1176  # Eurofer
-HCPB_VF_HE_NOM = 0.3730  # He-4 (gas)
-
-# --- fertile materials ------------------------------------------------------
-ENRICH_U     =  0.71     # [wt%] U-235 in UO2 kernel
-DENSITY_UO2  = 10.50
-DENSITY_ThO2 = 10.00
-DENSITY_SIC  =  3.20
-
-# --- BISO geometry ----------------------------------------------------------
-BISO_KERNEL_RADIUS = 0.04
-BISO_RADIUS        = 0.05
-BISO_VOLUME          = (4/3) * 3.14159265359 * BISO_RADIUS**3
-KERNEL_VOLUME        = (4/3) * 3.14159265359 * BISO_KERNEL_RADIUS**3
-BISO_KERNEL_VOL_FRAC = KERNEL_VOLUME / BISO_VOLUME
-BISO_COAT_VOL_FRAC   = 1.0 - BISO_KERNEL_VOL_FRAC
-
-# --- atomic masses ----------------------------------------------------------
-AMU_F19   =  18.9984
-AMU_O     =  15.999
-AMU_U     = 238.02891
-AMU_U238  = 238.05078826
-AMU_Th232 = 232.0381
-AMU_UF4   = AMU_U + 4 * AMU_F19
-AMU_ThF4  = AMU_Th232 + 4 * AMU_F19
-AMU_UO2   = AMU_U + 2 * AMU_O
-AMU_ThO2  = AMU_Th232 + 2 * AMU_O
-XF4_X_RATIO = AMU_UF4 / AMU_U238
-
-# --- ThF4 density (Cantor 1966/1973) ----------------------------------------
-DENSITY_ThF4 = 6.61    # [g/cm3]
-ThF4_Th_RATIO = AMU_ThF4 / AMU_Th232
-
-
-# =============================================================================
-# FERTILE-LOADING HELPERS  (copied verbatim from Python/utilities.py)
-# =============================================================================
-
-def fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope='U238'):
-    if fertile_isotope == 'U238':
-        return (fertile_kgm3 * AMU_UO2 / AMU_U238
-                / KERNEL_VOLUME / DENSITY_UO2 / 100**3 * 1000)
-    elif fertile_isotope == 'Th232':
-        return (fertile_kgm3 * AMU_ThO2 / AMU_Th232
-                / KERNEL_VOLUME / DENSITY_ThO2 / 100**3 * 1000)
-    sys.exit(f"Unknown fertile_isotope {fertile_isotope!r}")
-
-
-def calc_biso_breeder_vol_fracs(fertile_kgm3, fertile_isotope='U238'):
-    biso_per_cc     = fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope)
-    vf_biso_breeder = biso_per_cc * BISO_VOLUME
-    if vf_biso_breeder > 1.0:
-        sys.exit(f"Loading {fertile_kgm3} kg/m3 exceeds the breeder volume "
-                 f"(vf_biso_breeder = {vf_biso_breeder:.3f} > 1).")
-    vf_biso    = vf_biso_breeder / (vf_biso_breeder + 1)
-    vf_breeder = 1 / (vf_biso_breeder + 1)
-    return vf_biso, vf_breeder, biso_per_cc
-
-
-# =============================================================================
-# MATERIAL CONSTRUCTION  (mirrors flibe.py / hcpb.py / dcll.py)
-# =============================================================================
-
-def build_flibe_blanket(fertile_kgm3, fertile_isotope='U238'):
-    breeder = openmc.Material(name='breeder', temperature=TARGET_TEMP_K)
-    breeder.set_density('g/cm3', DENSITY_FLIBE)
-    breeder.add_elements_from_formula('F4Li2Be', 'ao',
-                                      enrichment_target='Li6',
-                                      enrichment_type='ao',
-                                      enrichment=ENRICH_FLIBE)
-    if fertile_kgm3 <= 0.0:
-        breeder.name = 'blanket'
-        return breeder
-
-    fertile = openmc.Material(name='fertile', temperature=TARGET_TEMP_K)
-    if fertile_isotope == 'U238':
-        fertile.add_elements_from_formula('UF4', 'ao')
-        fertile.set_density('g/cm3', DENSITY_UF4)
-        xf4_ratio = XF4_X_RATIO
-        rho_xf4   = DENSITY_UF4
-    elif fertile_isotope == 'Th232':
-        fertile.add_elements_from_formula('ThF4', 'ao')
-        fertile.set_density('g/cm3', DENSITY_ThF4)
-        xf4_ratio = ThF4_Th_RATIO
-        rho_xf4   = DENSITY_ThF4
-    else:
-        sys.exit(f"Unknown fertile_isotope {fertile_isotope!r}")
-
-    vf_xf4   = fertile_kgm3 * xf4_ratio / (rho_xf4 * 1000.0)
-    vf_flibe = 1.0 - vf_xf4
-    if vf_xf4 >= 1.0:
-        sys.exit(f"Loading {fertile_kgm3} kg/m3 gives vf_xf4={vf_xf4:.3f} >= 1.")
-    blanket = openmc.Material.mix_materials([breeder, fertile],
-                                            [vf_flibe, vf_xf4], 'vo')
-    blanket.name = 'blanket'
-    blanket.temperature = TARGET_TEMP_K
-    return blanket
-
-
-def build_dcll_blanket(fertile_kgm3, fertile_isotope='U238'):
-    pbli = openmc.Material(name='breeder', temperature=TARGET_TEMP_K)
-    pbli.set_density('g/cm3', DENSITY_DCLL)
-    pbli.add_element('Pb', 0.83, percent_type='ao')
-    pbli.add_element('Li', 0.17, percent_type='ao',
-                     enrichment_target='Li6', enrichment_type='ao',
-                     enrichment=ENRICH_DCLL)
-
-    f82h = openmc.Material(name='f82h', temperature=TARGET_TEMP_K)
-    f82h.add_element('Fe', 89.3686, percent_type='wo')
-    f82h.add_element('C',   0.1000, percent_type='wo')
-    f82h.add_element('Si',  0.1000, percent_type='wo')
-    f82h.add_element('Mn',  0.1300, percent_type='wo')
-    f82h.add_element('Cr',  8.1600, percent_type='wo')
-    f82h.add_element('W',   1.9400, percent_type='wo')
-    f82h.add_element('V',   0.2000, percent_type='wo')
-    f82h.add_element('N',   0.0014, percent_type='wo')
-    f82h.set_density('g/cm3', 7.78)
-
-    sic = openmc.Material(name='SiC', temperature=TARGET_TEMP_K)
-    sic.add_elements_from_formula('SiC')
-    sic.set_density('g/cm3', DENSITY_SIC)
-
-    he = openmc.Material(name='helium', temperature=TARGET_TEMP_K)
-    he.set_density('g/cm3', 0.004)
-    he.add_element('He', 1)
-
-    if fertile_isotope == 'U238':
-        kernel = openmc.Material(name='UO2', temperature=TARGET_TEMP_K)
-        kernel.add_elements_from_formula('UO2', enrichment=ENRICH_U)
-        kernel.set_density('g/cm3', DENSITY_UO2)
-    elif fertile_isotope == 'Th232':
-        kernel = openmc.Material(name='ThO2', temperature=TARGET_TEMP_K)
-        kernel.add_elements_from_formula('ThO2')
-        kernel.set_density('g/cm3', DENSITY_ThO2)
-    else:
-        sys.exit(f"Unknown fertile_isotope {fertile_isotope!r}")
-
-    biso = openmc.Material.mix_materials([kernel, sic],
-                                         [BISO_KERNEL_VOL_FRAC, BISO_COAT_VOL_FRAC],
-                                         'vo')
-
-    vf_biso_br, vf_pbli_br, _ = calc_biso_breeder_vol_fracs(fertile_kgm3,
-                                                            fertile_isotope)
-    vf_biso_bl = vf_biso_br * DCLL_VF_LL_NOM
-    vf_pbli_bl = vf_pbli_br * DCLL_VF_LL_NOM
-
-    blanket = openmc.Material.mix_materials(
-        [biso, pbli, f82h, sic, he],
-        [vf_biso_bl, vf_pbli_bl, DCLL_VF_FS_NOM, DCLL_VF_SI_NOM, DCLL_VF_HE_NOM],
-        'vo')
-    blanket.set_density('atom/b-cm', DCLL_BLANKET_NDENS)
-    blanket.temperature = TARGET_TEMP_K
-    blanket.name = 'blanket'
-    return blanket
-
-
-def build_hcpb_blanket(fertile_kgm3, fertile_isotope='U238'):
-    """HCPB Li4SiO4 + Be + BISO blanket (mirrors Python/hcpb.py)."""
-    li4sio4 = openmc.Material(name='Li4SiO4', temperature=TARGET_TEMP_K)
-    li4sio4.set_density('g/cm3', DENSITY_LI4SIO4)
-    li4sio4.add_elements_from_formula('Li4SiO4',
-                                       enrichment_target='Li6',
-                                       enrichment_type='ao',
-                                       enrichment=ENRICH_HCPB)
-
-    be = openmc.Material(name='Beryllium', temperature=TARGET_TEMP_K)
-    be.set_density('g/cm3', DENSITY_BE)
-    be.add_element('Be', 1, percent_type='wo')
-
-    eurofer = openmc.Material(name='Eurofer', temperature=TARGET_TEMP_K)
-    eurofer.set_density('g/cm3', 7.8)
-    eurofer.add_element('Fe', 89.36, percent_type='wo')
-    eurofer.add_element('C',   0.11, percent_type='wo')
-    eurofer.add_element('Cr',  9.00, percent_type='wo')
-    eurofer.add_element('W',   1.10, percent_type='wo')
-    eurofer.add_element('Mn',  0.40, percent_type='wo')
-    eurofer.add_element('N',   0.03, percent_type='wo')
-
-    he = openmc.Material(name='helium', temperature=TARGET_TEMP_K)
-    he.set_density('atom/b-cm', 0.00049800000)
-    he.add_element('He', 1)
-
-    sic = openmc.Material(name='SiC', temperature=TARGET_TEMP_K)
-    sic.add_elements_from_formula('SiC')
-    sic.set_density('g/cm3', DENSITY_SIC)
-
-    if fertile_isotope == 'U238':
-        kernel = openmc.Material(name='UO2', temperature=TARGET_TEMP_K)
-        kernel.add_elements_from_formula('UO2', enrichment=ENRICH_U)
-        kernel.set_density('g/cm3', DENSITY_UO2)
-    elif fertile_isotope == 'Th232':
-        kernel = openmc.Material(name='ThO2', temperature=TARGET_TEMP_K)
-        kernel.add_elements_from_formula('ThO2')
-        kernel.set_density('g/cm3', DENSITY_ThO2)
-    else:
-        sys.exit(f"Unknown fertile_isotope {fertile_isotope!r}")
-
-    biso = openmc.Material.mix_materials([kernel, sic],
-                                          [BISO_KERNEL_VOL_FRAC, BISO_COAT_VOL_FRAC],
-                                          'vo')
-
-    vf_biso_br, vf_libe_br, _ = calc_biso_breeder_vol_fracs(fertile_kgm3,
-                                                              fertile_isotope)
-    breeder_nom = HCPB_VF_LI_NOM + HCPB_VF_BE_NOM
-
-    vf_biso_bl = vf_biso_br * breeder_nom
-    vf_libe_bl = vf_libe_br * breeder_nom
-    vf_li_bl   = vf_libe_bl * HCPB_VF_LI_NOM / breeder_nom
-    vf_be_bl   = vf_libe_bl * HCPB_VF_BE_NOM / breeder_nom
-
-    blanket = openmc.Material.mix_materials(
-        [biso, li4sio4, be, eurofer, he],
-        [vf_biso_bl, vf_li_bl, vf_be_bl, HCPB_VF_EU_NOM, HCPB_VF_HE_NOM],
-        'vo')
-    blanket.temperature = TARGET_TEMP_K
-    blanket.name = 'blanket'
-    return blanket
-
-
-def atom_densities(mat):
-    """{nuclide: atom density [atom/b-cm]} -- robust to OpenMC version differences."""
-    raw = mat.get_nuclide_atom_densities()
-    out = {}
-    for k, v in raw.items():
-        out[k] = float(v[1]) if isinstance(v, (tuple, list)) else float(v)
-    return out
 
 
 # =============================================================================
 # CROSS-SECTION DATA HELPERS
 # =============================================================================
 
-def open_library():
-    xs_xml = (openmc.config.get('cross_sections')
-              if hasattr(openmc, 'config') else None) or os.environ.get('OPENMC_CROSS_SECTIONS')
-    if not xs_xml or not os.path.isfile(str(xs_xml)):
-        sys.exit("Could not find cross_sections.xml. Set OPENMC_CROSS_SECTIONS "
-                 "or openmc.config['cross_sections'] to your ENDF/B-VIII.0 library.")
-    return openmc.data.DataLibrary.from_xml(xs_xml)
-
-
-def find_path(lib, name):
-    for entry in lib.libraries:
-        if entry.get('type') == 'neutron' and name in entry.get('materials', []):
-            return entry['path']
-    return None
-
-
-def pick_temp(nuc, target_k=TARGET_TEMP_K):
-    temps = list(nuc.temperatures)
-    if not temps:
-        raise RuntimeError(f"{nuc.name}: no temperatures in data file")
-    want = f"{int(target_k)}K"
-    if want in temps:
-        return want
-    nearest = min(temps, key=lambda t: abs(int(t.rstrip('K')) - target_k))
-    print(f"  ! {nuc.name}: {want} unavailable, using {nearest}")
-    return nearest
 
 
 def load_elastic(names, lib):
@@ -539,44 +254,6 @@ def _parse_nuclide(name):
     return elem, A
 
 
-def _load_flux_spectra():
-    """Read the flux CSVs.  Returns {blanket: {loading: (E_mid, phi)}} or {}
-    for blankets whose file is missing / None.  Only non-zero flux bins are
-    kept (zero-flux bins cannot contribute to the weighted average)."""
-    import csv as _csv
-    spectra = {}
-    for bname, fname in FLUX_FILES.items():
-        if fname is None:
-            continue
-        path = os.path.join(FLUX_DIR, fname)
-        if not os.path.isfile(path):
-            print(f"  ! flux file not found: {path}  -- falling back to "
-                  f"point evaluation for {bname}")
-            continue
-        rows_by_loading = {}
-        with open(path) as fh:
-            for row in _csv.DictReader(fh):
-                ld = float(row['fertile_kg/m3'])
-                if ld not in rows_by_loading:
-                    rows_by_loading[ld] = ([], [])
-                rows_by_loading[ld][0].append(float(row['energy mid [eV]']))
-                rows_by_loading[ld][1].append(float(row['mean']))
-        blk = {}
-        for ld, (emids, phis) in rows_by_loading.items():
-            E = np.array(emids)
-            P = np.array(phis)
-            order = np.argsort(E)
-            E, P = E[order], P[order]
-            keep = P > 0
-            blk[ld] = (E[keep], P[keep])
-        spectra[bname] = blk
-    return spectra
-
-
-def _match_loading(available, target, tol=1.0):
-    """Closest loading in *available* within *tol* of *target*, or None."""
-    best = min(available, key=lambda x: abs(x - target))
-    return best if abs(best - target) <= tol else None
 
 
 def print_moderation_breakdown(host_dens, lib):
@@ -623,11 +300,11 @@ def print_moderation_breakdown(host_dens, lib):
                         all_dens[(bname, loading, fiso)] = host_dens[bname]
             else:
                 all_dens[('FLiBe', loading, fiso)] = atom_densities(
-                    build_flibe_blanket(loading, fiso))
+                    build_flibe_blanket(loading, fiso)[0])
                 all_dens[('HCPB',  loading, fiso)] = atom_densities(
-                    build_hcpb_blanket(loading, fiso))
+                    build_hcpb_blanket(loading, fiso)[0])
                 all_dens[('DCLL',  loading, fiso)] = atom_densities(
-                    build_dcll_blanket(loading, fiso))
+                    build_dcll_blanket(loading, fiso)[0])
 
     # load elastic XS for every nuclide across all cases
     all_nucs = sorted({n for dens in all_dens.values()
@@ -635,7 +312,7 @@ def print_moderation_breakdown(host_dens, lib):
     cache = load_elastic(all_nucs, lib)
 
     # load flux spectra (empty dict per blanket if file is missing)
-    flux = _load_flux_spectra()
+    flux = load_flux_spectra()
 
     SIG  = "\u03a3"            # Σ
     XI   = "\u03be"            # ξ
@@ -658,7 +335,7 @@ def print_moderation_breakdown(host_dens, lib):
                 weighting_label = f"at {E0 / 1e6:.0f} MeV"
                 blk_flux = flux.get(bname, {})
                 if blk_flux:
-                    matched = _match_loading(blk_flux.keys(), loading)
+                    matched = match_loading(blk_flux.keys(), loading)
                     if matched is not None:
                         phi_E, phi_w = blk_flux[matched]
                         phi_sum = phi_w.sum()
@@ -755,9 +432,9 @@ def main():
 
     # number densities from the built materials (unless overridden)
     host_dens = {
-        'FLiBe': atom_densities(build_flibe_blanket(FERTILE_KGM3, FERTILE_ISOTOPE)),
-        'HCPB':  atom_densities(build_hcpb_blanket(FERTILE_KGM3, FERTILE_ISOTOPE)),
-        'DCLL':  atom_densities(build_dcll_blanket(FERTILE_KGM3, FERTILE_ISOTOPE)),
+        'FLiBe': atom_densities(build_flibe_blanket(FERTILE_KGM3, FERTILE_ISOTOPE)[0]),
+        'HCPB':  atom_densities(build_hcpb_blanket(FERTILE_KGM3, FERTILE_ISOTOPE)[0]),
+        'DCLL':  atom_densities(build_dcll_blanket(FERTILE_KGM3, FERTILE_ISOTOPE)[0]),
     }
 
     def ndens_for(blanket, isotopes):
