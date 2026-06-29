@@ -131,8 +131,9 @@ class FLiBe(Reactor):
         # ORNL data show mixing UF4/ThF4 in 2(LiF)-BeF2 is additive in molar volume, i.e., XF4 takes up its own volume in the mixture, up to c.1000 C.
         # cf. Cantor 73 (ORNL-TM-4308) p.19, Cantor 68 (ORNL-TM-2316) p.34
 
-        vf_xf4   = self.fertile_kgm3 * xf4_x_ratio / (self.fertile.density*1000)  # 1 g/cm³ = 1000 kg/m³
-        vf_flibe = 1.0 - vf_xf4
+        xf4_per_1m3_flibe = self.fertile_kgm3 * xf4_x_ratio / (self.fertile.density*1000)  # 1 g/cm³ = 1000 kg/m³
+        vf_xf4   = xf4_per_1m3_flibe / (1 + xf4_per_1m3_flibe)
+        vf_flibe = 1 / (1 + xf4_per_1m3_flibe)
 
         # FLiBe volume = blanket volume minus XF4 volume (deduct as U/Th loading increases)
         self.breeder_volume = self.blanket_volume * vf_flibe
