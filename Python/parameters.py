@@ -47,7 +47,7 @@ DENSITY_UF4  =  6.88 # [g/cm³] nominally 6.7 for powder mass at room temp
 DENSITY_ThF4 =  6.61 # [g/cm³] nominally 6.3 for powder mass at room temp 
 
 # BISO particle parameters
-ENRICH_U     =  0.71 # [wt%]
+# ENRICH_U     =  0.71 # [wt%] -- in utilities.py
 DENSITY_UO2  = 10.50 # [g/cm³] 
 DENSITY_ThO2 = 10.00 # [g/cm³]
 DENSITY_SiC  =  3.20 # [g/cm³]

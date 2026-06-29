@@ -117,7 +117,8 @@ class FLiBe(Reactor):
             self.fertile = openmc.Material(name='fertile', temperature=self.temp_k)
             self.fertile.add_elements_from_formula('UF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
             self.fertile.set_density('g/cm3', DENSITY_UF4) 
-            xf4_x_ratio = AMU_UF4 / AMU_U238
+            xf4_x_ratio = AMU_UF4 / ((100-ENRICH_U)/100 * AMU_U)
+
 
         elif self.fertile_isotope == 'Th232':
 
@@ -125,7 +126,6 @@ class FLiBe(Reactor):
             self.fertile.add_elements_from_formula('ThF4','ao') # 'ao' here refers to 1:4 atomic ratio of Th:F in ThF4
             self.fertile.set_density('g/cm3', DENSITY_ThF4) 
             xf4_x_ratio = AMU_ThF4 / AMU_Th232
-
 
         # Per 1 m³ blanket, we deduct the volume of XF4 based on its mass density and specified kg/m³, then we compute the new volume fractions of FLiBe and XF4.
         # ORNL data show mixing UF4/ThF4 in 2(LiF)-BeF2 is additive in molar volume, i.e., XF4 takes up its own volume in the mixture, up to c.1000 C.

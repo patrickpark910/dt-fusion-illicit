@@ -116,30 +116,36 @@ class Reactor(OutputMixin, ABC):
         Li_tally        = self.make_tally('Li rxn rates',          ['(n,gamma)', '(n,Xt)', 'elastic'], nuclides=['Li6', 'Li7'], filters=[cell_filter], )
         Li_energy_tally = self.make_tally('Li rxn rates spectrum', ['(n,gamma)', '(n,Xt)', 'elastic'], nuclides=['Li6', 'Li7'], filters=[cell_filter, energy_filter], )
 
-        # Fluorine reaction rates
-        # F_tally        = self.make_tally('F rxn rates', ['(n,gamma)', 'elastic'], filters=[cell_filter], nuclides=['F19'])
-        # F_energy_tally = self.make_tally('F rxn rates spectrum', ['(n,gamma)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['F19'])
-
-        # Beryllium reaction rates
-        Be_tally_tot    = self.make_tally('Total Be rxn rate',     ['(n,gamma)', '(n,2n)', '(n,a)', *MT_INELASTIC_SCORES, 'elastic'], nuclides=['Be9'])
-        Be_tally        = self.make_tally('Be rxn rates',          ['(n,gamma)', '(n,2n)', '(n,a)', *MT_INELASTIC_SCORES, 'elastic'], nuclides=['Be9'], filters=[cell_filter],                )
-        Be_energy_tally = self.make_tally('Be rxn rates spectrum', ['(n,gamma)', '(n,2n)', '(n,a)', *MT_INELASTIC_SCORES, 'elastic'], nuclides=['Be9'], filters=[cell_filter, energy_filter], )
-
-        # Lead reaction rates
-        Pb_tally_tot    = self.make_tally('Total Pb rxn rate',     ['(n,gamma)', '(n,2n)', *MT_INELASTIC_SCORES, 'elastic'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'])
-        Pb_tally        = self.make_tally('Pb rxn rates',          ['(n,gamma)', '(n,2n)', *MT_INELASTIC_SCORES, 'elastic'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[cell_filter],               )
-        Pb_energy_tally = self.make_tally('Pb rxn rates spectrum', ['(n,gamma)', '(n,2n)', *MT_INELASTIC_SCORES, 'elastic'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[cell_filter, energy_filter],)
-
-
-        self.tallies.extend([fertile_tally_tot, Li_tally_tot, Be_tally_tot, Pb_tally_tot])
-        self.tallies.extend([fertile_tally, Li_tally, Be_tally, Pb_tally])
+        self.tallies.extend([fertile_tally_tot, Li_tally_tot,])
+        self.tallies.extend([fertile_tally, Li_tally,])
         self.tallies.extend([current_tally, flux_tally])
         self.tallies.extend([heating_tally, fisq_tally])
-        self.tallies.extend([fertile_energy_tally, Li_energy_tally, Be_energy_tally, Pb_energy_tally])
+        self.tallies.extend([fertile_energy_tally, Li_energy_tally,])
         self.tallies.extend([current_energy_tally, flux_energy_tally]) 
         self.tallies.extend([heating_energy_tally, fisq_energy_tally])
 
+        if self.blanket_name == 'FLiBe':
+            # Fluorine reaction rates
+            F_tally_tot    = self.make_tally('F rxn rates', ['(n,gamma)', 'elastic'], filters=[cell_filter], nuclides=['F19'])
+            F_tally        = self.make_tally('F rxn rates', ['(n,gamma)', 'elastic'], filters=[cell_filter], nuclides=['F19'])
+            F_energy_tally = self.make_tally('F rxn rates spectrum', ['(n,gamma)', 'elastic'], filters=[cell_filter, energy_filter], nuclides=['F19'])
+            self.tallies.extend([F_tally_tot, F_tally, F_energy_tally])
+
+        if self.blanket_name in ['FLiBe', 'HCPB']:
+            # Beryllium reaction rates
+            Be_tally_tot    = self.make_tally('Total Be rxn rate',     ['(n,gamma)', '(n,2n)', '(n,a)', *MT_INELASTIC_SCORES, 'elastic'], nuclides=['Be9'])
+            Be_tally        = self.make_tally('Be rxn rates',          ['(n,gamma)', '(n,2n)', '(n,a)', *MT_INELASTIC_SCORES, 'elastic'], nuclides=['Be9'], filters=[cell_filter],                )
+            Be_energy_tally = self.make_tally('Be rxn rates spectrum', ['(n,gamma)', '(n,2n)', '(n,a)', *MT_INELASTIC_SCORES, 'elastic'], nuclides=['Be9'], filters=[cell_filter, energy_filter], )
+            self.tallies.extend([Be_tally_tot, Be_tally, Be_energy_tally])
+
+        if self.blanket_name == 'DCLL':
+            # Lead reaction rates
+            Pb_tally_tot    = self.make_tally('Total Pb rxn rate',     ['(n,gamma)', '(n,2n)', *MT_INELASTIC_SCORES, 'elastic'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'])
+            Pb_tally        = self.make_tally('Pb rxn rates',          ['(n,gamma)', '(n,2n)', *MT_INELASTIC_SCORES, 'elastic'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[cell_filter],               )
+            Pb_energy_tally = self.make_tally('Pb rxn rates spectrum', ['(n,gamma)', '(n,2n)', *MT_INELASTIC_SCORES, 'elastic'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[cell_filter, energy_filter],)
+            self.tallies.extend([Pb_tally_tot, Pb_tally, Pb_energy_tally])
     
+
     @staticmethod
     def make_tally(name, scores, filters:list=None, nuclides:list=None):
         tally = openmc.Tally(name=name)
