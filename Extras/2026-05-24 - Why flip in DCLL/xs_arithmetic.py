@@ -144,6 +144,28 @@ def load_elastic(names, lib):
     return cache
 
 
+def load_reaction(names, lib, mt, label='reaction'):
+    """name -> (sigma_callable, native_energy_grid[eV], temp_string), or None.
+
+    Like load_elastic but for an arbitrary MT number (e.g. MT 4 = inelastic,
+    MT 16 = (n,2n)).  Missing reactions are silently returned as None.
+    """
+    cache = {}
+    for name in names:
+        path = find_path(lib, name)
+        if path is None:
+            cache[name] = None
+            continue
+        nuc = openmc.data.IncidentNeutron.from_hdf5(path)
+        T   = pick_temp(nuc, TARGET_TEMP_K)
+        rx  = nuc.reactions.get(mt)
+        if rx is None or T not in rx.xs:
+            cache[name] = None
+            continue
+        cache[name] = (rx.xs[T], np.asarray(nuc.energy[T]), T)
+    return cache
+
+
 # =============================================================================
 # SLOWING-DOWN PHYSICS
 # =============================================================================
@@ -306,10 +328,12 @@ def print_moderation_breakdown(host_dens, lib):
                 all_dens[('DCLL',  loading, fiso)] = atom_densities(
                     build_dcll_blanket(loading, fiso)[0])
 
-    # load elastic XS for every nuclide across all cases
+    # load elastic, inelastic, and (n,2n) XS for every nuclide across all cases
     all_nucs = sorted({n for dens in all_dens.values()
                        for n, N in dens.items() if N > 0})
     cache = load_elastic(all_nucs, lib)
+    cache_inel = load_reaction(all_nucs, lib, 4, 'inelastic')
+    cache_n2n  = load_reaction(all_nucs, lib, 16, '(n,2n)')
 
     # load flux spectra (empty dict per blanket if file is missing)
     flux = load_flux_spectra()
@@ -346,9 +370,11 @@ def print_moderation_breakdown(host_dens, lib):
                             phi_E = phi_w = phi_sum = None   # fall back
 
                 # --- accumulate per element -----------------------------------
-                elem_Sig   = {}
-                elem_xiSig = {}
-                elem_N     = {}
+                elem_Sig      = {}
+                elem_xiSig    = {}
+                elem_N        = {}
+                elem_Sig_inel = {}
+                elem_Sig_n2n  = {}
 
                 for nuc, N in dens.items():
                     if N <= 0 or cache.get(nuc) is None:
@@ -372,18 +398,44 @@ def print_moderation_breakdown(host_dens, lib):
                     elem_xiSig[elem] = elem_xiSig.get(elem, 0.0) + xi * Sigma_el
                     elem_N[elem]     = elem_N.get(elem, 0.0)     + N
 
+                    # inelastic (MT 4)
+                    inel_entry = cache_inel.get(nuc)
+                    if inel_entry is not None:
+                        sig_fn_i, _, _ = inel_entry
+                        if phi_E is not None:
+                            si_bins = np.asarray(sig_fn_i(phi_E), dtype=float)
+                            sigma_inel = np.dot(si_bins, phi_w) / phi_sum
+                        else:
+                            sigma_inel = float(sig_fn_i(E0))
+                        elem_Sig_inel[elem] = (elem_Sig_inel.get(elem, 0.0)
+                                               + N * sigma_inel)
+
+                    # (n,2n) (MT 16)
+                    n2n_entry = cache_n2n.get(nuc)
+                    if n2n_entry is not None:
+                        sig_fn_n, _, _ = n2n_entry
+                        if phi_E is not None:
+                            sn_bins = np.asarray(sig_fn_n(phi_E), dtype=float)
+                            sigma_n2n = np.dot(sn_bins, phi_w) / phi_sum
+                        else:
+                            sigma_n2n = float(sig_fn_n(E0))
+                        elem_Sig_n2n[elem] = (elem_Sig_n2n.get(elem, 0.0)
+                                              + N * sigma_n2n)
+
                 if not elem_Sig:
                     continue
 
-                total_Sig   = sum(elem_Sig.values())
-                total_xiSig = sum(elem_xiSig.values())
+                total_Sig      = sum(elem_Sig.values())
+                total_xiSig    = sum(elem_xiSig.values())
+                total_Sig_inel = sum(elem_Sig_inel.values())
+                total_Sig_n2n  = sum(elem_Sig_n2n.values())
 
                 ranked = sorted(elem_Sig.keys(),
                                 key=lambda e: elem_Sig[e], reverse=True)
 
                 # --- header ---------------------------------------------------
                 SIG_B = '\u03c3'   # σ  (lowercase for microscopic)
-                W = 102
+                W = 136
                 print(f"\n{'=' * W}")
                 print(f"  {bname} ({flabel}) -- {loading:g} kg/{M3} -- elastic "
                       f"{SIG} and moderation power,  {weighting_label}")
@@ -391,11 +443,13 @@ def print_moderation_breakdown(host_dens, lib):
                 print(f"  {'Element':<8}  {'N [/b-cm]':>12}  "
                       f"{'<' + SIG_B + '_el> [b]':>12}  "
                       f"{SIG + '_el [/cm]':>12}  {XI:>8}  "
-                      f"{XI + DOT + SIG + '_el [/cm]':>14}  {'% mod power':>11}")
+                      f"{XI + DOT + SIG + '_el [/cm]':>14}  {'% mod power':>11}  "
+                      f"{SIG + '_inel [/cm]':>14}  {SIG + '_n2n [/cm]':>14}")
                 print(f"  {'--------':<8}  {'------------':>12}  "
                       f"{'------------':>12}  "
                       f"{'------------':>12}  {'--------':>8}  "
-                      f"{'--------------':>14}  {'-----------':>11}")
+                      f"{'--------------':>14}  {'-----------':>11}  "
+                      f"{'--------------':>14}  {'--------------':>14}")
 
                 for elem in ranked:
                     Sig   = elem_Sig[elem]
@@ -405,22 +459,28 @@ def print_moderation_breakdown(host_dens, lib):
                     xi_eff = xiSig / Sig if Sig > 0 else 0.0
                     pct    = 100.0 * xiSig / total_xiSig if total_xiSig > 0 else 0.0
 
+                    S_inel = elem_Sig_inel.get(elem, 0.0)
+                    S_n2n  = elem_Sig_n2n.get(elem, 0.0)
+
                     print(f"  {elem:<8}  {N_e:12.4e}  "
                           f"{sig_micro:12.4e}  "
                           f"{Sig:12.4e}  {xi_eff:8.5f}  "
-                          f"{xiSig:14.4e}  {pct:10.4f}%")
+                          f"{xiSig:14.4e}  {pct:10.4f}%  "
+                          f"{S_inel:14.4e}  {S_n2n:14.4e}")
 
                 print(f"  {'--------':<8}  {'------------':>12}  "
                       f"{'------------':>12}  "
                       f"{'------------':>12}  {'--------':>8}  "
-                      f"{'--------------':>14}  {'-----------':>11}")
+                      f"{'--------------':>14}  {'-----------':>11}  "
+                      f"{'--------------':>14}  {'--------------':>14}")
                 total_N = sum(elem_N.values())
                 sig_micro_avg = total_Sig / total_N if total_N > 0 else 0.0
                 xi_avg = total_xiSig / total_Sig if total_Sig > 0 else 0.0
                 print(f"  {'Total':<8}  {total_N:12.4e}  "
                       f"{sig_micro_avg:12.4e}  "
                       f"{total_Sig:12.4e}  {xi_avg:8.5f}  "
-                      f"{total_xiSig:14.4e}  {'100.0%':>11}")
+                      f"{total_xiSig:14.4e}  {'100.0%':>11}  "
+                      f"{total_Sig_inel:14.4e}  {total_Sig_n2n:14.4e}")
 
 
 # =============================================================================
