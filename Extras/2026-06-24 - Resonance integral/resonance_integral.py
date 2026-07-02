@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Bondarenko-style U-238(n,gamma) test for UF4-FLiBe."""
+"""resonance integral-style U-238(n,gamma) test for UF4-FLiBe."""
 
 from pathlib import Path
 import os, re, sys, csv
@@ -40,13 +40,13 @@ CSV_RXNS_DCLL = DATA / "DCLL_900K_Li90.0_U238_summary.csv"
 
 
 """ Names of various output files"""
-OUT_COMPARE_LOG = HERE / "bondarenko_vs_openmc_log.png"
-OUT_COMPARE_LINEAR = HERE / "bondarenko_vs_openmc_linear.png"
-OUT_PSI_IEFF = HERE / "bondarenko_psi_vs_ieff.png"
+OUT_COMPARE_LOG = HERE / "integral_vs_openmc_log.png"
+OUT_COMPARE_LINEAR = HERE / "integral_vs_openmc_linear.png"
+OUT_PSI_IEFF = HERE / "integral_psi_vs_ieff.png"
 
-OUT_CSV_FLIBE = OUTS / "bondarenko_flibe_uf4.csv"
-OUT_CSV_DCLL  = OUTS / "bondarenko_dcll_uo2.csv"
-OUT_CSV_HCPB  = OUTS / "bondarenko_hcpb_uo2.csv"
+OUT_CSV_FLIBE = OUTS / "integral_flibe_uf4.csv"
+OUT_CSV_DCLL  = OUTS / "integral_dcll_uo2.csv"
+OUT_CSV_HCPB  = OUTS / "integral_hcpb_uo2.csv"
 
 
 def temp_label(labels):
@@ -366,7 +366,7 @@ def read_flux_generic(flux_csv, loading=0.0):
 
 
 def plot_compare_all(cases, log_scale):
-    """Combined Bondarenko vs OpenMC for all blankets.
+    """Combined resonance integral vs OpenMC for all blankets.
 
     cases: list of (label, bond_rows, x_key, openmc_csv_path)
     """
@@ -390,7 +390,7 @@ def plot_compare_all(cases, log_scale):
         mask = mask_for(x_bond, y_bond)
 
         ax.plot(x_bond[mask], y_bond[mask], "o-", color=c, lw=0.75,
-                markersize=1, label=f"{label} Bondarenko")
+                markersize=1, label=f"{label} resonance integral")
 
         omc = read_openmc_generic(openmc_csv)
         omc_mask = mask_for(omc["x"], omc["y"])
