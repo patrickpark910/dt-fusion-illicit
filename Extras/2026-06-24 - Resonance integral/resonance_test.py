@@ -25,6 +25,20 @@ SIGMA_P_U238 = 11.29  # barns
 NU_U235 = 2.43
 NU_U238 = 2.80
 
+# Two-bin Goldstein-Cohen lambda: the WLUP lambda(A) values were derived in
+# the resolved-resonance region of a thermal PWR cell, so they only apply
+# below the resonance range. Above E_LAMBDA_CUT_EV every nuclide is a narrow
+# scatterer -- (1-alpha)E >> any practical width -- so the exact limit is
+# lambda = 1 (pure NR). This removes the artifact of applying a 6.67 eV-regime
+# lambda (e.g. lambda_Pb = 0.21) at the tens-of-keV energies where DCLL
+# actually captures. Set to the top of U-238's resolved resonance range.
+E_LAMBDA_CUT_EV = 2.0e4
+
+
+def lambda_split(lam_lowE, energy):
+    """Energy-dependent lambda: WLUP value below the cutoff, 1.0 above."""
+    return np.where(energy < E_LAMBDA_CUT_EV, lam_lowE, 1.0)
+
 BLANKET_COLORS = ['C0', 'C1', 'C2']   # FLiBe, HCPB, DCLL -- shared across all plots
 
 # kg U-238 per m3 of real, post-deduction FLiBe.
@@ -43,21 +57,21 @@ CSV_RXNS_DCLL = DATA / "DCLL_900K_Li90.0_U238_summary.csv"
 
 
 """ Names of various output files"""
-OUT_COMPARE_LOG = HERE / "integral_vs_openmc_log.png"
-OUT_COMPARE_LINEAR = HERE / "integral_vs_openmc_linear.png"
-OUT_PSI_IEFF = HERE / "integral_psi_vs_ieff.png"
+OUT_COMPARE_LOG = HERE / "test_integral_vs_openmc_log.png"
+OUT_COMPARE_LINEAR = HERE / "test_integral_vs_openmc_linear.png"
+OUT_PSI_IEFF = HERE / "test_integral_psi_vs_ieff.png"
 
-OUT_CSV_FLIBE_NR = OUTS / "integral_nr_flibe_uf4.csv"
-OUT_CSV_DCLL_NR  = OUTS / "integral_nr_dcll_uo2.csv"
-OUT_CSV_HCPB_NR  = OUTS / "integral_nr_hcpb_uo2.csv"
+OUT_CSV_FLIBE_NR = OUTS / "test_integral_nr_flibe_uf4.csv"
+OUT_CSV_DCLL_NR  = OUTS / "test_integral_nr_dcll_uo2.csv"
+OUT_CSV_HCPB_NR  = OUTS / "test_integral_nr_hcpb_uo2.csv"
 
-OUT_CSV_FLIBE_IR = OUTS / "integral_ir_flibe_uf4.csv"
-OUT_CSV_DCLL_IR  = OUTS / "integral_ir_dcll_uo2.csv"
-OUT_CSV_HCPB_IR  = OUTS / "integral_ir_hcpb_uo2.csv"
+OUT_CSV_FLIBE_IR = OUTS / "test_integral_ir_flibe_uf4.csv"
+OUT_CSV_DCLL_IR  = OUTS / "test_integral_ir_dcll_uo2.csv"
+OUT_CSV_HCPB_IR  = OUTS / "test_integral_ir_hcpb_uo2.csv"
 
-OUT_CSV_FLIBE_IRM = OUTS / "integral_irm_flibe_uf4.csv"
-OUT_CSV_DCLL_IRM  = OUTS / "integral_irm_dcll_uo2.csv"
-OUT_CSV_HCPB_IRM  = OUTS / "integral_irm_hcpb_uo2.csv"
+OUT_CSV_FLIBE_IRM = OUTS / "test_integral_irm_flibe_uf4.csv"
+OUT_CSV_DCLL_IRM  = OUTS / "test_integral_irm_dcll_uo2.csv"
+OUT_CSV_HCPB_IRM  = OUTS / "test_integral_irm_hcpb_uo2.csv"
 
 
 def temp_label(labels):
@@ -408,7 +422,7 @@ def run_ir(case_name, make_mat, loadings, out_csv,
         sigma_fis_u238 = np.zeros_like(energy)
     sigma_a_u238 = sigma_gamma_u238 + sigma_fis_u238
 
-    lambda_28 = LAMBDA[238]
+    lambda_28 = lambda_split(LAMBDA[238], energy)
 
     elastic_xs_bg = {}
     for n in data:
@@ -439,7 +453,7 @@ def run_ir(case_name, make_mat, loadings, out_csv,
             for nuclide, density in atom_density.items():
                 if nuclide != "U238" and nuclide in elastic_xs_bg:
                     A = int(re.search(r'\d+', nuclide).group())
-                    lam = LAMBDA.get(A, 0.20)
+                    lam = lambda_split(LAMBDA.get(A, 0.20), energy)
                     sigma_bg_lambda += lam * density * elastic_xs_bg[nuclide]
             psi_lambda = sigma_bg_lambda / n28
 
@@ -528,7 +542,7 @@ def run_irm(case_name, make_mat, loadings, out_csv,
         sigma_fis_u238 = np.zeros_like(energy)
     sigma_a_u238 = sigma_gamma_u238 + sigma_fis_u238
 
-    lambda_28 = LAMBDA[238]
+    lambda_28 = lambda_split(LAMBDA[238], energy)
 
     # Background cross sections: elastic (for psi_lambda) and total (for absorption)
     elastic_xs_bg = {}
@@ -572,7 +586,7 @@ def run_irm(case_name, make_mat, loadings, out_csv,
             for nuclide, density in atom_density.items():
                 if nuclide != "U238" and nuclide in elastic_xs_bg:
                     A = int(re.search(r'\d+', nuclide).group())
-                    lam = LAMBDA.get(A, 0.20)
+                    lam = lambda_split(LAMBDA.get(A, 0.20), energy)
                     sigma_bg_lambda += lam * density * elastic_xs_bg[nuclide]
             psi_lambda = sigma_bg_lambda / n28
 
