@@ -10,7 +10,8 @@ import openmc
 
 # NB. the / operator for path joining only works when the left side is a Path, and everything chained after that is a Path --ppark
 HERE = Path(__file__).resolve().parent
-ROOT = Path("/Users/patrickpark/git-repos/emma-openmc")
+# ROOT = Path("/Users/patrickpark/git-repos/emma-openmc")
+ROOT = Path("/home/patri/projects/emma-openmc")
 DATA = ROOT / "Figures/Data"
 OUTS = HERE / "Outputs"
 
