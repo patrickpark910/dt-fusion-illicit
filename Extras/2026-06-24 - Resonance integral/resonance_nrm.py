@@ -21,9 +21,9 @@ sys.path.insert(0, str(ROOT))
 from Python.parameters import *
 from Python.utilities import *
 
-E_MIN_EV = 0.01
+E_MIN = {'U238': 3.0, 'Th232': 10.0}
+E_MAX = 15e6
 E_C = {'U238': 2e4, 'Th232': 4e3}
-E_MAX  = 15e6
 R2_MIN = 0.97
 SIGMA_P_U238 = 11.29  # barns
 NU_BAR = {
@@ -397,7 +397,7 @@ def run_nrm(case_name, make_mat, loadings, out_csv,
     labels = {n: temp_label(data[n].temperatures) for n in data}
 
     # =====================================================================
-    # RESONANCE GROUP (E_MIN_EV -- E_C) on fertile nuclide's fine ENDF grid
+    # RESONANCE GROUP (E_MIN -- E_C) on fertile nuclide's fine ENDF grid
     # =====================================================================
     energy_coarse, phi_u_coarse = read_flux_generic(flux_csv, flux_loading)
     order = np.argsort(energy_coarse)
@@ -412,7 +412,7 @@ def run_nrm(case_name, make_mat, loadings, out_csv,
     phi_u_density_coarse = phi_u_coarse / bin_width
 
     energy_fine_full = data[fertile].energy[labels[fertile]]
-    fine_mask = (energy_fine_full >= E_MIN_EV) & (energy_fine_full <= E_C[fertile])
+    fine_mask = (energy_fine_full >= E_MIN[fertile]) & (energy_fine_full <= E_C[fertile])
     energy = energy_fine_full[fine_mask]
 
     pos = phi_u_density_coarse > 0
@@ -467,9 +467,10 @@ def run_nrm(case_name, make_mat, loadings, out_csv,
     nu_fissile_res = nu_bar(fissile, energy) if fissile else np.zeros_like(energy)
 
     Phi_u = np.trapezoid(phi_u_density, energy)
-    ratio = Phi_u / np.sum(phi_u_coarse)
-    print(f"  Phi_u (res): fine-grid trapz = {Phi_u:.6g}, coarse-tally sum = "
-          f"{np.sum(phi_u_coarse):.6g} (ratio {ratio:.4f})")
+    res_mask = (energy_coarse >= E_MIN[fertile]) & (energy_coarse <= E_C[fertile])
+    coarse_res_sum = np.sum(phi_u_coarse[res_mask])
+    ratio = Phi_u / coarse_res_sum if coarse_res_sum > 0 else float('inf')
+    print(f"  Phi_u (intermediate region): fine-grid trapz = {Phi_u:.6g}, coarse-tally sum = {coarse_res_sum:.6g} (ratio {ratio:.4f})")
     if abs(ratio - 1.0) > 0.05:
         print(f"  WARNING: fine/coarse Phi_u ratio off by >5%")
 
@@ -539,6 +540,13 @@ def run_nrm(case_name, make_mat, loadings, out_csv,
                     inelastic_xs_bg_fast[n] = np.zeros_like(energy_fast_c)
 
         R_F_per_nf = np.trapezoid(sigma_gamma_fert_fast * phi_u_density_fast, energy_fast_c)
+        Phi_u_fast = np.trapezoid(phi_u_density_fast, energy_fast_c)
+        fast_mask = (energy_coarse >= E_C[fertile]) & (energy_coarse <= E_MAX)
+        coarse_fast_sum = np.sum(phi_u_coarse[fast_mask])
+        ratio_fast = Phi_u_fast / coarse_fast_sum if coarse_fast_sum > 0 else float('inf')
+        print(f"  Phi_u (fast region): trapz = {Phi_u_fast:.6g}, coarse-tally sum = {coarse_fast_sum:.6g} (ratio {ratio_fast:.4f})")
+        if abs(ratio_fast - 1.0) > 0.05:
+            print(f"  WARNING: fast fine/coarse Phi_u ratio off by >5%")
         print(f"  fast group ({E_C[fertile]:.0f}–{E_MAX:.0e} eV): "
               f"R_F/n_fert = {R_F_per_nf:.6g},  {len(energy_fast_c)} tally bins")
     else:
@@ -677,7 +685,7 @@ def read_openmc_generic(csv_path, ng_col='U238(n,g)'):
     }
 
 
-def read_flux_generic(flux_csv, loading=0.0, e_min=E_MIN_EV, e_max=E_MAX):
+def read_flux_generic(flux_csv, loading=0.0, e_min=0.0, e_max=E_MAX):
     energy, flux = [], []
     with flux_csv.open() as f:
         for row in csv.DictReader(f):
@@ -693,7 +701,7 @@ def plot_compare_all(cases, scale='linear'):
     """Combined NRM and OpenMC for all blankets.
 
     scale: 'linear', 'linlog', or 'loglog'
-    cases: list of (label, nrm_rows, x_key, openmc_csv_path, ng_col, color, linestyle)
+    cases: list of (label, nrm_rows, x_key, openmc_csv_path, ng_col, color, linestyle, marker, fillstyle)
     """
     fig, ax = plt.subplots(figsize=(3.5, 3.0))
 
@@ -708,27 +716,33 @@ def plot_compare_all(cases, scale='linear'):
         ax.set_xlim(10**(-1 - 0.03*5), 10**(4 + 0.03*5))
         out = OUT_COMPARE_LOGLOG
     else:
+        max_loading = max(LOADINGS)
+        ax.set_xlim(-0.03 * max_loading, max_loading + 0.03 * max_loading)
         out = OUT_COMPARE_LINEAR
 
     def mask_for(x, y):
         return (x > 0) & (y > 0) if scale != 'linear' else np.ones_like(x, dtype=bool)
 
-    for label, nrm_rows, x_key, openmc_csv, ng_col, color, linestyle in cases:
+    dummy_cases = []
+    for label, nrm_rows, x_key, openmc_csv, ng_col, color, linestyle, mkr, fillstyle in cases:
         omc = read_openmc_generic(openmc_csv, ng_col=ng_col)
         omc_mask = mask_for(omc["x"], omc["y"])
         ax.plot(omc["x"][omc_mask], omc["y"][omc_mask],
-                "o", color=color, lw=0.75, markersize=2, linestyle=linestyle,
-                label=f"{label} OpenMC")
+                marker=mkr, color=color, lw=0.75, markersize=2,
+                fillstyle=fillstyle, linestyle='none',
+                label='_nolegend_')
 
         x_m = np.array([r[x_key] for r in nrm_rows])
         y_m = np.array([r["R_per_source_neutron"] for r in nrm_rows])
         mask = mask_for(x_m, y_m)
-        ax.plot(x_m[mask], y_m[mask], ls=(0, (3, 1, 1, 1)), color=color, lw=0.75,
-                markersize=1, label=f"{label} NRM")
+        ax.plot(x_m[mask], y_m[mask], ls=linestyle, color=color, lw=0.75,
+                markersize=1, label='_nolegend_')
+
+        dummy_cases.append((label, color, linestyle, mkr, fillstyle))
 
     ax.set_xlabel(r"Fertile isotope density [kg$/$m³]")
     ax.set_ylabel(r"Fertile isotope (n,$\gamma$) rate [rxns$/$src-n]")
-    ax.set_ylim(-0.03 * 0.9, 0.9 + 0.03 * 0.9)
+    ax.set_ylim(-0.03, 1 + 0.03)
 
     ax.xaxis.set_ticks_position('both')
     ax.yaxis.set_ticks_position('both')
@@ -737,9 +751,17 @@ def plot_compare_all(cases, scale='linear'):
     ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
     ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
 
+    # Dummy plots for legend — Th (left col) then U (right col)
+    th = [d for d in dummy_cases if d[4] == 'none']
+    u  = [d for d in dummy_cases if d[4] == 'full']
+    for label, color, linestyle, mkr, fillstyle in th + u:
+        ax.plot([9e8, 9e9], [9e8, 9e9], marker=mkr, color=color, markersize=2,
+                fillstyle=fillstyle, linestyle=linestyle, linewidth=0.75,
+                label=label)
+
     fig.tight_layout()
     leg = ax.legend(loc='lower right', fancybox=False, edgecolor='none',
-                    frameon=True, framealpha=0.0, ncol=1, fontsize=6.5)
+                    frameon=True, framealpha=0.0, ncol=2, fontsize=6.5)
     leg.get_frame().set_linewidth(0.5)
 
     fig.savefig(f'{out}.png', bbox_inches='tight', pad_inches=0.01, dpi=300)
@@ -804,17 +826,18 @@ def fit_power_law_progressive(x, y, r2_min=R2_MIN):
 def plot_psi_vs_ieff(cases, r2_min=R2_MIN):
     """psi vs I_eff for all blankets, log-log.
 
-    cases: list of (label, nrm_rows, color, marker)
+    cases: list of (label, nrm_rows, color, marker, fillstyle, fit_ls)
     """
     fig, ax = plt.subplots(figsize=(3.5, 3.0))
 
-    for label, nrm_rows, color, marker in cases:
+    dummy_fits = []
+    for label, nrm_rows, color, marker, fillstyle, fit_ls in cases:
         psi = np.array([r["sigma_bg"] for r in nrm_rows])
         i_eff = np.array([r["I_eff_b"] for r in nrm_rows])
         mask = np.isfinite(psi) & (psi > 0) & (i_eff > 0)
 
         ax.plot(psi[mask], i_eff[mask], marker, color=color, markersize=3,
-                linestyle="none", label=label)
+                fillstyle=fillstyle, linestyle="none", label='_nolegend_')
 
         a, c, r2, n_used, psi_boundary = fit_power_law_progressive(
             psi[mask], i_eff[mask], r2_min)
@@ -824,9 +847,14 @@ def plot_psi_vs_ieff(cases, r2_min=R2_MIN):
               f"psi={psi_boundary:.3g} b)")
 
         x_fit = np.geomspace(psi[mask].min(), psi_boundary, 100)
-        ax.plot(x_fit, a * x_fit**c, ls=(0, (3, 1, 1, 1)), color=color, lw=0.75,
-                label=rf"{label} fit: ${a:.3g}\,\psi_o^{{{c:.3g}}}$")
+        ax.plot(x_fit, a * x_fit**c, ls=fit_ls, color=color, lw=0.75,
+                label='_nolegend_')
 
+        dummy_fits.append((label, a, c, color, marker, fillstyle, fit_ls))
+
+    # Dummy plots for legend — Th (left col) then U (right col)
+    th = [d for d in dummy_fits if d[5] == 'none']
+    u  = [d for d in dummy_fits if d[5] == 'full']
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_xlabel(r"$\psi_o$ [b]")
@@ -834,14 +862,21 @@ def plot_psi_vs_ieff(cases, r2_min=R2_MIN):
     ax.set_xlim(10**(1 - 0.03*6), 10**(7 + 0.03*6))
     ax.set_ylim(10**(-1 - 0.03*2), 10**(1 + 0.03*2))
 
+    for label, a, c, color, mkr, fillstyle, fit_ls in th + u:
+        ax.plot([9e8, 9e9], [9e8, 9e9], marker=mkr, color=color, markersize=3,
+                fillstyle=fillstyle, linestyle=fit_ls, linewidth=0.75,
+                label=rf"{label}: ${a:.3g}\,\psi_o^{{{c:.3g}}}$")
+
+    from matplotlib.ticker import ScalarFormatter
     ax.xaxis.set_ticks_position('both')
     ax.yaxis.set_ticks_position('both')
+    ax.yaxis.set_major_formatter(lambda x, _: f'{x:g}')
     ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
     ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
 
     fig.tight_layout()
     leg = ax.legend(loc='lower right', fancybox=False, edgecolor='none',
-                    frameon=True, framealpha=0.0, ncol=1, fontsize=6.5)
+                    frameon=True, framealpha=0.0, ncol=2, fontsize=6.5)
     leg.get_frame().set_linewidth(0.5)
 
     fig.savefig(f'{OUT_PSI_IEFF}.png', bbox_inches='tight', pad_inches=0.01, dpi=300)
@@ -863,24 +898,24 @@ def main():
 
     x_key = "kg_fertile_per_m3_breeder"
     compare_cases = [
-        (r"FLiBe-UF$_4$",  flibe_u_nrm,  x_key, CSV_RXNS_FLIBE_U,  'U238(n,g)',   '#66b420', '-'),
-        (r"FLiBe-ThF$_4$", flibe_th_nrm, x_key, CSV_RXNS_FLIBE_TH, 'Th232(n,g)',  '#66b420', LONG_DASH),
-        (r"HCPB-UO$_2$",   hcpb_u_nrm,   x_key, CSV_RXNS_HCPB_U,   'U238(n,g)',   '#b41f24', '-'),
-        (r"HCPB-ThO$_2$",  hcpb_th_nrm,  x_key, CSV_RXNS_HCPB_TH,  'Th232(n,g)',  '#b41f24', LONG_DASH),
-        (r"DCLL-UO$_2$",   dcll_u_nrm,   x_key, CSV_RXNS_DCLL_U,   'U238(n,g)',   '#0047ba', '-'),
-        (r"DCLL-ThO$_2$",  dcll_th_nrm,  x_key, CSV_RXNS_DCLL_TH,  'Th232(n,g)',  '#0047ba', LONG_DASH),
+        (r"FLiBe-UF$_4$",  flibe_u_nrm,  x_key, CSV_RXNS_FLIBE_U,  'U238(n,g)',   '#66b420', '-',        'o', 'full'),
+        (r"FLiBe-ThF$_4$", flibe_th_nrm, x_key, CSV_RXNS_FLIBE_TH, 'Th232(n,g)',  '#66b420', '--',  'o', 'none'),
+        (r"HCPB-UO$_2$",   hcpb_u_nrm,   x_key, CSV_RXNS_HCPB_U,   'U238(n,g)',   '#b41f24', '-',        's', 'full'),
+        (r"HCPB-ThO$_2$",  hcpb_th_nrm,  x_key, CSV_RXNS_HCPB_TH,  'Th232(n,g)',  '#b41f24', '--',  's', 'none'),
+        (r"DCLL-UO$_2$",   dcll_u_nrm,   x_key, CSV_RXNS_DCLL_U,   'U238(n,g)',   '#0047ba', '-',        '^', 'full'),
+        (r"DCLL-ThO$_2$",  dcll_th_nrm,  x_key, CSV_RXNS_DCLL_TH,  'Th232(n,g)',  '#0047ba', '--',  '^', 'none'),
     ]
     plot_compare_all(compare_cases, scale='linlog')
     plot_compare_all(compare_cases, scale='loglog')
     plot_compare_all(compare_cases, scale='linear')
 
     psi_cases = [
-        (r"FLiBe-UF$_4$",  flibe_u_nrm,  '#66b420', 'o'),
-        (r"FLiBe-ThF$_4$", flibe_th_nrm, '#66b420', '+'),
-        (r"HCPB-UO$_2$",   hcpb_u_nrm,   '#b41f24', 's'),
-        (r"HCPB-ThO$_2$",  hcpb_th_nrm,  '#b41f24', '1'),
-        (r"DCLL-UO$_2$",   dcll_u_nrm,   '#0047ba', '^'),
-        (r"DCLL-ThO$_2$",  dcll_th_nrm,  '#0047ba', 'x'),
+        (r"FLiBe-UF$_4$",  flibe_u_nrm,  '#66b420', 'o', 'full',  '-'),
+        (r"FLiBe-ThF$_4$", flibe_th_nrm, '#66b420', 'o', 'none',  '--'),
+        (r"HCPB-UO$_2$",   hcpb_u_nrm,   '#b41f24', 's', 'full',  '-'),
+        (r"HCPB-ThO$_2$",  hcpb_th_nrm,  '#b41f24', 's', 'none',  '--'),
+        (r"DCLL-UO$_2$",   dcll_u_nrm,   '#0047ba', '^', 'full',  '-'),
+        (r"DCLL-ThO$_2$",  dcll_th_nrm,  '#0047ba', '^', 'none',  '--'),
     ]
     plot_psi_vs_ieff(psi_cases, r2_min=R2_MIN)
 
