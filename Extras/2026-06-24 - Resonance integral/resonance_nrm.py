@@ -3,7 +3,7 @@
 """resonance integral-style U-238(n,gamma) test for UF4-FLiBe."""
 
 from pathlib import Path
-import os, re, sys, csv
+import argparse, os, re, sys, csv
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 import numpy as np
@@ -11,8 +11,8 @@ import openmc
 
 # NB. the / operator for path joining only works when the left side is a Path, and everything chained after that is a Path --ppark
 HERE = Path(__file__).resolve().parent
-# ROOT = Path("/Users/patrickpark/git-repos/emma-openmc")
-ROOT = Path("/home/patri/projects/emma-openmc")
+ROOT = Path("/Users/patrickpark/git-repos/emma-openmc")
+# ROOT = Path("/home/patri/projects/emma-openmc")
 DATA = ROOT / "Figures/Data"
 OUTS = HERE / "Outputs"
 
@@ -38,8 +38,6 @@ NU_BAR = {
 def nu_bar(isotope, energy_ev):
     e_tab, nu_tab = NU_BAR[isotope]
     return np.interp(energy_ev, e_tab, nu_tab, left=nu_tab[0], right=nu_tab[-1])
-
-BLANKET_COLORS = ['#66b420', '#b41f24', '#0047ba']   # FLiBe, HCPB, DCLL -- shared across all plots
 
 
 # kg U-238 per m3 of real, post-deduction FLiBe.
@@ -697,7 +695,7 @@ def read_flux_generic(flux_csv, loading=0.0, e_min=0.0, e_max=E_MAX):
     return np.array(energy), np.array(flux)
 
 
-def plot_compare_all(cases, scale='linear'):
+def plot_compare_all(cases, scale='linear', suffix=''):
     """Combined NRM and OpenMC for all blankets.
 
     scale: 'linear', 'linlog', or 'loglog'
@@ -705,20 +703,20 @@ def plot_compare_all(cases, scale='linear'):
     """
     fig, ax = plt.subplots(figsize=(3.5, 3.0))
 
-    if scale == 'linlog':
+    if scale in ('linlog', 'loglog'):
         ax.set_xscale("log")
-        ax.set_yscale("linear")
-        ax.set_xlim(10**(-1 - 0.03*5), 10**(4 + 0.03*5))
-        out = OUT_COMPARE_LINLOG
-    elif scale == 'loglog':
-        ax.set_xscale("log")
-        ax.set_yscale("log")
-        ax.set_xlim(10**(-1 - 0.03*5), 10**(4 + 0.03*5))
-        out = OUT_COMPARE_LOGLOG
+        if suffix:
+            ax.set_xlim(10**(-1 - 0.03*5), 10**(4 + 0.03*5))
+        else:
+            ax.set_xlim(10**(-1 - 0.03*4), 10**(3 + 0.03*4))
+        if scale == 'loglog':
+            ax.set_yscale("log")
+        out = OUT_COMPARE_LOGLOG if scale == 'loglog' else OUT_COMPARE_LINLOG
     else:
-        max_loading = max(LOADINGS)
+        max_loading = max(r[cases[0][2]] for c in cases for r in c[1])
         ax.set_xlim(-0.03 * max_loading, max_loading + 0.03 * max_loading)
         out = OUT_COMPARE_LINEAR
+    out = Path(str(out) + suffix)
 
     def mask_for(x, y):
         return (x > 0) & (y > 0) if scale != 'linear' else np.ones_like(x, dtype=bool)
@@ -727,9 +725,10 @@ def plot_compare_all(cases, scale='linear'):
     for label, nrm_rows, x_key, openmc_csv, ng_col, color, linestyle, mkr, fillstyle in cases:
         omc = read_openmc_generic(openmc_csv, ng_col=ng_col)
         omc_mask = mask_for(omc["x"], omc["y"])
+        ms, mew = (3.5, 0.5) if fillstyle == 'none' else (2, None)
         ax.plot(omc["x"][omc_mask], omc["y"][omc_mask],
-                marker=mkr, color=color, lw=0.75, markersize=2,
-                fillstyle=fillstyle, linestyle='none',
+                marker=mkr, color=color, lw=0.75, markersize=ms,
+                markeredgewidth=mew, fillstyle=fillstyle, linestyle='none',
                 label='_nolegend_')
 
         x_m = np.array([r[x_key] for r in nrm_rows])
@@ -742,12 +741,14 @@ def plot_compare_all(cases, scale='linear'):
 
     ax.set_xlabel(r"Fertile isotope density [kg$/$m³]")
     ax.set_ylabel(r"Fertile isotope (n,$\gamma$) rate [rxns$/$src-n]")
-    ax.set_ylim(-0.03, 1 + 0.03)
 
     ax.xaxis.set_ticks_position('both')
     ax.yaxis.set_ticks_position('both')
-    ax.yaxis.set_major_locator(MultipleLocator(0.1))
-    ax.yaxis.set_minor_locator(MultipleLocator(0.05))
+    if scale != 'loglog':
+        ax.yaxis.set_major_locator(MultipleLocator(0.1))
+        ax.yaxis.set_minor_locator(MultipleLocator(0.05))
+    if scale == 'linear' and not suffix:
+        ax.xaxis.set_minor_locator(MultipleLocator(100))
     ax.grid(axis='x', which='major', linestyle='-', linewidth=0.5)
     ax.grid(axis='y', which='major', linestyle='-', linewidth=0.5)
 
@@ -755,12 +756,21 @@ def plot_compare_all(cases, scale='linear'):
     th = [d for d in dummy_cases if d[4] == 'none']
     u  = [d for d in dummy_cases if d[4] == 'full']
     for label, color, linestyle, mkr, fillstyle in th + u:
-        ax.plot([9e8, 9e9], [9e8, 9e9], marker=mkr, color=color, markersize=2,
-                fillstyle=fillstyle, linestyle=linestyle, linewidth=0.75,
-                label=label)
+        ms, mew = (3.5, 0.5) if fillstyle == 'none' else (2, None)
+        ax.plot([9e8, 9e9], [9e8, 9e9], marker=mkr, color=color, markersize=ms,
+                markeredgewidth=mew, fillstyle=fillstyle, linestyle=linestyle,
+                linewidth=0.75, label=label)
+
+    if scale == 'loglog':
+        ax.set_ylim(10**(-5 - 0.03*5), 10**(0 + 0.03*5))
+    elif suffix:
+        ax.set_ylim(-0.03, 1 + 0.03)
+    else:
+        ax.set_ylim(-0.03 * 0.5, 0.5 + 0.03 * 0.5)
 
     fig.tight_layout()
-    leg = ax.legend(loc='lower right', fancybox=False, edgecolor='none',
+    legend_loc = 'lower right' if scale == 'loglog' else 'upper left'
+    leg = ax.legend(loc=legend_loc, fancybox=False, edgecolor='none',
                     frameon=True, framealpha=0.0, ncol=2, fontsize=6.5)
     leg.get_frame().set_linewidth(0.5)
 
@@ -823,7 +833,7 @@ def fit_power_law_progressive(x, y, r2_min=R2_MIN):
     return a, c, r2, n_used, x[n_used - 1]
 
 
-def plot_psi_vs_ieff(cases, r2_min=R2_MIN):
+def plot_psi_vs_ieff(cases, r2_min=R2_MIN, suffix=''):
     """psi vs I_eff for all blankets, log-log.
 
     cases: list of (label, nrm_rows, color, marker, fillstyle, fit_ls)
@@ -836,8 +846,10 @@ def plot_psi_vs_ieff(cases, r2_min=R2_MIN):
         i_eff = np.array([r["I_eff_b"] for r in nrm_rows])
         mask = np.isfinite(psi) & (psi > 0) & (i_eff > 0)
 
-        ax.plot(psi[mask], i_eff[mask], marker, color=color, markersize=3,
-                fillstyle=fillstyle, linestyle="none", label='_nolegend_')
+        ms, mew = (3.5, 0.5) if fillstyle == 'none' else (2, None)
+        ax.plot(psi[mask], i_eff[mask], marker, color=color, markersize=ms,
+                markeredgewidth=mew, fillstyle=fillstyle, linestyle="none",
+                label='_nolegend_')
 
         a, c, r2, n_used, psi_boundary = fit_power_law_progressive(
             psi[mask], i_eff[mask], r2_min)
@@ -863,11 +875,12 @@ def plot_psi_vs_ieff(cases, r2_min=R2_MIN):
     ax.set_ylim(10**(-1 - 0.03*2), 10**(1 + 0.03*2))
 
     for label, a, c, color, mkr, fillstyle, fit_ls in th + u:
-        ax.plot([9e8, 9e9], [9e8, 9e9], marker=mkr, color=color, markersize=3,
-                fillstyle=fillstyle, linestyle=fit_ls, linewidth=0.75,
+        ms, mew = (3.5, 0.5) if fillstyle == 'none' else (2, None)
+        ax.plot([9e8, 9e9], [9e8, 9e9], marker=mkr, color=color, markersize=ms,
+                markeredgewidth=mew, fillstyle=fillstyle, linestyle=fit_ls,
+                linewidth=0.75,
                 label=rf"{label}: ${a:.3g}\,\psi_o^{{{c:.3g}}}$")
 
-    from matplotlib.ticker import ScalarFormatter
     ax.xaxis.set_ticks_position('both')
     ax.yaxis.set_ticks_position('both')
     ax.yaxis.set_major_formatter(lambda x, _: f'{x:g}')
@@ -879,22 +892,50 @@ def plot_psi_vs_ieff(cases, r2_min=R2_MIN):
                     frameon=True, framealpha=0.0, ncol=2, fontsize=6.5)
     leg.get_frame().set_linewidth(0.5)
 
-    fig.savefig(f'{OUT_PSI_IEFF}.png', bbox_inches='tight', pad_inches=0.01, dpi=300)
-    fig.savefig(f'{OUT_PSI_IEFF}.pdf', bbox_inches='tight', pad_inches=0.01, dpi=300)
-    print(f"wrote {OUT_PSI_IEFF}")
+    out = Path(str(OUT_PSI_IEFF) + suffix)
+    fig.savefig(f'{out}.png', bbox_inches='tight', pad_inches=0.01, dpi=300)
+    fig.savefig(f'{out}.pdf', bbox_inches='tight', pad_inches=0.01, dpi=300)
+    print(f"wrote {out}")
+
+
+def filter_rows(rows, loadings):
+    loading_set = set(loadings)
+    out = [r for r in rows if r["kg_fertile_per_m3_breeder"] in loading_set]
+    missing = loading_set - {r["kg_fertile_per_m3_breeder"] for r in out}
+    if missing:
+        raise ValueError(f"loadings {sorted(missing)} not found in cached CSV")
+    return out
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--full', action='store_true',
+                        help='run/plot all loadings up to 4000 kg/m3')
+    args = parser.parse_args()
 
-    # U-238 cases
+    if args.full:
+        loadings = LOADINGS
+        suffix = '_full'
+    else:
+        loadings = [l for l in LOADINGS if l <= 1000]
+        suffix = ''
+
+    # always run with full LOADINGS so the CSV has everything
     flibe_u_nrm = read_cached_rows(OUT_CSV_FLIBE_U_NRM) or run_nrm("FLiBe (UF4)", make_flibe, LOADINGS, OUT_CSV_FLIBE_U_NRM, flux_csv=CSV_FLUX_FLIBE_U, fertile='U238', fissile='U235')
     hcpb_u_nrm  = read_cached_rows(OUT_CSV_HCPB_U_NRM)  or run_nrm("HCPB (UO2-SiC)", make_hcpb, LOADINGS, OUT_CSV_HCPB_U_NRM, flux_csv=CSV_FLUX_HCPB_U, fertile='U238', fissile='U235')
     dcll_u_nrm  = read_cached_rows(OUT_CSV_DCLL_U_NRM)  or run_nrm("DCLL (UO2-SiC)", make_dcll, LOADINGS, OUT_CSV_DCLL_U_NRM, flux_csv=CSV_FLUX_DCLL_U, fertile='U238', fissile='U235')
 
-    # Th-232 cases
     flibe_th_nrm = read_cached_rows(OUT_CSV_FLIBE_TH_NRM) or run_nrm("FLiBe (ThF4)", make_flibe_th, LOADINGS, OUT_CSV_FLIBE_TH_NRM, flux_csv=CSV_FLUX_FLIBE_TH, fertile='Th232', fissile=None)
     hcpb_th_nrm  = read_cached_rows(OUT_CSV_HCPB_TH_NRM)  or run_nrm("HCPB (ThO2-SiC)", make_hcpb_th, LOADINGS, OUT_CSV_HCPB_TH_NRM, flux_csv=CSV_FLUX_HCPB_TH, fertile='Th232', fissile=None)
     dcll_th_nrm  = read_cached_rows(OUT_CSV_DCLL_TH_NRM)  or run_nrm("DCLL (ThO2-SiC)", make_dcll_th, LOADINGS, OUT_CSV_DCLL_TH_NRM, flux_csv=CSV_FLUX_DCLL_TH, fertile='Th232', fissile=None)
+
+    # filter to desired loadings for plotting
+    flibe_u_nrm  = filter_rows(flibe_u_nrm, loadings)
+    hcpb_u_nrm   = filter_rows(hcpb_u_nrm, loadings)
+    dcll_u_nrm   = filter_rows(dcll_u_nrm, loadings)
+    flibe_th_nrm = filter_rows(flibe_th_nrm, loadings)
+    hcpb_th_nrm  = filter_rows(hcpb_th_nrm, loadings)
+    dcll_th_nrm  = filter_rows(dcll_th_nrm, loadings)
 
     x_key = "kg_fertile_per_m3_breeder"
     compare_cases = [
@@ -905,9 +946,9 @@ def main():
         (r"DCLL-UO$_2$",   dcll_u_nrm,   x_key, CSV_RXNS_DCLL_U,   'U238(n,g)',   '#0047ba', '-',        '^', 'full'),
         (r"DCLL-ThO$_2$",  dcll_th_nrm,  x_key, CSV_RXNS_DCLL_TH,  'Th232(n,g)',  '#0047ba', '--',  '^', 'none'),
     ]
-    plot_compare_all(compare_cases, scale='linlog')
-    plot_compare_all(compare_cases, scale='loglog')
-    plot_compare_all(compare_cases, scale='linear')
+    plot_compare_all(compare_cases, scale='linlog', suffix=suffix)
+    plot_compare_all(compare_cases, scale='loglog', suffix=suffix)
+    plot_compare_all(compare_cases, scale='linear', suffix=suffix)
 
     psi_cases = [
         (r"FLiBe-UF$_4$",  flibe_u_nrm,  '#66b420', 'o', 'full',  '-'),
@@ -917,7 +958,7 @@ def main():
         (r"DCLL-UO$_2$",   dcll_u_nrm,   '#0047ba', '^', 'full',  '-'),
         (r"DCLL-ThO$_2$",  dcll_th_nrm,  '#0047ba', '^', 'none',  '--'),
     ]
-    plot_psi_vs_ieff(psi_cases, r2_min=R2_MIN)
+    plot_psi_vs_ieff(psi_cases, r2_min=R2_MIN, suffix=suffix)
 
 
 if __name__ == "__main__":

@@ -21,12 +21,12 @@ class FLiBe(Reactor):
         print(self.breeder_enrich)
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
         s = f"{self.n_particles:.0e}x{self.n_cycles}".replace("+0", "").replace("+", "")
-        self.name = f"{self.run_type}_{self.blanket_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_kgm3:06.2f}kgm3_{s}"           
+        self.name = f"{self.run_type}_{self.blanket_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_kgm3:07.2f}kgm3_{s}"           
         self.path = f"./OpenMC/{self.name}"
         
         os.makedirs(self.path, exist_ok=True)
 
-        start_msg = f"\n======== {self.blanket_name} blanket - {self.fertile_isotope} {self.fertile_kgm3:6.2f} kg/m3 - {self.breeder_enrich:4.1f}%-enriched Li - {self.temp_k} K ========"
+        start_msg = f"\n======== {self.blanket_name} blanket - {self.fertile_isotope} {self.fertile_kgm3:07.2f} kg/m3 - {self.breeder_enrich:4.1f}%-enriched Li - {self.temp_k} K ========"
         print(f"{C.CYAN}{start_msg}{C.END}")
 
 
@@ -100,12 +100,12 @@ class FLiBe(Reactor):
         # Breeder material
         # ------------------------------------------------------------------
 
-        self.breeder = openmc.Material(name='breeder', temperature=self.temp_k)
-        self.breeder.set_density('g/cm3', self.breeder_density)
-        self.breeder.add_elements_from_formula('F4Li2Be', 'ao', 
-                                               enrichment_target='Li6', 
-                                               enrichment_type='ao',  # I don't know why Alex says this should be wt%. I'm deferring to the MIT papers that say 7.5 at% here. --ppark
-                                               enrichment=self.breeder_enrich)
+        flibe = openmc.Material(name='2(LiF)-BeF2', temperature=self.temp_k)
+        flibe.set_density('g/cm3', self.breeder_density)
+        flibe.add_elements_from_formula('F4Li2Be', 'ao', 
+                                        enrichment_target='Li6', 
+                                        enrichment_type='ao',  # I don't know why Alex says this should be wt%. I'm deferring to the MIT papers that say 7.5 at% here. --ppark
+                                        enrichment=self.breeder_enrich)
 
         
         # ------------------------------------------------------------------
@@ -117,7 +117,7 @@ class FLiBe(Reactor):
             self.fertile = openmc.Material(name='fertile', temperature=self.temp_k)
             self.fertile.add_elements_from_formula('UF4','ao') # 'ao' here refers to 1:4 atomic ratio of U:F in UF4
             self.fertile.set_density('g/cm3', DENSITY_UF4) 
-            xf4_x_ratio = AMU_UF4 / ((100-ENRICH_U)/100 * AMU_U)
+            xf4_x_ratio = AMU_UF4 / ((100-ENRICH_U)/100 * AMU_U238)
 
 
         elif self.fertile_isotope == 'Th232':
@@ -131,15 +131,12 @@ class FLiBe(Reactor):
         # ORNL data show mixing UF4/ThF4 in 2(LiF)-BeF2 is additive in molar volume, i.e., XF4 takes up its own volume in the mixture, up to c.1000 C.
         # cf. Cantor 73 (ORNL-TM-4308) p.19, Cantor 68 (ORNL-TM-2316) p.34
 
-        xf4_per_1m3_flibe = self.fertile_kgm3 * xf4_x_ratio / (self.fertile.density*1000)  # 1 g/cm³ = 1000 kg/m³
-        vf_xf4   = xf4_per_1m3_flibe / (1 + xf4_per_1m3_flibe)
-        vf_flibe = 1 / (1 + xf4_per_1m3_flibe)
+        vf_xf4   = self.fertile_kgm3 * xf4_x_ratio / (self.fertile.density*1000)  # 1 g/cm³ = 1000 kg/m³
+        vf_flibe = 1 - vf_xf4
 
-        # FLiBe volume = blanket volume minus XF4 volume (deduct as U/Th loading increases)
-        self.breeder_volume = self.blanket_volume * vf_flibe
-
-        self.blanket = openmc.Material.mix_materials([self.breeder, self.fertile], [vf_flibe, vf_xf4], 'vo') # fractions in 'mix_materials' MUST add up to 1
-        self.blanket.name, self.blanket.temperature = self.name, self.temp_k
+        self.blanket = openmc.Material.mix_materials([self.fertile, flibe], [vf_xf4, vf_flibe], 'vo') # fractions in 'mix_materials' MUST add up to 1
+        self.blanket.temperature = self.temp_k
+        self.blanket.name = (f"{self.fertile_kgm3:07.2f} kg/m3 | {(vf_xf4*100):.4f} vol% of nominal breeder")
 
 
         # ------------------------------------------------------------------
@@ -161,14 +158,13 @@ class FLiBe(Reactor):
             print(f"| DEBUG PRINTOUT - MATERIALS")
             print(f"| ")
             print(f"| Breeder = 2(LiF)-BeF2")
+            print(f"| Breeder vol: {self.breeder_volume:.6f} [m³] (nominal breeder volume in blanket)")
             print(f"| Blanket vol: {self.blanket_volume:.6f} [m³] (total blanket volume)")
-            print(f"| Breeder vol: {self.breeder_volume:.6f} [m³] (breeder in blanket)")
-            print(f"| XF4     vol: {(self.blanket_volume-self.breeder_volume):.6f} [m³] (XF4 in blanket)")
             print(f"| ")
-            print(f"| With respect to the BREEDER, i.e., per 1 m³ of breeder volume, we have these new volume fractions:")
-            print(f"|   vf_flibe =  {(vf_flibe*100):.6f} vol%")
+            print(f"| With respect to the NOMINAL BREEDER VOLUME, we have these new volume fractions:")
             print(f"|   vf_xf4   =  {(vf_xf4*100):.6f} vol%")
-            print(f"|   check they add up = {(vf_xf4+vf_flibe)*100:.6f} vol%")
+            print(f"|   vf_flibe =  {(vf_flibe*100):.6f} vol%")
+            # print(f"|   check they add up = {(vf_xf4+vf_flibe)*100:.6f} vol%")
             print(f"")
 
 

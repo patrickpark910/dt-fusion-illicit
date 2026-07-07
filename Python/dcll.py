@@ -19,12 +19,12 @@ class DCLL(Reactor):
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
         s = f"{self.n_particles:.0e}x{self.n_cycles}".replace("+0", "").replace("+", "")
-        self.name = f"{self.run_type}_{self.blanket_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_kgm3:06.2f}kgm3_{s}"           
+        self.name = f"{self.run_type}_{self.blanket_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_kgm3:07.2f}kgm3_{s}"           
         self.path = f"./OpenMC/{self.name}"
         
         os.makedirs(self.path, exist_ok=True)
 
-        start_msg = f"\n======== {self.blanket_name} blanket - {self.fertile_kgm3:6.2f} kg({self.fertile_isotope})/m³ - {self.breeder_enrich:4.1f} at%-enriched Li - {self.temp_k} K ========"
+        start_msg = f"\n======== {self.blanket_name} blanket - {self.fertile_kgm3:07.2f} kg({self.fertile_isotope})/m³ - {self.breeder_enrich:4.1f} at%-enriched Li - {self.temp_k} K ========"
         print(f"{C.MAGENTA}{start_msg}{C.END}")
 
 
@@ -135,7 +135,7 @@ class DCLL(Reactor):
         # Breeder material
         # ------------------------------------------------------------------
 
-        pbli = openmc.Material(name='breeder', temperature=self.temp_k)
+        pbli = openmc.Material(name='Pb-17Li', temperature=self.temp_k)
         pbli.set_density('g/cm3', DENSITY_DCLL)
         pbli.add_element('Pb', 0.83, percent_type='ao') 
         pbli.add_element('Li', 0.17, percent_type='ao', enrichment_target='Li6', enrichment_type='ao', enrichment=self.breeder_enrich) # Li-6 enrichment to 90 at% 
@@ -168,28 +168,17 @@ class DCLL(Reactor):
         # Mix blanket materials
         # ------------------------------------------------------------------
 
-        # BISO and Pb-Li volume fractions relative to BREEDER (Pb-Li)
-        vf_biso_br, vf_pbli_br, biso_per_cc_br = calc_biso_breeder_vol_fracs(self.fertile_kgm3, fertile_isotope=self.fertile_isotope)
+        # BISO and Pb-Li volume fractions relative to nominal breeder volume in blanket (Pb-Li)
+        vf_biso, vf_breeder, biso_per_cc = calc_biso_vol_fracs(self.fertile_kgm3, fertile_isotope=self.fertile_isotope)
+        checksum1 = vf_biso + vf_breeder
 
-        # New volume ratios of everyting relative to BLANKET
-        vf_biso_bl = vf_biso_br * DCLL_VF_LL_NOM
-        vf_pbli_bl = vf_pbli_br * DCLL_VF_LL_NOM
+        # New mixture that will occupy nominal breeder volume
+        breeder = openmc.Material.mix_materials([biso, pbli], [vf_biso, vf_breeder], 'vo') 
 
-        # Number of BISO spheres per cm³ of BLANKET
-        biso_per_cc_bl = vf_biso_bl / BISO_VOLUME
-
-        # Checksums
-        checksum1  = vf_biso_br + vf_pbli_br  # should equal 1
-        checksum2  = vf_biso_bl + vf_pbli_bl + DCLL_VF_FS_NOM + DCLL_VF_SI_NOM + DCLL_VF_HE_NOM  # should equal 1
-        checksum3  = vf_biso_bl + vf_pbli_bl  # should equal DCLL_VF_LL_NOM = 0.808 
-        
         # Blanket material
-        self.blanket = openmc.Material.mix_materials([biso, pbli, self.f82h, sic, he], [vf_biso_bl, vf_pbli_bl, DCLL_VF_FS_NOM, DCLL_VF_SI_NOM, DCLL_VF_HE_NOM], 'vo') 
-        # !! this should not have been set, fixed 2026-06-05 --ppark -- self.blanket.set_density('atom/b-cm', 0.03541604638)  # from Glaser et al. (2025) MCNP
+        self.blanket = openmc.Material.mix_materials([breeder, self.f82h, sic, he], [DCLL_VF_LL_NOM, DCLL_VF_FS_NOM, DCLL_VF_SI_NOM, DCLL_VF_HE_NOM], 'vo') 
         self.blanket.temperature = self.temp_k
-        self.blanket.name = (f"{self.fertile_kgm3:06.2f} kg/m3"
-                             f" | {biso_per_cc_br:.4f} spheres/cc = {(vf_biso_br*100):.4f} vol% in breeder"
-                             f" | {biso_per_cc_bl:.4f} spheres/cc = {(vf_biso_bl*100):.4f} vol% in blanket")
+        self.blanket.name = (f"{self.fertile_kgm3:07.2f} kg/m3 | {biso_per_cc:.4f} spheres/cc = {(vf_biso*100):.4f} vol% of nominal breeder")
         
 
         # ------------------------------------------------------------------
@@ -213,23 +202,12 @@ class DCLL(Reactor):
             print(f"| Breeder vol: {self.breeder_volume:.6f} [cm³] (breeder in blanket)")
             print(f"| Blanket vol: {self.blanket_volume:.6f} [cm³] (breeder + structure + coolant)")
             print(f"| ")
-            print(f"| BISO/cm³ of breeder: {biso_per_cc_br:.6f} spheres/cm³")
-            print(f"|     /cm³ of blanket: {biso_per_cc_bl:.6f} spheres/cm³")
+            print(f"| BISO/cm³ of nominal breeder: {biso_per_cc:.6f} spheres/cm³")
             print(f"| ")
-            print(f"| With respect to the BREEDER, i.e., per 1 m³ of breeder volume, we have these new volume fractions:")
-            print(f"|   vf_biso_br =  {(vf_biso_br*100):.6f} vol%")
-            print(f"|   vf_pbli_br =  {(vf_pbli_br*100):.6f} vol%")
+            print(f"| With respect to the NOMINAL BREEDER VOLUME, we have these new volume fractions:")
+            print(f"|   vf BISO    =  {(vf_biso*100):.6f} vol%")
+            print(f"|   vf Pb-17Li =  {(vf_breeder*100):.6f} vol%")
             print(f"|   check they add up = {(checksum1*100):.6f} vol%")
-            print(f"| ")
-            print(f"| With respect to the BLANKET, we have these new volume fractions:")
-            print(f"|   vf_biso_bl        =  {(vf_biso_bl*100):.6f} vol%")
-            print(f"|   vf_pbli_bl        =  {(vf_pbli_bl*100):.6f} vol%")
-            print(f"|   ferritic steel    =   {(DCLL_VF_FS_NOM*100):.6f} vol%")
-            print(f"|   silicon carbide   =   {(DCLL_VF_SI_NOM*100):.6f} vol%")
-            print(f"|   helium coolant    =   {(DCLL_VF_HE_NOM*100):.6f} vol%")
-            print(f"|   check they add up = {(checksum2*100):.6f} vol%")
-            print(f"|   check that BISO + PbLi adds up to the nominal PbLi fraction")
-            print(f"|   vf_biso_bl + vf_pbli_bl = {(checksum3*100):.6f} : DCLL_VF_LL_NOM = {(DCLL_VF_LL_NOM*100):.6f}")
             print(f"")
 
 

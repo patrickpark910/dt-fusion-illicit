@@ -163,8 +163,13 @@ HCPB_VF_BE_NOM = 0.3790  # Be (metal)
 HCPB_VF_EU_NOM = 0.1176  # Eurofer
 HCPB_VF_HE_NOM = 0.3730  # He-4 (gas)
 
+# In HCPB the "breeder" is Li4SiO4 + Be, so relative to the breeder, the Li4SiO4 and Be volume fractions are:
+HCPB_VF_BREEDER_NOM = HCPB_VF_LI_NOM + HCPB_VF_BE_NOM
+HCPB_VF_LI_IN_BREEDER_NOM = HCPB_VF_LI_NOM / HCPB_VF_BREEDER_NOM
+HCPB_VF_BE_IN_BREEDER_NOM = HCPB_VF_BE_NOM / HCPB_VF_BREEDER_NOM
+
 HCPB_BL_VOL = 520.6 # [m³] from ./OpenMC/volume_HCPB_900K_Li60.0_U000.00kgm3/volume_1.csv
-HCPB_BR_VOL = HCPB_BL_VOL * (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
+HCPB_BR_VOL = HCPB_BL_VOL * HCPB_VF_BREEDER_NOM
 
 
 HCPB_CONV_U_FPR = [ (   0.1, 0.6092),   # see wedge_data_2026-04-102.xlsx for details  

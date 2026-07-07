@@ -122,7 +122,7 @@ class Prism():
             # self.blanket.set_density('atom/b-cm', _)  # Compute from OpenMC
             self.blanket.temperature = TEMP_K
 
-            self.blanket.name = (f"{self.fertile_kgm3:06.2f} kg/m3"
+            self.blanket.name = (f"{self.fertile_kgm3:07.2f} kg/m3"
                               f" | {self.biso_per_cc_br:.4f} spheres/cc = {(self.vf_biso_br*100):.4f} vol% in breeder"
                               f" | {self.biso_per_cc_bl:.4f} spheres/cc = {(self.vf_biso_bl*100):.4f} vol% in blanket")
 

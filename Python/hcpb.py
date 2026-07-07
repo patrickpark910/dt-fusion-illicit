@@ -19,12 +19,12 @@ class HCPB(Reactor):
 
         # Name file based on reactor config - should come out to smth like: tallies_FLiBe_U010kgm3_Li7.5_900K
         s = f"{self.n_particles:.0e}x{self.n_cycles}".replace("+0", "").replace("+", "")
-        self.name = f"{self.run_type}_{self.blanket_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_kgm3:06.2f}kgm3_{s}"         
+        self.name = f"{self.run_type}_{self.blanket_name}_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_{self.fertile_isotope}_{self.fertile_kgm3:07.2f}kgm3_{s}"         
         self.path = f"./OpenMC/{self.name}"
         
         os.makedirs(self.path, exist_ok=True)
 
-        start_msg = f"\n======== {self.blanket_name} blanket - {self.fertile_kgm3:06.2f} kg({self.fertile_isotope})/m³ - {self.breeder_enrich:4.1f}at%-enriched Li - {self.temp_k} K ========"
+        start_msg = f"\n======== {self.blanket_name} blanket - {self.fertile_kgm3:07.2f} kg({self.fertile_isotope})/m³ - {self.breeder_enrich:4.1f}at%-enriched Li - {self.temp_k} K ========"
         print(f"{C.MAGENTA}{start_msg}{C.END}")
 
 
@@ -165,31 +165,18 @@ class HCPB(Reactor):
         # ------------------------------------------------------------------
 
         # BISO and (Li4SiO4 + Be) volume fractions relative to BREEDER (Li4SiO4 + Be)
-        vf_biso_br, vf_libe_br, biso_per_cc_br = calc_biso_breeder_vol_fracs(self.fertile_kgm3, fertile_isotope=self.fertile_isotope)
+        vf_biso, vf_breeder, biso_per_cc = calc_biso_vol_fracs(self.fertile_kgm3, fertile_isotope=self.fertile_isotope)
+        checksum1 = vf_biso + vf_breeder  # should equal 1
+        checksum2 = vf_biso + vf_breeder * HCPB_VF_LI_IN_BREEDER_NOM + vf_breeder * HCPB_VF_BE_IN_BREEDER_NOM  # should equal 1
 
-        # New volume ratios of everyting relative to BLANKET
-        vf_biso_bl = vf_biso_br * (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
-        vf_libe_bl = vf_libe_br * (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
-        vf_li_bl   = vf_libe_bl * HCPB_VF_LI_NOM / (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
-        vf_be_bl   = vf_libe_bl * HCPB_VF_BE_NOM / (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
+        # New mixture that will occupy nominal breeder volume
+        breeder = openmc.Material.mix_materials([biso, li4sio4, be], [vf_biso, vf_breeder * HCPB_VF_LI_IN_BREEDER_NOM, vf_breeder * HCPB_VF_BE_IN_BREEDER_NOM], 'vo') 
 
-        # Number of BISO spheres per cm³ of BLANKET
-        biso_per_cc_bl = vf_biso_bl / BISO_VOLUME
-
-        # Checksums
-        checksum1  = vf_biso_br + vf_libe_br  # should equal 1
-        checksum2  = vf_biso_bl + vf_libe_bl + HCPB_VF_EU_NOM + HCPB_VF_HE_NOM  # should equal 1
-        checksum3  = vf_biso_bl + vf_li_bl + vf_be_bl  # should equal HCPB_VF_LI_NOM + HCPB_VF_BE_NOM = 0.5094
-        
         # Blanket material
-        self.blanket = openmc.Material.mix_materials([biso,       li4sio4,  be,       self.eurofer, he], 
-                                                     [vf_biso_bl, vf_li_bl, vf_be_bl, HCPB_VF_EU_NOM, HCPB_VF_HE_NOM], 'vo') 
-        # self.blanket.set_density('atom/b-cm', _)  # Compute from OpenMC
+        self.blanket = openmc.Material.mix_materials([breeder, self.eurofer, he], [HCPB_VF_BREEDER_NOM, HCPB_VF_EU_NOM, HCPB_VF_HE_NOM], 'vo') 
         self.blanket.temperature = self.temp_k 
-        self.blanket.name = (f"{self.fertile_kgm3:06.2f} kg/m3"
-                          f" | {biso_per_cc_br:.4f} spheres/cc = {(vf_biso_br*100):.4f} vol% in breeder"
-                          f" | {biso_per_cc_bl:.4f} spheres/cc = {(vf_biso_bl*100):.4f} vol% in blanket")
-        
+        self.blanket.name = (f"{self.fertile_kgm3:07.2f} kg/m3 | {biso_per_cc:.4f} spheres/cc = {(vf_biso*100):.4f} vol% of nominal breeder")
+                
 
         # ------------------------------------------------------------------
         # Add materials 
@@ -212,24 +199,15 @@ class HCPB(Reactor):
             print(f"| Breeder vol: {self.breeder_volume:.6f} [cm³] (breeder in blanket)")
             print(f"| Blanket vol: {self.blanket_volume:.6f} [cm³] (breeder + structure + coolant)")
             print(f"| ")
-            print(f"| BISO/cm³ of breeder: {biso_per_cc_br:.6f} spheres/cm³")
-            print(f"|     /cm³ of blanket: {biso_per_cc_bl:.6f} spheres/cm³")
+            print(f"| BISO/cm³ of nominal breeder: {biso_per_cc:.6f} spheres/cm³")
             print(f"| ")
-            print(f"| With respect to the BREEDER, i.e., per 1 m³ of NOMINAL BREEDER volume, we have these new volume fractions:")
-            print(f"|   vf_biso_br =  {(vf_biso_br*100):.6f} vol%")
-            print(f"|   vf_libe_br =  {(vf_libe_br*100):.6f} vol%")
-            print(f"|   check they add up = {(checksum1*100):.6f} vol%")
-            print(f"| ")
-            print(f"| With respect to the BLANKET, we have these new volume fractions:")
-            print(f"|   vf_biso_bl        =  {(vf_biso_bl*100):.6f} vol%")
-            print(f"|   vf_li_bl          =  {(vf_li_bl*100):.6f} vol%")
-            print(f"|   vf_be_bl          =  {(vf_be_bl*100):.6f} vol%")
-            print(f"|   eurofer           =  {(HCPB_VF_EU_NOM*100):.6f} vol%")
-            print(f"|   helium gas        =   {(DCLL_VF_HE_NOM*100):.6f} vol%")
-            print(f"|   check they add up = {(checksum2*100):.6f} vol%")
-            print(f"|   check that BISO + Li4SiO4 + Be adds up to the nominal Li4SiO4 + Be fraction")
-            print(f"|     vf_biso_bl + vf_li_bl + vf_be_bl = {(checksum3*100):.6f} ")
-            print(f"|     HCPB_VF_LI_NOM + HCPB_VF_BE_NOM  = {((HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)*100):.6f}")
+            print(f"| With respect to the NOMINAL BREEDER VOLUME, we have these new volume fractions:")
+            print(f"|   vf BISO           =  {(vf_biso*100):.6f} vol%")
+            print(f"|   vf Li4SiO4 + Be   =  {(vf_breeder*100):.6f} vol%")
+            print(f"|   |    vf Li4SiO4   =  {(vf_breeder*HCPB_VF_LI_IN_BREEDER_NOM*100):.6f} vol%")
+            print(f"|   |    vf Be        =  {(vf_breeder*HCPB_VF_BE_IN_BREEDER_NOM*100):.6f} vol%")
+            print(f"|   checksum 1        =  {(checksum1*100):.6f} vol%")
+            print(f"|   checksum 2        =  {(checksum2*100):.6f} vol%")
             print(f"")
 
 

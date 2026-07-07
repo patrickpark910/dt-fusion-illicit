@@ -1215,7 +1215,7 @@ def plot_compare_all(cases, log_scale):
     ax.set_xlabel("U-238 loading [kg/m³ breeder]")
     ax.set_ylabel("U-238(n,γ) [reactions/source neutron]")
     ax.grid(True, which="both", alpha=0.35)
-    ax.legend(fontsize=6)
+    ax.legend(fontsize=6, loc='best' if log_scale else 'upper left')
     fig.tight_layout()
     fig.savefig(out, dpi=300)
     print(f"wrote {out}")

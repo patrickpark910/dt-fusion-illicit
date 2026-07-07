@@ -55,7 +55,8 @@ LAMBDA = { 1: 1.00, 2: 1.00, 3: 0.99, 4: 0.99, 5: 0.99, 6: 0.99, 7: 0.98, 8: 0.9
           181: 0.22, 182: 0.22, 183: 0.22, 184: 0.22, 185: 0.22, 186: 0.22, 187: 0.22, 188: 0.22, 189: 0.21, 190: 0.21, 191: 0.21, 192: 0.21, 193: 0.21, 194: 0.21, 195: 0.21, 196: 0.21, 197: 0.21, 198: 0.21, 199: 0.21, 200: 0.21,
           201: 0.21, 202: 0.21, 203: 0.21, 204: 0.21, 205: 0.21, 206: 0.21, 207: 0.21, 208: 0.21, 209: 0.21, 210: 0.21, 211: 0.21, 212: 0.21, 213: 0.21, 214: 0.21, 215: 0.20, 216: 0.20, 217: 0.20, 218: 0.20, 219: 0.20, 220: 0.20,
           221: 0.20, 222: 0.20, 223: 0.20, 224: 0.20, 225: 0.20, 226: 0.20, 227: 0.20, 228: 0.20, 229: 0.20, 230: 0.20, 231: 0.20, 232: 0.20, 233: 0.20, 234: 0.20, 235: 0.20, 236: 0.20, 237: 0.20, 
-          238: 0.206, # computed exactly for U-238
+          # computed exactly for U-238
+          238: 0.206, 
           239: 0.20, 240: 0.20, 241: 0.20, 242: 0.20, }
 
 
@@ -167,21 +168,24 @@ def fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope='U238'):
     """
     Converts given kg/m³ of fertile material to the number of BISO particles per cm³
 
+    BISO/cc = (g_isotope / cm³_ref) → (g_compound / cm³_ref) → (kernels / cm³_ref)
+
     Args:
-        fertile_kgm3  (float): kg of fertile isotope per m³ of breeder
+        fertile_kgm3  (float): kg of fertile isotope per m³ of nominal breeder
         fertile_isotope (str): one of ['U238', 'Th232']
 
     Returns:
-        biso_per_cc (float): number of biso particles per m³ of breeder
+        biso_per_cc (float): number of biso particles per m³ of nominal breeder
     """
     if fertile_isotope == 'U238':
-        biso_per_cc = fertile_kgm3 * AMU_UO2 / AMU_U238 / KERNEL_VOLUME / DENSITY_UO2 / 100**3 * 1000
+        x28 = (100 - ENRICH_U) / 100 # = 0.9929
+        biso_per_cc = fertile_kgm3 * AMU_UO2 / (x28 * AMU_U238) / KERNEL_VOLUME / DENSITY_UO2 / 100**3 * 1000
     elif fertile_isotope == 'Th232':
         biso_per_cc = fertile_kgm3 * AMU_ThO2 / AMU_Th232 / KERNEL_VOLUME / DENSITY_ThO2 / 100**3 * 1000
     return biso_per_cc
 
 
-def calc_biso_breeder_vol_fracs(fertile_kgm3, fertile_isotope='U238'):
+def calc_biso_vol_fracs(fertile_kgm3, fertile_isotope='U238'):
     """
     Calculate volume fractions of BISO particles and breeder material.
     Per Glaser & Goldston (2012), we assume the BISO/TRISO particles are homogenized 
@@ -189,29 +193,23 @@ def calc_biso_breeder_vol_fracs(fertile_kgm3, fertile_isotope='U238'):
     relative mass or volume fractions of fertile vs. coating material.
     
     Args:
-        fertile_kgm3  (float): kg of fertile isotope per m³ of breeder
+        fertile_kgm3  (float): kg of fertile isotope per m³ of nominal breeder
         fertile_isotope (str): one of ['U238', 'Th232']
 
     Returns:
-        vf_biso_br (float): vol frac of BISO relative to nominal breeder volume
-        vf_breeder_br (float): new vol frac of breeder relative to nominal breeder volume
-        biso_per_cc_br (float): number of BISO spheres per cm³ of breeder
+        vf_biso     (float): vol frac of BISO relative to nominal breeder volume
+        vf_breeder  (float): vol frac of background material (everything else) relative to nominal breeder volume
+        biso_per_cc (float): number of BISO spheres per cm³ of nominal breeder
     """
-    # Number of BISO spheres per cc of breeder
-    biso_per_cc     = fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope=fertile_isotope)
-    vf_biso_breeder = biso_per_cc * BISO_VOLUME
 
-    if vf_biso_breeder > 1.0:
-        print(f"Fatal. Your fertile kg/m³ exceeds what can physically fit in the breeder volume!")
-        print(f"Fatal. That is, your volume of BISO per cm³ of breeder volume exceeds 1.")
+    # Number of BISO spheres per cc of nominal breeder
+    biso_per_cc  = fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope=fertile_isotope)
+    vf_biso      = biso_per_cc * BISO_VOLUME
+    vf_breeder   = 1 - vf_biso
+
+    if vf_biso > 1.0:
+        print(f"Fatal. Your fertile kg/m³ exceeds the nominal breeder volume!")
         sys.exit()
-
-    """
-    vf_biso_breeder tells us the X cm³ of BISO per 1 cm³ of breeder material.
-    We want the volume fractions of BISO and breeder relative to the NOMINAL breeder volume, (1 + X) cm³.
-    """
-    vf_biso    = vf_biso_breeder / (vf_biso_breeder + 1)
-    vf_breeder = 1 / (vf_biso_breeder + 1)
 
     return vf_biso, vf_breeder, biso_per_cc
 
