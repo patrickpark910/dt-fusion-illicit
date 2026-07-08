@@ -185,6 +185,41 @@ def fertile_kgm3_to_biso_per_cc(fertile_kgm3, fertile_isotope='U238'):
     return biso_per_cc
 
 
+def calc_xf4_vol_fracs(fertile_kgm3, fertile_isotope='U238'):
+    """
+    Calculate volume fractions of XF4 and FLiBe breeder.
+    Per 1 m³ blanket, we deduct the volume of XF4 based on its mass density and specified kg/m³, then we compute the new volume fractions of FLiBe and XF4.
+    ORNL data show mixing UF4/ThF4 in 2(LiF)-BeF2 is additive in molar volume, i.e., XF4 takes up its own volume in the mixture, up to c.1000 C.
+    cf. Cantor 73 (ORNL-TM-4308) p.19, Cantor 68 (ORNL-TM-2316) p.34
+    
+    Args:
+        fertile_kgm3  (float): kg of fertile isotope per m³ of nominal breeder
+        fertile_isotope (str): one of ['U238', 'Th232']
+
+    Returns:
+        vf_xf4    (float): vol frac of XF4 relative to nominal breeder volume
+        vf_flibe  (float): vol frac of background material (everything else) relative to nominal breeder volume
+    """
+    # Calculate ratio of XF4 per X
+    if fertile_isotope == 'U238':
+        xf4_x_ratio = AMU_UF4 / ((100-ENRICH_U)/100 * AMU_U238)  # mass ratio
+        xf4_density = DENSITY_UF4                                # g/cm³
+    elif fertile_isotope == 'Th232':
+        xf4_x_ratio = AMU_ThF4 / AMU_Th232                       # mass ratio
+        xf4_density = DENSITY_ThF4                               # g/cm³
+    else:
+        sys.exit(f"Fatal. <utilities.py/calc_xf4_vol_fracs()> Fertile isotope not recognized!")
+
+    # Volume of XF4 and new volume of FLiBe per m³ of nominal FLiBe
+    vf_xf4   = fertile_kgm3 * xf4_x_ratio / (xf4_density*1000)   # 1 g/cm³ = 1000 kg/m³
+    vf_flibe = 1 - vf_xf4
+    
+    if vf_xf4 > 1.0:
+        sys.exit(f"Fatal. Your fertile kg/m³ exceeds the nominal breeder volume!")
+
+    return vf_xf4, vf_flibe
+
+
 def calc_biso_vol_fracs(fertile_kgm3, fertile_isotope='U238'):
     """
     Calculate volume fractions of BISO particles and breeder material.
