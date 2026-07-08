@@ -10,14 +10,6 @@ from Python.parameters import *
 from Python.utilities import *
 from Python.output import OutputMixin
 
-# Workaround: OpenMC has a bug tallying MT=4 (total inelastic) directly.
-# Instead, tally the 41 discrete-level + continuum channels (MTs 51-91)
-# individually, then collapse them in post-processing.
-# MT_INELASTIC_SCORES = [str(mt) for mt in range(51, 92)]
-MT_SCATTERING_SCORES = ['scatter', 'elastic', '(n,2n)', '(n,3n)', '(n,na)', '(n,np)']
-# instead of this let's try doing scattering - elastic - n,Xn - n,nX = inelastic
-
-
 
 class Reactor(OutputMixin, ABC):
 
@@ -71,6 +63,12 @@ class Reactor(OutputMixin, ABC):
         cell_filter         = openmc.CellFilter([cell for cell in self.cells if cell.fill is self.blanket])  # not None])  # dropping tallies on non-blanket cells for expedience --ppark 2026-07-07
         energy_filter       = openmc.EnergyFilter(logspace_per_decade(1e-3, 20e6, 100)) # './helpers/utilities.py'
                 
+        # Workaround: OpenMC has a bug tallying MT=4 (total inelastic) directly.
+        # Instead, tally the 41 discrete-level + continuum channels (MTs 51-91)
+        # individually, then collapse them in post-processing.
+        # MT_INELASTIC_SCORES = [str(mt) for mt in range(51, 92)]
+        MT_SCATTERING_SCORES = ['scatter', 'elastic', '(n,2n)', '(n,3n)', '(n,na)', '(n,np)']
+        # instead of this let's try doing scattering - elastic - n,Xn - n,nX = inelastic
 
         # ---------------------------------------------------------------
         # Flux and current tallies 
