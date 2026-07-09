@@ -28,15 +28,15 @@
       <nuclide name="V50" wo="0.0022551070895674248"/>
       <nuclide name="V51" wo="0.9177448929104326"/>
     </material>
-    <material id="6" name="0000.00 kg/m3 | 0.0000 vol% of nominal breeder" depletable="true" temperature="900">
-      <density value="1.9504999999999992" units="g/cm3"/>
-      <nuclide name="U234" ao="0.0"/>
-      <nuclide name="U235" ao="0.0"/>
-      <nuclide name="U238" ao="0.0"/>
-      <nuclide name="F19" ao="0.5714285714285714"/>
-      <nuclide name="Li6" ao="0.021428571428571425"/>
-      <nuclide name="Li7" ao="0.2642857142857143"/>
-      <nuclide name="Be9" ao="0.14285714285714285"/>
+    <material id="6" name="0000.50 kg/m3 | 0.0097 vol% of nominal breeder" depletable="true" temperature="900">
+      <density value="1.9509759603941128" units="g/cm3"/>
+      <nuclide name="U234" ao="8.273631246396709e-10"/>
+      <nuclide name="U235" ao="1.1037636944267019e-07"/>
+      <nuclide name="U238" ao="1.5210335612611781e-05"/>
+      <nuclide name="F19" ao="0.5714460817592516"/>
+      <nuclide name="Li6" ao="0.02142692983507016"/>
+      <nuclide name="Li7" ao="0.2642654679658653"/>
+      <nuclide name="Be9" ao="0.14284619890046774"/>
     </material>
   </materials>
   <geometry>
