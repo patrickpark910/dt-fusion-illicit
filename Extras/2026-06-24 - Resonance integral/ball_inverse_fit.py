@@ -7,14 +7,14 @@ import matplotlib.pyplot as plt
 def production_rate(rho, c1, c2, c3):
     return rho / (c1 * rho**2 + c2 * rho + c3)
 
-# List of your files and corresponding labels for the plot
+# List of files and corresponding labels for the plot
 datasets = [
     {'file': 'FLiBe_900K_Li07.5_U238_summary.csv', 'label': 'FLiBe (Li6 7.5%)', 'color': '#66b420'},
     {'file': 'HCPB_900K_Li60.0_U238_summary.csv',  'label': 'HCPB (Li6 60.0%)', 'color': '#b41f24'},
     {'file': 'DCLL_900K_Li90.0_U238_summary.csv',  'label': 'DCLL (Li6 90.0%)', 'color': '#0047ba'}
 ]
 
-# Constants for extracting A, B, and C (Update V to your actual blanket volume)
+# Constants for extracting A, B, and C
 M_SQ = 8.0 
 V = 1.0  
 

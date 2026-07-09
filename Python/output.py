@@ -7,41 +7,43 @@ from Python.parameters import *
 from Python.utilities import *
 
 
-# OpenMC score names for MTs 51-91 (discrete inelastic levels + continuum).
-# Used to collapse individual level tallies back into a single '(n,level)' score,
-# working around an OpenMC bug in direct MT=4 tallying.
-INELASTIC_SCORES = frozenset(
-    [f'(n,n{i})' for i in range(1, 41)] + ['(n,nc)']
-)
+# Scores subtracted from 'scatter' to derive inelastic scattering.
+# inelastic = scatter - elastic - (n,2n) - (n,3n) - (n,na) - (n,np)
+SUBTRACTION_SCORES = ['elastic', '(n,2n)', '(n,3n)', '(n,na)', '(n,np)']
 
 
-def _collapse_inelastic(df):
+def _compute_inelastic(df):
     """
-    Sum individual inelastic-level scores (MTs 51-91) into one '(n,level)' row
-    per (cell, nuclide, energy-bin) group. Propagates uncertainties in quadrature.
-    Returns the DataFrame with those rows replaced; non-inelastic rows are untouched.
+    Compute inelastic scattering by subtraction:
+    inelastic = scatter - elastic - (n,2n) - (n,3n) - (n,na) - (n,np)
+    Adds rows with score='inelastic'. Propagates uncertainties in quadrature.
+    Original rows are preserved.
     """
     if df is None:
         return None
 
-    mask = df['score'].isin(INELASTIC_SCORES)
-    if not mask.any():
+    if 'scatter' not in df['score'].values:
         return df
 
-    inel  = df[mask]
-    other = df[~mask].copy()
-
-    # Group by every column except score, mean, std. dev.
     group_cols = [c for c in df.columns if c not in ('score', 'mean', 'std. dev.')]
 
-    grouped   = inel.groupby(group_cols, sort=False)
-    collapsed = grouped['mean'].sum().reset_index()
-    collapsed['std. dev.'] = grouped['std. dev.'].apply(
-        lambda x: np.sqrt((x**2).sum())
-    ).values
-    collapsed['score'] = '(n,level)'
+    base = df[df['score'] == 'scatter'][group_cols + ['mean', 'std. dev.']].set_index(group_cols)
+    inel_mean = base['mean'].copy()
+    inel_var = (base['std. dev.'] ** 2).copy()
 
-    return pd.concat([other, collapsed], ignore_index=True)
+    for score in SUBTRACTION_SCORES:
+        sub = df[df['score'] == score]
+        if sub.empty:
+            continue
+        sub = sub[group_cols + ['mean', 'std. dev.']].set_index(group_cols)
+        inel_mean -= sub['mean'].reindex(inel_mean.index, fill_value=0.0)
+        inel_var += (sub['std. dev.'].reindex(inel_mean.index, fill_value=0.0)) ** 2
+
+    result = inel_mean.reset_index()
+    result['std. dev.'] = np.sqrt(inel_var.values)
+    result['score'] = 'inelastic'
+
+    return pd.concat([df, result], ignore_index=True)
 
 
 class OutputMixin:
@@ -115,11 +117,11 @@ class OutputMixin:
             raw['Be']      = sp.get_tally(name='Be rxn rates').get_pandas_dataframe()
             raw['Be_spec'] = sp.get_tally(name='Be rxn rates spectrum').get_pandas_dataframe()
 
-        # Collapse individual inelastic levels (MTs 51-91) into single '(n,level)' score
-        raw['fertile']      = _collapse_inelastic(raw['fertile'])
-        raw['fertile_spec'] = _collapse_inelastic(raw['fertile_spec'])
-        raw['Pb']           = _collapse_inelastic(raw['Pb'])
-        raw['Pb_spec']      = _collapse_inelastic(raw['Pb_spec'])
+        # Compute inelastic = scatter - elastic - (n,2n) - (n,3n) - (n,na) - (n,np)
+        raw['fertile']      = _compute_inelastic(raw['fertile'])
+        raw['fertile_spec'] = _compute_inelastic(raw['fertile_spec'])
+        raw['Pb']           = _compute_inelastic(raw['Pb'])
+        raw['Pb_spec']      = _compute_inelastic(raw['Pb_spec'])
 
         # Add energy-bin midpoints to all spectrum DataFrames
         for key in ['flux_spec', 'fertile_spec', 'Li_spec', 'Be_spec', 'Pb_spec']:
@@ -216,18 +218,18 @@ class OutputMixin:
         Be9_n2n_Ebin = sum_over_cells(raw['Be_spec'], 'Be9', '(n,2n)') if raw['Be_spec'] is not None else None
         Pb_n2n_Ebin  = sum_over_cells(raw['Pb_spec'], ['Pb204','Pb206','Pb207','Pb208'], '(n,2n)') if raw['Pb_spec'] is not None else None
 
-        # Fertile inelastic scattering (MT 4 -> '(n,level)') and elastic scattering ('(n,elastic)')
-        U235_inel_Ebin  = sum_over_cells(raw['fertile_spec'], 'U235',  '(n,level)')
-        U238_inel_Ebin  = sum_over_cells(raw['fertile_spec'], 'U238',  '(n,level)')
-        Th232_inel_Ebin = sum_over_cells(raw['fertile_spec'], 'Th232', '(n,level)')
+        # Fertile inelastic scattering (MT 4 -> 'inelastic') and elastic scattering ('elastic')
+        U235_inel_Ebin  = sum_over_cells(raw['fertile_spec'], 'U235',  'inelastic')
+        U238_inel_Ebin  = sum_over_cells(raw['fertile_spec'], 'U238',  'inelastic')
+        Th232_inel_Ebin = sum_over_cells(raw['fertile_spec'], 'Th232', 'inelastic')
 
-        U235_elas_Ebin  = sum_over_cells(raw['fertile_spec'], 'U235',  '(n,elastic)')
-        U238_elas_Ebin  = sum_over_cells(raw['fertile_spec'], 'U238',  '(n,elastic)')
-        Th232_elas_Ebin = sum_over_cells(raw['fertile_spec'], 'Th232', '(n,elastic)')
-        Li6_elas_Ebin   = sum_over_cells(raw['Li_spec'], 'Li6', '(n,elastic)')
-        Li7_elas_Ebin   = sum_over_cells(raw['Li_spec'], 'Li7', '(n,elastic)')
-        Be9_elas_Ebin   = sum_over_cells(raw['Be_spec'], 'Be9', '(n,elastic)') if raw['Be_spec'] is not None else None
-        Pb_elas_Ebin    = sum_over_cells(raw['Pb_spec'], ['Pb204','Pb206','Pb207','Pb208'], '(n,elastic)') if raw['Pb_spec'] is not None else None
+        U235_elas_Ebin  = sum_over_cells(raw['fertile_spec'], 'U235',  'elastic')
+        U238_elas_Ebin  = sum_over_cells(raw['fertile_spec'], 'U238',  'elastic')
+        Th232_elas_Ebin = sum_over_cells(raw['fertile_spec'], 'Th232', 'elastic')
+        Li6_elas_Ebin   = sum_over_cells(raw['Li_spec'], 'Li6', 'elastic')
+        Li7_elas_Ebin   = sum_over_cells(raw['Li_spec'], 'Li7', 'elastic')
+        Be9_elas_Ebin   = sum_over_cells(raw['Be_spec'], 'Be9', 'elastic') if raw['Be_spec'] is not None else None
+        Pb_elas_Ebin    = sum_over_cells(raw['Pb_spec'], ['Pb204','Pb206','Pb207','Pb208'], 'elastic') if raw['Pb_spec'] is not None else None
 
         rxns_df = U235_ng_Ebin[['energy low [eV]', 'energy high [eV]', 'energy mid [eV]']].copy()
 
@@ -301,7 +303,7 @@ class OutputMixin:
             Be = raw['Be']
             be9_n2n = Be[(Be['nuclide']=='Be9') & (Be['score']=='(n,2n)')][['cell','mean','std. dev.']]
             be9_list, be9_err = be9_n2n['mean'].tolist(), be9_n2n['std. dev.'].tolist()
-            be9_el = Be[(Be['nuclide']=='Be9') & (Be['score']=='(n,elastic)')][['cell','mean','std. dev.']]
+            be9_el = Be[(Be['nuclide']=='Be9') & (Be['score']=='elastic')][['cell','mean','std. dev.']]
             be9_list_el, be9_err_el = be9_el['mean'].tolist() if len(be9_el) else zeros, be9_el['std. dev.'].tolist() if len(be9_el) else zeros
             pb_list,  pb_err  = zeros, zeros
             pb_list_el, pb_err_el = zeros, zeros
@@ -309,7 +311,7 @@ class OutputMixin:
             Pb = raw['Pb']
             pb_n2n = sum_over_nuclides(Pb, '(n,2n)')
             pb_list,  pb_err  = pb_n2n['mean'].tolist(), pb_n2n['std. dev.'].tolist()
-            pb_el = sum_over_nuclides(Pb, '(n,elastic)')
+            pb_el = sum_over_nuclides(Pb, 'elastic')
             pb_list_el, pb_err_el = pb_el['mean'].tolist(), pb_el['std. dev.'].tolist()
             be9_list, be9_err = zeros, zeros
             be9_list_el, be9_err_el = zeros, zeros
@@ -318,10 +320,10 @@ class OutputMixin:
         u238_ng  = fertile[(fertile['nuclide']=='U238')  & (fertile['score']=='(n,gamma)')][['cell','mean','std. dev.']]
         th232_ng = fertile[(fertile['nuclide']=='Th232') & (fertile['score']=='(n,gamma)')][['cell','mean','std. dev.']]
 
-        # Fertile inelastic scattering (MT 4 -> '(n,level)')
-        u235_inel  = fertile[(fertile['nuclide']=='U235')  & (fertile['score']=='(n,level)')][['cell','mean','std. dev.']]
-        u238_inel  = fertile[(fertile['nuclide']=='U238')  & (fertile['score']=='(n,level)')][['cell','mean','std. dev.']]
-        th232_inel = fertile[(fertile['nuclide']=='Th232') & (fertile['score']=='(n,level)')][['cell','mean','std. dev.']]
+        # Fertile inelastic scattering (MT 4 -> 'inelastic')
+        u235_inel  = fertile[(fertile['nuclide']=='U235')  & (fertile['score']=='inelastic')][['cell','mean','std. dev.']]
+        u238_inel  = fertile[(fertile['nuclide']=='U238')  & (fertile['score']=='inelastic')][['cell','mean','std. dev.']]
+        th232_inel = fertile[(fertile['nuclide']=='Th232') & (fertile['score']=='inelastic')][['cell','mean','std. dev.']]
 
         u235_inel_list  = u235_inel['mean'].tolist()  if len(u235_inel)  else zeros
         u235_inel_err   = u235_inel['std. dev.'].tolist()  if len(u235_inel)  else zeros
@@ -331,11 +333,11 @@ class OutputMixin:
         th232_inel_err  = th232_inel['std. dev.'].tolist() if len(th232_inel) else zeros
 
         # Elastic scattering
-        u235_elas  = fertile[(fertile['nuclide']=='U235')  & (fertile['score']=='(n,elastic)')][['cell','mean','std. dev.']]
-        u238_elas  = fertile[(fertile['nuclide']=='U238')  & (fertile['score']=='(n,elastic)')][['cell','mean','std. dev.']]
-        th232_elas = fertile[(fertile['nuclide']=='Th232') & (fertile['score']=='(n,elastic)')][['cell','mean','std. dev.']]
-        li6_elas = Li[(Li['nuclide']=='Li6') & (Li['score']=='(n,elastic)')][['cell','mean','std. dev.']]
-        li7_elas = Li[(Li['nuclide']=='Li7') & (Li['score']=='(n,elastic)')][['cell','mean','std. dev.']]
+        u235_elas  = fertile[(fertile['nuclide']=='U235')  & (fertile['score']=='elastic')][['cell','mean','std. dev.']]
+        u238_elas  = fertile[(fertile['nuclide']=='U238')  & (fertile['score']=='elastic')][['cell','mean','std. dev.']]
+        th232_elas = fertile[(fertile['nuclide']=='Th232') & (fertile['score']=='elastic')][['cell','mean','std. dev.']]
+        li6_elas = Li[(Li['nuclide']=='Li6') & (Li['score']=='elastic')][['cell','mean','std. dev.']]
+        li7_elas = Li[(Li['nuclide']=='Li7') & (Li['score']=='elastic')][['cell','mean','std. dev.']]
 
         u235_elas_list  = u235_elas['mean'].tolist()       if len(u235_elas)  else zeros
         u235_elas_err   = u235_elas['std. dev.'].tolist()  if len(u235_elas)  else zeros
