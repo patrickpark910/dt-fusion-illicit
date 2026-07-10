@@ -8,12 +8,14 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 DATA = ROOT / "Figures/Data"
 
+os.chdir(ROOT)
 sys.path.insert(0, str(ROOT))
 from Python.parameters import *
 from Python.utilities  import *
 
 OUTS = HERE / "Data"
 FIGS = HERE / "Figures_NRM"
+OPENMC_DIR = HERE / "OpenMC"
 
 
 
@@ -32,7 +34,7 @@ class Prism():
         s = f"{self.n_particles:.0e}x{self.n_batches}".replace("+0", "").replace("+", "")
 
         self.name = f"dcll_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_wedge{self.case}_{self.fertile_isotope}_{self.fertile_kgm3:07.2f}kgm3_{s}"         
-        self.path = f"./OpenMC/{self.name}"
+        self.path = str(OPENMC_DIR / self.name)
 
         os.makedirs(self.path, exist_ok=True)
 
@@ -584,7 +586,7 @@ if __name__ == '__main__':
 
     import argparse
 
-    os.makedirs(f"./OpenMC/", exist_ok=True)
+    os.makedirs(OPENMC_DIR, exist_ok=True)
 
     CASES    = ['C','A'] # 
     ISOTOPES = ['U238', 'Th232'] # 

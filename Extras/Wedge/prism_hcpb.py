@@ -2,33 +2,35 @@ import os
 import sys
 import numpy as np
 import openmc
+from pathlib import Path
 
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parent.parent
 
-from prism_utilities import *
+os.chdir(ROOT)
+sys.path.insert(0, str(ROOT))
+from Python.parameters import *
+from Python.utilities  import *
+
+OPENMC_DIR = HERE / "OpenMC"
 
 
 class Prism():
 
-    def __init__(self, case, fertile_kgm3, isotope='U238', breeder_enrich=60.0, write_openmc=True, run_openmc=False,):
+    def __init__(self, case, fertile_kgm3, fertile_isotope='U238', breeder_enrich=60.0, n_particles=N_PARTICLES, n_cycles=N_CYCLES):
 
-        self.case = case
-        self.fertile_kgm3 = fertile_kgm3
-        self.fertile_str = f"{fertile_kgm3:06.2f}"
-        self.breeder_enrich = breeder_enrich
-        self.breeder_enr_str = f"{breeder_enrich:04.1f}"
-        self.isotope = isotope 
-        
-        if fertile_kgm3 <=  1:
-            self.n_particles, self.n_batches = int(4e6), 25  # = 1e8 nps
-        elif  1 < fertile_kgm3 <= 10:
-            self.n_particles, self.n_batches = int(4e5), 25  # = 1e7 nps
-        elif 10 < fertile_kgm3:
-            self.n_particles, self.n_batches = int(4e4), 25  # = 1e6 nps
-        
+        self.case            = case
+        self.fertile_kgm3    = fertile_kgm3
+        self.breeder_enrich  = breeder_enrich
+        self.fertile_isotope = fertile_isotope
+        self.temp_k          = TEMP_K
+        self.n_particles     = n_particles
+        self.n_batches       = n_cycles
+
         s = f"{self.n_particles:.0e}x{self.n_batches}".replace("+0", "").replace("+", "")
 
-        self.name = f"hcpb_Li{self.breeder_enr_str}_wedge{self.case}_{self.isotope}_{self.fertile_str}kgm3_{s}"         
-        self.path = f"./OpenMC/{self.name}"
+        self.name = f"hcpb_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_wedge{self.case}_{self.fertile_isotope}_{self.fertile_kgm3:07.2f}kgm3_{s}"
+        self.path = str(OPENMC_DIR / self.name)
 
         os.makedirs(self.path, exist_ok=True)
 
@@ -36,13 +38,13 @@ class Prism():
     def materials(self, debug=False):
 
         # Tungsten | First wall
-        self.tungsten = openmc.Material(name='firstwall', temperature=TEMP_K)
+        self.tungsten = openmc.Material(name='firstwall', temperature=self.temp_k)
         self.tungsten.set_density('g/cm3',19.0)
         self.tungsten.add_element('W',1)
         self.tungsten.depletable = False
 
         # Structure | Eurofer
-        self.eurofer = openmc.Material(name='Eurofer', temperature=TEMP_K)
+        self.eurofer = openmc.Material(name='Eurofer', temperature=self.temp_k)
         self.eurofer.depletable = False
         self.eurofer.set_density('g/cm3', 7.80)
         self.eurofer.add_element('Fe', 89.36, percent_type='wo')
@@ -62,12 +64,12 @@ class Prism():
 
         ''' Breeder material '''
         # Li4SiO4 | Tritium breeder
-        li4sio4 = openmc.Material(name='Li4SiO4', temperature=TEMP_K) 
+        li4sio4 = openmc.Material(name='Li4SiO4', temperature=self.temp_k) 
         li4sio4.set_density('g/cm3', 2.42)
         li4sio4.add_elements_from_formula('Li4SiO4', enrichment_target='Li6', enrichment_type='ao', enrichment=self.breeder_enrich)
 
         # Beryllium | Neutron multiplier
-        be = openmc.Material(name='Beryllium', temperature=TEMP_K) 
+        be = openmc.Material(name='Beryllium', temperature=self.temp_k) 
         be.set_density('g/cm3', 1.85) 
         be.add_element('Be', 1, percent_type='wo')     
         # be.add_s_alpha_beta('c_Be')  # NotImplementedError   
@@ -75,20 +77,18 @@ class Prism():
 
         ''' BISO particle '''
         # Fertile material
-        if self.isotope == 'U238':
-            self.kernel = openmc.Material(name='UO2', temperature=TEMP_K)
-            self.kernel.add_elements_from_formula('UO2')
-            self.kernel.set_density('g/cm3', DENSITY_UO2)  
-            # self.kernel.add_s_alpha_beta('c_U_in_UO2')  # NotImplementedError
-            # self.kernel.add_s_alpha_beta('c_O_in_UO2')  # NotImplementedError
+        if self.fertile_isotope == 'U238':
+            self.kernel = openmc.Material(name='UO2', temperature=self.temp_k)
+            self.kernel.add_elements_from_formula('UO2', enrichment=ENRICH_U)
+            self.kernel.set_density('g/cm3', DENSITY_UO2)
 
-        elif self.isotope == 'Th232': 
-            self.kernel = openmc.Material(name='ThO2', temperature=TEMP_K) 
-            self.kernel.add_elements_from_formula('ThO2') 
-            self.kernel.set_density('g/cm3', DENSITY_ThO2)   
+        elif self.fertile_isotope == 'Th232':
+            self.kernel = openmc.Material(name='ThO2', temperature=self.temp_k)
+            self.kernel.add_elements_from_formula('ThO2')
+            self.kernel.set_density('g/cm3', DENSITY_ThO2)
 
         # SiC coating
-        self.sic = openmc.Material(name='SiC', temperature=TEMP_K)
+        self.sic = openmc.Material(name='SiC', temperature=self.temp_k)
         self.sic.add_elements_from_formula('SiC')
         self.sic.set_density('g/cm3', 3.2)
         # self.sic.add_s_alpha_beta('c_Si_in_SiC')  # NotImplementedError
@@ -104,10 +104,10 @@ class Prism():
 
             self.blanket = openmc.Material.mix_materials([breeder, self.eurofer, he], [HCPB_VF_BREEDER_NOM, HCPB_VF_EU_NOM, HCPB_VF_HE_NOM], 'vo')
 
-            self.blanket.name = (f"{self.fertile_str} kg/m3"
+            self.blanket.name = (f"{self.fertile_kgm3:07.2f} kg/m3"
                               f" | {self.biso_per_cc_br:.4f} spheres/cc = {(self.vf_biso_br*100):.4f} vol% of nominal breeder")
             
-            self.blanket.temperature = TEMP_K
+            self.blanket.temperature = self.temp_k
 
             self.materials = openmc.Materials([self.tungsten, self.eurofer, self.blanket]) 
 
@@ -119,7 +119,7 @@ class Prism():
                                                          [self.vf_li_bl_c, self.vf_be_bl_c, self.vf_eu_bl_c, self.vf_he_bl_c], 'vo') 
 
             # self.blanket.set_density('atom/b-cm', _)  # Compute from OpenMC
-            self.blanket.temperature = TEMP_K
+            self.blanket.temperature = self.temp_k
 
             self.blanket.name = (f"{self.fertile_kgm3:07.2f} kg/m3"
                               f" | {self.biso_per_cc_br:.4f} spheres/cc = {(self.vf_biso_br*100):.4f} vol% in breeder"
@@ -404,7 +404,7 @@ class Prism():
         '''
 
         # BISO and breeder volume fractions relative to nominal breeder (Li4SiO4 + Be)
-        vf_biso_br, vf_libe_br, biso_per_cc_br = calc_biso_vol_fracs(self.fertile_kgm3, fertile_isotope=self.isotope)
+        vf_biso_br, vf_libe_br, biso_per_cc_br = calc_biso_vol_fracs(self.fertile_kgm3, fertile_isotope=self.fertile_isotope)
         checksum1 = vf_biso_br + vf_libe_br  # should equal 1
 
         # Blanket-level volume fractions
@@ -461,7 +461,7 @@ class Prism():
 
         if debug:
             print(40*f"=")
-            print(f"Case: {self.fertile_kgm3} kg/cm³ ({case})")
+            print(f"Case: {self.case}, {self.fertile_kgm3} kg/m³")
             print(f"")
             print(f"Dimensions (inboard, outboard):")
             print(f" XY face half-lengths c1, c2: {c1:.6f}, {c2:.6f} [cm]")
@@ -510,9 +510,9 @@ class Prism():
                 print(f"")
                 print(f"With respect to BISO DENSITIES:")
                 print(f"  Check these values equal:")
-                print(f"          target_total_biso = {target_total_biso}")
-                print(f"  biso_per_cc_br * vol_libe = {(biso_per_cc_br * vol_libe):.6f}")
-                print(f"        biso_per_cc_bl * Vt = {(biso_per_cc_bl * Vt):.6f}")
+                print(f"              target_total_biso = {target_total_biso}")
+                print(f"  biso_per_cc_br * VF_BR * Vt    = {(biso_per_cc_br * HCPB_VF_BREEDER_NOM * Vt):.6f}")
+                print(f"  biso_per_cc_bl * Vt            = {(biso_per_cc_bl * Vt):.6f}")
                 print(f"")
 
             print(f"Check BISO volume fraction wrt breeding region is correct:")
@@ -579,7 +579,7 @@ if __name__ == '__main__':
 
     import argparse
 
-    os.makedirs(f"./OpenMC/", exist_ok=True)
+    os.makedirs(OPENMC_DIR, exist_ok=True)
 
     CASES    = ['C', 'A']
     ISOTOPES = ['U238', 'Th232']
@@ -588,9 +588,9 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="Run Wedge OpenMC calculations")
 
-    parser.add_argument("-c", "--cases",
+    parser.add_argument("-t", "--types",
                         type=str, nargs="+", default=CASES,
-                        help=f"Specify cases, separated by space (default: {CASES})")
+                        help=f"Specify cases (t), separated by space (default: {CASES})")
 
     parser.add_argument("-i", "--isotopes",
                         type=str, nargs="+", default=ISOTOPES,
@@ -604,6 +604,14 @@ if __name__ == '__main__':
                         type=float, nargs="+", default=ENRICH,
                         help=f"Li-6 enrichment in at%% (default: {ENRICH})")
 
+    parser.add_argument("-p", "--n_particles",
+                        type=lambda x: int(float(x)), default=N_PARTICLES,
+                        help=f"Specify number of particles in integer scientific notation, e.g. 1e6")
+
+    parser.add_argument("-c", "--n_cycles",
+                        type=lambda x: int(float(x)), default=N_CYCLES,
+                        help=f"Specify number of cycles in integers, e.g. 25")
+
     parser.add_argument("--no_debug", dest="debug", action="store_false")
     parser.add_argument("--no_write", dest="write", action="store_false")
     parser.add_argument("--no_run",   dest="run",   action="store_false")
@@ -611,17 +619,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    for enrich in args.enrich:
+    for breeder_enrich in args.enrich:
         for isotope in args.isotopes:
-            for case in args.cases:
+            for case in args.types:
                 for fertile_kgm3 in args.fertile:
-                    
-                    #### TEMP FIX ####
-                    if isotope == 'U':
-                        isotope_temp_fix = 'U238'
-                    else:
-                        isotope_temp_fix = isotope
-                    #### TEMP FIX ####
-
-                    current_run = Prism(case, fertile_kgm3, isotope=isotope_temp_fix, breeder_enrich=enrich)
+                    current_run = Prism(case, fertile_kgm3, fertile_isotope=isotope, breeder_enrich=breeder_enrich, n_particles=args.n_particles, n_cycles=args.n_cycles)
                     current_run.openmc(debug=args.debug, write=args.write, run=args.run)
