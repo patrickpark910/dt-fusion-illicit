@@ -1,13 +1,13 @@
 """ Universal parameters for ALL models """
 
 # Run settings
-FERTILE_KGM3 = [0.0, 0.01, 0.10, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 1000, 2000, 3000, 4000, 4499]
+FERTILE_KGM3 = [0.0, 0.01, 0.10, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 1000, 2000, 3000, 4000]
 BLANKETS = ['FLiBe','DCLL','HCPB']
 ISOTOPES = ['U238', 'Th232']
 BLANKET_COVERAGE = 1.00 # Assume blanket covers 88% of plasma surface, rest for divertor -- removed as irrelevant for our conclusions --ppark 2026-02-11
 TEMP_K = 900 # [K] ENDF data generally has: [250, 294, 600, 900, 1200, 2500 K]
 
-N_PARTICLES, N_CYCLES = int(4e6), 25
+N_PARTICLES, N_CYCLES = int(4e5), 25
 
 # Geometry is split into 1/10 sector ... so multiply all tallies by 10x !! -- ppark 2026-05-01
 SECTOR            = 1/10        

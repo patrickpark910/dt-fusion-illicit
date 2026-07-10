@@ -18,7 +18,7 @@ from Python.parameters import *
 OUTS = HERE / "Data"
 FIGS = HERE / "Figures_NRM"
 
-LOADINGS = [0.0, 0.01, 0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 1000, 2000, 3000, 4000, 4499]
+LOADINGS = [0.0, 0.01, 0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 1000, 2000, 3000, 4000]
 R2_MIN = 0.97
 
 # OpenMC comparison data
@@ -249,7 +249,7 @@ def plot_psi_vs_ieff(cases, r2_min=R2_MIN, suffix=''):
     ax.set_yscale("log")
     ax.set_xlabel(r"$\psi_o$ [b]")
     ax.set_ylabel(r"I-eff [b]")
-    ax.set_xlim(10**(1 - 0.03*6), 10**(7 + 0.03*6))
+    ax.set_xlim(10**(1 - 0.03*6), 10**(8 + 0.03*7))
     ax.set_ylim(10**(-1 - 0.03*2), 10**(1 + 0.03*2))
 
     for label, a, c, color, mkr, fillstyle, fit_ls in th + u:

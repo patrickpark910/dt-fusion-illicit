@@ -96,7 +96,6 @@ class DCLL(Reactor):
         he.add_element('He', 1) 
 
         self.coolant = openmc.Material.mix_materials([self.f82h, he], [0.170, 0.830], 'vo')
-        self.coolant.set_density('atom/b-cm', 0.01471892350) # from Glaser et al. (2025) MCNP
         self.coolant.temperature = self.temp_k
         self.coolant.name = "coolant (17.0 vol% F82H, 83.0 vol% He-4)" 
 

@@ -2,32 +2,37 @@ import os
 import sys
 import numpy as np
 import openmc
+from pathlib import Path
 
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parent.parent
+DATA = ROOT / "Figures/Data"
 
-from prism_utilities import *
+os.chdir(ROOT)
+sys.path.insert(0, str(ROOT))
+from Python.parameters import *
+from Python.utilities  import *
+
+OUTS = HERE / "Data"
+FIGS = HERE / "Figures_NRM"
+
 
 
 class Prism():
 
-    def __init__(self, case, fertile_kgm3, isotope='U238', breeder_enrich=90.0, write_openmc=True, run_openmc=False,):
+    def __init__(self, case, fertile_kgm3, fertile_isotope='U238', breeder_enrich=90.0, n_particles=N_PARTICLES, n_cycles=N_CYCLES):
 
-        self.case = case
-        self.fertile_kgm3 = fertile_kgm3
-        self.fertile_str = f"{fertile_kgm3:06.2f}"
-        self.breeder_enrich = breeder_enrich
-        self.breeder_enr_str = f"{breeder_enrich:04.1f}"
-        self.isotope = isotope 
+        self.case            = case
+        self.fertile_kgm3    = fertile_kgm3
+        self.breeder_enrich  = breeder_enrich
+        self.fertile_isotope = fertile_isotope
+        self.temp_k          = TEMP_K
+        self.n_particles     = n_particles
+        self.n_batches       = n_cycles
 
-        if fertile_kgm3 <=  1:
-            self.n_particles, self.n_batches = int(4e6), 25  # = 1e8 nps
-        elif  1 < fertile_kgm3 <= 10:
-            self.n_particles, self.n_batches = int(4e5), 25  # = 1e7 nps
-        elif 10 < fertile_kgm3:
-            self.n_particles, self.n_batches = int(4e4), 25  # = 1e6 nps
-        
         s = f"{self.n_particles:.0e}x{self.n_batches}".replace("+0", "").replace("+", "")
 
-        self.name = f"dcll_Li{self.breeder_enr_str}_wedge{self.case}_{self.isotope}_{self.fertile_str}kgm3_{s}"         
+        self.name = f"dcll_{self.temp_k}K_Li{self.breeder_enrich:04.1f}_wedge{self.case}_{self.fertile_isotope}_{self.fertile_kgm3:07.2f}kgm3_{s}"         
         self.path = f"./OpenMC/{self.name}"
 
         os.makedirs(self.path, exist_ok=True)
@@ -35,13 +40,20 @@ class Prism():
 
     def materials(self, debug=False):
 
-        # Tungsten | First wall
-        self.firstwall = openmc.Material(name='firstwall', temperature=TEMP_K)
+        # ------------------------------------------------------------------
+        # First wall 
+        # ------------------------------------------------------------------
+
+        self.firstwall = openmc.Material(name='firstwall', temperature=self.temp_k)
         self.firstwall.set_density('g/cm3',19.3)
         self.firstwall.add_element('W',1)
+        
 
-        # F82H steel (first wall front, back + part of other structural components)
-        self.f82h = openmc.Material(name='f82h', temperature=TEMP_K)
+        # ------------------------------------------------------------------
+        # Structure - F82H steel (first wall front, back + part of other structural components)
+        # ------------------------------------------------------------------
+
+        self.f82h = openmc.Material(name='f82h', temperature=self.temp_k)
         self.f82h.add_element('Fe', 89.3686, percent_type='wo')
         self.f82h.add_element('C' ,  0.1000, percent_type='wo')
         self.f82h.add_element('Si',  0.1000, percent_type='wo')
@@ -52,79 +64,98 @@ class Prism():
         self.f82h.add_element('N' ,  0.0014, percent_type='wo')
         self.f82h.set_density('g/cm3', 7.78)
 
-        # He-4 (gas) - COOLANT
-        he = openmc.Material(name='helium') 
-        he.set_density('g/cm3', 0.004) # Helium density at 900 K ~80 bar 
+
+        # ------------------------------------------------------------------
+        # Coolant (17 vol% F82H + 83 vol% He-4)
+        # ------------------------------------------------------------------
+
+        he = openmc.Material(name='helium', temperature=self.temp_k) 
+        he.set_density('g/cm3', 0.004)
         he.add_element('He', 1) 
 
-        # Coolant 
         self.coolant = openmc.Material.mix_materials([self.f82h, he], [0.170, 0.830], 'vo')
-        # self.coolant.set_density('atom/b-cm', 0.01471892350) # from Glaser et al. (2025) MCNP
-        self.coolant.temperature = TEMP_K
+        self.coolant.temperature = self.temp_k
         self.coolant.name = "coolant (17.0 vol% F82H, 83.0 vol% He-4)" 
 
+
+        # ------------------------------------------------------------------
+        # Divider material
+        # ------------------------------------------------------------------
+        
         self.divider = openmc.Material.mix_materials([self.f82h, he], [0.512, 0.488], 'vo')
-        self.divider.temperature = TEMP_K
+        self.divider.temperature = self.temp_k
         self.divider.name        = "divider (51.2 vol% F82H, 48.8 vol% He-4)"
 
+
+        # ------------------------------------------------------------------
+        # Manifold material
+        # ------------------------------------------------------------------
+
         self.manifold = openmc.Material.mix_materials([self.f82h, he], [0.453, 0.547], 'vo')
-        self.manifold.temperature = TEMP_K
+        self.manifold.temperature = self.temp_k
         self.manifold.name        = "inner manifold (45.3 vol% F82H, 54.7 vol% He-4)"
 
+
+        # ------------------------------------------------------------------
+        # Steel shield material
+        # ------------------------------------------------------------------
+
         self.shield = openmc.Material.mix_materials([self.f82h, he], [0.80, 0.20], 'vo')
-        self.shield.temperature = TEMP_K
+        self.shield.temperature = self.temp_k
         self.shield.name = "steel shield (80 vol% F82H, 20 vol% He-4)"
 
+
+        # ------------------------------------------------------------------
         # Breeder material
-        pbli = openmc.Material(name='breeder', temperature=TEMP_K)
+        # ------------------------------------------------------------------
+
+        pbli = openmc.Material(name='Pb-17Li', temperature=self.temp_k)
         pbli.set_density('g/cm3', DENSITY_DCLL)
         pbli.add_element('Pb', 0.83, percent_type='ao') 
         pbli.add_element('Li', 0.17, percent_type='ao', enrichment_target='Li6', enrichment_type='ao', enrichment=self.breeder_enrich) # Li-6 enrichment to 90 at% 
 
-        # Fertile material
-        if self.isotope == 'U238':
-            self.kernel = openmc.Material(name='UO2', temperature=TEMP_K)
-            self.kernel.add_elements_from_formula('UO2')
+
+        # ------------------------------------------------------------------
+        # Fertile material - BISO Particle
+        # ------------------------------------------------------------------
+
+        if self.fertile_isotope == 'U238':
+            self.kernel = openmc.Material(name='UO2', temperature=self.temp_k)
+            self.kernel.add_elements_from_formula('UO2', enrichment=ENRICH_U)
             self.kernel.set_density('g/cm3', DENSITY_UO2)  
 
-        elif self.isotope == 'Th232': 
-            self.kernel = openmc.Material(name='ThO2', temperature=TEMP_K) 
+        elif self.fertile_isotope == 'Th232': 
+            self.kernel = openmc.Material(name='ThO2', temperature=self.temp_k) 
             self.kernel.add_elements_from_formula('ThO2') 
-            self.kernel.set_density('g/cm3', DENSITY_ThO2)   
+            self.kernel.set_density('g/cm3', DENSITY_ThO2) 
 
         # SiC coating
-        self.sic = openmc.Material(name='SiC', temperature=TEMP_K)
+        self.sic = openmc.Material(name='SiC', temperature=self.temp_k)
         self.sic.add_elements_from_formula('SiC')
         self.sic.set_density('g/cm3', 3.2)
 
-        if case == 'A': # homogeneous 
+        if self.case == 'A': # homogeneous
+
+            biso = openmc.Material.mix_materials([self.kernel, self.sic], [BISO_KERNEL_VOL_FRAC, BISO_COAT_VOL_FRAC], 'vo') 
+
+            # New mixture that will occupy nominal breeder volume
+            breeder = openmc.Material.mix_materials([biso, pbli], [self.vf_biso_br, self.vf_pbli_br], 'vo') 
+
+            # Blanket material
+            self.blanket = openmc.Material.mix_materials([breeder, self.f82h, self.sic, he], [DCLL_VF_LL_NOM, DCLL_VF_FS_NOM, DCLL_VF_SI_NOM, DCLL_VF_HE_NOM], 'vo') 
+            self.blanket.temperature = self.temp_k
+            self.blanket.name = (f"{self.fertile_kgm3:07.2f} kg/m3 | {self.biso_per_cc:.4f} spheres/cc = {(self.vf_biso_br*100):.4f} vol% of nominal breeder")
+
+            self.materials = openmc.Materials([self.firstwall, self.f82h, self.coolant, self.blanket, self.divider, self.manifold, self.shield])
+
+
+        elif self.case in ['B','C']:
+
+            self.blanket = openmc.Material.mix_materials([pbli,            self.f82h,       self.sic,        he], 
+                                                         [self.vf_ll_bl_c, self.vf_fs_bl_c, self.vf_si_bl_c, self.vf_he_bl_c], 'vo')
             
-            biso = openmc.Material.mix_materials([self.kernel, self.sic], [KERNEL_VOLUME/BISO_VOLUME, (1-(KERNEL_VOLUME/BISO_VOLUME))], 'vo') 
-            
-            self.blanket = openmc.Material.mix_materials([biso,            pbli,            self.f82h,      self.sic,       he], 
-                                                         [self.vf_biso_bl, self.vf_pbli_bl, DCLL_VF_FS_NOM, DCLL_VF_SI_NOM, DCLL_VF_HE_NOM], 
-                                                         'vo') 
-            
-            self.blanket.name = (f"{self.fertile_str} kg/m3"
-                              f" | {self.biso_per_cc_br:.4f} spheres/cc = {(self.vf_biso_br*100):.4f} vol% in breeder volume"
-                              f" | {self.biso_per_cc_bl:.4f} spheres/cc = {(self.vf_biso_bl*100):.4f} vol% in breeding region")
-
-            self.blanket.temperature = TEMP_K
-
-            self.materials = openmc.Materials([self.manifold, self.blanket, self.divider, self.f82h, self.coolant, self.firstwall, self.shield])
-
-
-        elif case in ['B','C']:
-
-            self.blanket = openmc.Material.mix_materials([pbli,              self.f82h,       self.sic,        he], 
-                                                         [self.vf_pbli_bl_c, self.vf_fs_bl_c, self.vf_si_bl_c, self.vf_he_bl_c], 'vo')
-            
-            self.blanket.name = (f"{self.fertile_kgm3:07.2f} kg/m3"
-                              f" | {self.biso_per_cc_br:.4f} spheres/cc = {(self.vf_biso_br*100):.4f} vol% in breeder"
-                              f" | {self.biso_per_cc_bl:.4f} spheres/cc = {(self.vf_biso_bl*100):.4f} vol% in blanket")
-
-            self.blanket.temperature = TEMP_K
-
+            self.blanket.name = (f"{self.fertile_kgm3:07.2f} kg/m3 | {self.biso_per_cc:.4f} spheres/cc = {(self.vf_biso_br*100):.4f} vol% in breeder")
+            self.blanket.temperature = self.temp_k
 
             self.materials = openmc.Materials([self.manifold, self.blanket, self.kernel, self.sic, self.divider, self.f82h, self.coolant, self.firstwall, self.shield])
 
@@ -148,33 +179,33 @@ class Prism():
         s124 = openmc.YPlane(surface_id=124, y0= +self.geom['c_out'], boundary_type="reflective")
 
         # Z-planes - inboard 
-        s130 = openmc.ZPlane(surface_id=130, z0=  -0.00, boundary_type="vacuum")  # 0.0 cm - inboard - vacuum-shield boundary
-        s131 = openmc.ZPlane(surface_id=131, z0=   20.00)   #   20.0 cm - inboard - shield-back plate boundary
-        s132 = openmc.ZPlane(surface_id=132, z0=  21.5)     #   21.5 cm - inboard - back plate-manifold boundary 
-        s133 = openmc.ZPlane(surface_id=133, z0=  29.5)     #   29.5 cm - inboard - manifold-breeding region 1 boundary 
-        s134 = openmc.ZPlane(surface_id=134, z0=  50.5)     #   50.5 cm - inboard - breeding region 1-divider boundary 
-        s135 = openmc.ZPlane(surface_id=135, z0= 53.7)      #   53.7 cm - inboard - divider-breeding region 2 boundary
-        s136 = openmc.ZPlane(surface_id=136, z0= 74.7)      #   74.7 cm - inbodard - breeding region 2 - first wall back boundary 
-        s137 = openmc.ZPlane(surface_id=137, z0= 75.1)      #   75.1 cm - inboard - first wall back-coolant boundary 
-        s138 = openmc.ZPlane(surface_id=138, z0= 77.1)      #   77.1 cm - inboard - coolant-first wall front boundary 
-        s139 = openmc.ZPlane(surface_id=139, z0= 77.5)      #   77.5 cm - inboard - first wall front-tungsten boundary 
+        s130 = openmc.ZPlane(surface_id=130, z0=  0.0, boundary_type="vacuum")  # 0.0 cm - inboard - vacuum-shield boundary
+        s131 = openmc.ZPlane(surface_id=131, z0= 20.0)   #   20.0 cm - inboard - shield-back plate boundary
+        s132 = openmc.ZPlane(surface_id=132, z0= 21.5)   #   21.5 cm - inboard - back plate-manifold boundary 
+        s133 = openmc.ZPlane(surface_id=133, z0= 29.5)   #   29.5 cm - inboard - manifold-breeding region 1 boundary 
+        s134 = openmc.ZPlane(surface_id=134, z0= 50.5)   #   50.5 cm - inboard - breeding region 1-divider boundary 
+        s135 = openmc.ZPlane(surface_id=135, z0= 53.7)   #   53.7 cm - inboard - divider-breeding region 2 boundary
+        s136 = openmc.ZPlane(surface_id=136, z0= 74.7)   #   74.7 cm - inbodard - breeding region 2 - first wall back boundary 
+        s137 = openmc.ZPlane(surface_id=137, z0= 75.1)   #   75.1 cm - inboard - first wall back-coolant boundary 
+        s138 = openmc.ZPlane(surface_id=138, z0= 77.1)   #   77.1 cm - inboard - coolant-first wall front boundary 
+        s139 = openmc.ZPlane(surface_id=139, z0= 77.5)   #   77.5 cm - inboard - first wall front-tungsten boundary 
 
         # Z-planes - plasma chamber
-        s140 = openmc.ZPlane(surface_id=140, z0= 77.7)      #   77.7 cm - inboard - tungsten - plasma chamber boundary 
-        s141 = openmc.ZPlane(surface_id=141, z0= 477.7)     #   477.7 cm - outboard - plasma chamber-tungsten boundary 
+        s140 = openmc.ZPlane(surface_id=140, z0=  77.7)  #   77.7 cm - inboard - tungsten - plasma chamber boundary 
+        s141 = openmc.ZPlane(surface_id=141, z0= 477.7)  #   477.7 cm - outboard - plasma chamber-tungsten boundary 
 
         # Z-planes - outboard
-        s150 = openmc.ZPlane(surface_id=150, z0= 477.9)     #   477.9 cm - outboard - tungsten-first wall front boundary
-        s151 = openmc.ZPlane(surface_id=151, z0= 478.3)     #   478.3 cm - outboard - first wall front-coolant boundary
-        s152 = openmc.ZPlane(surface_id=152, z0= 480.3)     #   480.3 cm - outboard - coolant-first wall back boundary
-        s153 = openmc.ZPlane(surface_id=153, z0= 480.7)     #   480.7 cm - outboard - first wall back-breeding region 1 boundary
-        s154 = openmc.ZPlane(surface_id=154, z0= 501.7)     #   501.7 cm - outboard - breeding region 1-divider 1 boundary
-        s155 = openmc.ZPlane(surface_id=155, z0= 504.9)     #   504.9 cm - outboard - divider 1-breeding region 2 boundary
-        s156 = openmc.ZPlane(surface_id=156, z0= 525.9)     #   525.9 cm - outboard - breeding region 2-divider 2 boundary
-        s157 = openmc.ZPlane(surface_id=157, z0= 529.1)     #   529.1 cm - outboard - divider 2-breeding region 3 boundary
-        s158 = openmc.ZPlane(surface_id=158, z0= 550.1)     #   550.1 cm - outboard - breeding region 3-manifold boundary
-        s159 = openmc.ZPlane(surface_id=159, z0= 558.1)     #   558.1 cm - outboard - manifold-back plate boundary
-        s160 = openmc.ZPlane(surface_id=160, z0= 559.6)     #   559.6 cm - outboard - back plate-shield boundary
+        s150 = openmc.ZPlane(surface_id=150, z0= 477.9)  #   477.9 cm - outboard - tungsten-first wall front boundary
+        s151 = openmc.ZPlane(surface_id=151, z0= 478.3)  #   478.3 cm - outboard - first wall front-coolant boundary
+        s152 = openmc.ZPlane(surface_id=152, z0= 480.3)  #   480.3 cm - outboard - coolant-first wall back boundary
+        s153 = openmc.ZPlane(surface_id=153, z0= 480.7)  #   480.7 cm - outboard - first wall back-breeding region 1 boundary
+        s154 = openmc.ZPlane(surface_id=154, z0= 501.7)  #   501.7 cm - outboard - breeding region 1-divider 1 boundary
+        s155 = openmc.ZPlane(surface_id=155, z0= 504.9)  #   504.9 cm - outboard - divider 1-breeding region 2 boundary
+        s156 = openmc.ZPlane(surface_id=156, z0= 525.9)  #   525.9 cm - outboard - breeding region 2-divider 2 boundary
+        s157 = openmc.ZPlane(surface_id=157, z0= 529.1)  #   529.1 cm - outboard - divider 2-breeding region 3 boundary
+        s158 = openmc.ZPlane(surface_id=158, z0= 550.1)  #   550.1 cm - outboard - breeding region 3-manifold boundary
+        s159 = openmc.ZPlane(surface_id=159, z0= 558.1)  #   558.1 cm - outboard - manifold-back plate boundary
+        s160 = openmc.ZPlane(surface_id=160, z0= 559.6)  #   559.6 cm - outboard - back plate-shield boundary
         s161 = openmc.ZPlane(surface_id=161, z0= 579.6, boundary_type='vacuum')     #   579.6 cm - outboard - shield-vacuum boundary
 
         # Plasma chamber boundaries
@@ -222,7 +253,7 @@ class Prism():
         c40 = openmc.Cell(cell_id=40, region= +s113 & -s114 & +s123 & -s124 & +s159 & -s160, fill=self.f82h) # plate
         c41 = openmc.Cell(cell_id=41, region= +s113 & -s114 & +s123 & -s124 & +s160 & -s161, fill=self.shield) # shield
 
-        if case in ['A']:
+        if self.case in ['A']:
             # inboard 
             c23 = openmc.Cell(cell_id=23, region= +s111 & -s112 & +s121 & -s122 & +s133 & -s134, fill=self.blanket)
             c25 = openmc.Cell(cell_id=25, region= +s111 & -s112 & +s121 & -s122 & +s135 & -s136, fill=self.blanket)
@@ -232,7 +263,7 @@ class Prism():
             c36 = openmc.Cell(cell_id=36, region= +s113 & -s114 & +s123 & -s124 & +s155 & -s156, fill=self.blanket)
             c38 = openmc.Cell(cell_id=38, region= +s113 & -s114 & +s123 & -s124 & +s157 & -s158, fill=self.blanket)
         
-        elif case in ['B', 'C']:
+        elif self.case in ['B', 'C']:
             # Common setup for B and C: Define the BISO Universe
             # inboard 
             c23 = openmc.Cell(cell_id=23, region= +s111 & -s112 & +s121 & -s122 & +s133 & -s134)
@@ -261,7 +292,7 @@ class Prism():
             pitch_out_36 = (ur_out_36 - ll_out_36) / self.geom['shape_out_per']
             pitch_out_38 = (ur_out_38 - ll_out_38) / self.geom['shape_out_per']
 
-            if case == 'B': # Random packing
+            if self.case == 'B': # Random packing
                 # -- NB. 'pack_spheres' returns a list of coordinates, not cell instances
                 r23 = +s111 & -s112 & +s121 & -s122 & +s133 & -s134
                 r25 = +s111 & -s112 & +s121 & -s122 & +s135 & -s136
@@ -292,7 +323,7 @@ class Prism():
                 c36.fill = openmc.model.create_triso_lattice(biso_out_36, ll_out_36, pitch_out_36, self.geom['shape_out_per'], self.blanket)
                 c38.fill = openmc.model.create_triso_lattice(biso_out_38, ll_out_38, pitch_out_38, self.geom['shape_out_per'], self.blanket)
 
-            elif case == 'C':
+            elif self.case == 'C':
                 # Rectangular lattice
                 centers_23  = lattice_coords(ll_in_23, self.geom['shape_in_per'], pitch_in_23)
                 centers_25  = lattice_coords(ll_in_25, self.geom['shape_in_per'], pitch_in_25)
@@ -335,58 +366,28 @@ class Prism():
 
     def tallies(self, debug=False):
 
-        self.tallies = openmc.Tallies() # initialize
-        cell_filter = openmc.CellFilter([cell for cell in self.cells if cell.fill is not None])
+        self.tallies  = openmc.Tallies() # initialize
+        cell_filter   = openmc.CellFilter([23, 25, 34, 36, 38]) # blanket cells
         energy_filter = openmc.EnergyFilter(logspace_per_decade(1e-5, 20e6, 100)) # './helpers/utilities.py'
-
-        # Depth mesh through outboard breeding region
-        # z = 480.7 cm (s153) to 550.1 cm (s158)
-        N_DEPTH_BINS = round(550.1 - 480.7)  # 1 bin per cm
-        depth_mesh = openmc.RegularMesh(mesh_id=100)
-        depth_mesh.dimension = [1, 1, N_DEPTH_BINS]
-        depth_mesh.lower_left  = [-self.geom['c_out'], -self.geom['c_out'], 480.7]
-        depth_mesh.upper_right = [+self.geom['c_out'], +self.geom['c_out'], 550.1]
-        depth_mesh_filter = openmc.MeshFilter(depth_mesh)
 
         # Flux tally 
         flux_tally        = self.make_tally('flux', ['flux'], filters=[cell_filter])
         flux_tally_energy = self.make_tally('flux spectrum', ['flux'], filters=[cell_filter, energy_filter])
 
         # Fertile element reaction rates
-        fertile_tally_tot    = self.make_tally(f'Fertile rxn rates total',    ['(n,gamma)', 'fission', 'nu-fission', '(n,2n)'], nuclides=['U238', 'U235', 'Th232'])
         fertile_tally        = self.make_tally(f'Fertile rxn rates by cell',  ['(n,gamma)', 'fission', 'nu-fission', '(n,2n)'], nuclides=['U238', 'U235', 'Th232'], filters=[cell_filter])
         fertile_tally_energy = self.make_tally(f'Fertile rxn rates spectrum', ['(n,gamma)', 'fission', 'nu-fission', '(n,2n)'], nuclides=['U238', 'U235', 'Th232'], filters=[cell_filter, energy_filter])
 
         # Lithium reaction rates
-        Li_tally_tot    = self.make_tally('Li rxn rates total',    ['(n,Xt)', '(n,gamma)'])
         Li_tally        = self.make_tally('Li rxn rates by cell',  ['(n,Xt)', '(n,gamma)'], nuclides=['Li6', 'Li7'], filters=[cell_filter])
         Li_tally_energy = self.make_tally('Li rxn rates spectrum', ['(n,Xt)', '(n,gamma)'], nuclides=['Li6', 'Li7'], filters=[cell_filter, energy_filter])
-
-        # Multiplier reaction rates
-        n2n_tally_tot    = self.make_tally('(n,2n) rxn rates total',    ['(n,2n)']) 
-        n2n_tally        = self.make_tally('(n,2n) rxn rates by cell',  ['(n,2n)'], filters=[cell_filter]) 
-        n2n_tally_energy = self.make_tally('(n,2n) rxn rates spectrum', ['(n,2n)'], filters=[cell_filter, energy_filter])
-        Pb_tally_tot    = self.make_tally('Pb rxn rates total',    ['(n,2n)', '(n,gamma)'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208']) # otherwise will count all (n,2n) reactions
-        Pb_tally        = self.make_tally('Pb rxn rates by cell',  ['(n,2n)', '(n,gamma)'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[cell_filter])
-        Pb_tally_energy = self.make_tally('Pb rxn rates spectrum', ['(n,2n)', '(n,gamma)'], nuclides=['Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[cell_filter, energy_filter])
 
         # k-infinite tally
         kinf_tally = self.make_tally('k-inf by cell', ['nu-fission', '(n,2n)', '(n,3n)', 'absorption'], filters=[cell_filter])
 
-        # Depth tallies
-        depth_ngamma_tot        = self.make_tally('Reactions per depth',                ['(n,gamma)','fission','nu-fission','(n,2n)','(n,Xt)'], filters=[depth_mesh_filter])
-        depth_ngamma_tot_energy = self.make_tally('Reactions per depth-energy',         ['(n,gamma)','fission','nu-fission','(n,2n)','(n,Xt)'], filters=[depth_mesh_filter, energy_filter])
-        depth_ngamma            = self.make_tally('Reactions per nuclide-depth',        ['(n,gamma)','nu-fission','(n,2n)','(n,Xt)'],           nuclides=['U238', 'U235', 'Th232', 'Li6', 'Li7', 'Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[depth_mesh_filter])
-        depth_ngamma_energy     = self.make_tally('Reactions per nuclide-energy-depth', ['(n,gamma)','fission','nu-fission','(n,2n)','(n,Xt)'], nuclides=['U238', 'U235', 'Th232', 'Li6', 'Li7', 'Pb204', 'Pb206', 'Pb207', 'Pb208'], filters=[depth_mesh_filter, energy_filter])
-
-        depth_flux_energy = self.make_tally('Flux spectrum per depth', ['flux'], filters=[depth_mesh_filter, energy_filter])
-
         # Put in order you want it to print in... recommend fertile_tally's first
-        self.tallies.extend([fertile_tally_tot, Li_tally_tot, Pb_tally_tot, n2n_tally_tot, 
-                             fertile_tally, Li_tally, Pb_tally, n2n_tally, flux_tally, kinf_tally,
-                             fertile_tally_energy, flux_tally_energy, Li_tally_energy, Pb_tally_energy, n2n_tally_energy,
-                             depth_ngamma_tot, depth_ngamma_tot_energy, depth_ngamma, depth_ngamma_energy,
-                             depth_flux_energy])
+        self.tallies.extend([fertile_tally, Li_tally, flux_tally, kinf_tally,
+                             fertile_tally_energy, Li_tally_energy, flux_tally_energy, ])
 
     def make_tally(self, name, scores, filters:list=None, nuclides:list=None):
         tally = openmc.Tally(name=name)
@@ -403,9 +404,6 @@ class Prism():
         # 14-MeV point source at center of plasma chamber
         source = openmc.IndependentSource()
         source.space = openmc.stats.Point((0,0,277.7))                                                           
-        # source.space = openmc.stats.CartesianIndependent(x=openmc.stats.Uniform(a= -self.geom['c_in'], b= +self.geom['c_in']),
-        #                                                  y=openmc.stats.Uniform(a= -self.geom['c_in'], b= +self.geom['c_in']),
-        #                                                  z=openmc.stats.Discrete([277.7], [1.0]) )
         source.particle = 'neutron'
         source.energy   = openmc.stats.Discrete([14.1e6], [1.0])  # 14 MeV
         
@@ -435,8 +433,7 @@ class Prism():
 
     def prism_helpers(self, debug=False):
 
-        fertile_kgm3 = self.fertile_kgm3
-        target_total_biso = 16096 # maybe change, maybe it's not 2012 particles. 
+        target_total_biso = 16096 
 
         # N_in/N_out = breeder_length_in/breeder_length_out * f1/f2
         N_in, N_out = 4800, 11250     # proportional to volume
@@ -453,26 +450,23 @@ class Prism():
         thickness_out = 3 * thickness_per
 
         # Volume fractions of BISO and Pb-17Li relative to the nominal Pb-17Li volume
-        vf_biso_br, vf_pbli_br, biso_per_cc_br = calc_biso_breeder_vol_fracs(fertile_kgm3)
-        checksum1 = vf_biso_br + vf_pbli_br  # should equal 1
+        vf_biso_br, vf_pbli_br, biso_per_cc_br = calc_biso_vol_fracs(self.fertile_kgm3, fertile_isotope=self.fertile_isotope)
         
-        # Volume fractions of BISO and Pb-17Li relative to physical blanket volume
+        # Volume fractions of BISO and Pb-17Li relative to blanket volume
         vf_biso_bl = vf_biso_br * DCLL_VF_LL_NOM
         vf_pbli_bl = vf_pbli_br * DCLL_VF_LL_NOM
-        checksum2  = vf_biso_bl + vf_pbli_bl + DCLL_VF_FS_NOM + DCLL_VF_SI_NOM + DCLL_VF_HE_NOM  # should equal 1 
 
         # Number of BISO spheres per cc of physical blanket volume
         biso_per_cc_bl = vf_biso_bl / BISO_VOLUME 
 
         """
-        For case C, the BISO isn't being mixed into self.blanket's materials, 
-        so we renormalize the Pb-17Li, Eurofer, SiC, He volume fractions by themselves
-        """  
-        vf_pbli_bl_c = vf_pbli_bl     / (vf_pbli_bl + DCLL_VF_FS_NOM + DCLL_VF_SI_NOM + DCLL_VF_HE_NOM)
-        vf_fs_bl_c   = DCLL_VF_FS_NOM / (vf_pbli_bl + DCLL_VF_FS_NOM + DCLL_VF_SI_NOM + DCLL_VF_HE_NOM)
-        vf_si_bl_c   = DCLL_VF_SI_NOM / (vf_pbli_bl + DCLL_VF_FS_NOM + DCLL_VF_SI_NOM + DCLL_VF_HE_NOM)
-        vf_he_bl_c   = DCLL_VF_HE_NOM / (vf_pbli_bl + DCLL_VF_FS_NOM + DCLL_VF_SI_NOM + DCLL_VF_HE_NOM)
-        checksum3    = vf_pbli_bl_c + vf_fs_bl_c + vf_si_bl_c + vf_he_bl_c  # should equal 1 
+        New blanket volume fractions for case C
+        """
+        # We add BISO and deduct from Pb-17Li volume, but keep the other volume fractions in the blanket the same
+        vf_ll_bl_c = vf_pbli_bl     / (vf_pbli_bl + DCLL_VF_FS_NOM + DCLL_VF_SI_NOM + DCLL_VF_HE_NOM)
+        vf_fs_bl_c = DCLL_VF_FS_NOM / (vf_pbli_bl + DCLL_VF_FS_NOM + DCLL_VF_SI_NOM + DCLL_VF_HE_NOM)
+        vf_si_bl_c = DCLL_VF_SI_NOM / (vf_pbli_bl + DCLL_VF_FS_NOM + DCLL_VF_SI_NOM + DCLL_VF_HE_NOM)
+        vf_he_bl_c = DCLL_VF_HE_NOM / (vf_pbli_bl + DCLL_VF_FS_NOM + DCLL_VF_SI_NOM + DCLL_VF_HE_NOM)
 
         # Can now calculate remainder of geometric parameters
         A_ref = target_total_biso / biso_per_cc_bl / (thickness_in + thickness_out) 
@@ -481,24 +475,24 @@ class Prism():
         b_in, b_out = np.round(np.sqrt(A_in), 6), np.round(np.sqrt(A_out), 6)  # face lengths
         c_in, c_out = b_in/2, b_out/2  # face HALF-lengths
 
-        V_in, V_in_per = A_in * thickness_in, A_in * thickness_per
-        V_out, V_out_per = A_out * thickness_out, A_out * thickness_per # volumes of breeding regions
+        V_in  = A_in * thickness_in
+        V_out = A_out * thickness_out  # volumes of breeding regions
         Vt = V_in + V_out
 
         """
         Checksums by scaling to real volumes in the model
         """
-        vol_biso = target_total_biso * BISO_VOLUME
-        vol_pbli = vf_pbli_bl_c * (Vt - vol_biso)
-        vol_fs   =   vf_fs_bl_c * (Vt - vol_biso)
-        vol_si   =   vf_si_bl_c * (Vt - vol_biso)
-        vol_he   =   vf_he_bl_c * (Vt - vol_biso)
+        vol_biso  = target_total_biso * BISO_VOLUME
+        vol_pbli  =   vf_ll_bl_c * (Vt - vol_biso)
+        vol_fs    =   vf_fs_bl_c * (Vt - vol_biso)
+        vol_si    =   vf_si_bl_c * (Vt - vol_biso)
+        vol_he    =   vf_he_bl_c * (Vt - vol_biso)
         checksum4 = vol_biso + vol_pbli + vol_fs + vol_si + vol_he
 
         if debug:
             print(40*f"=")
             print(f"{self.name}")
-            print(f"Case: {self.fertile_kgm3} kg/cm³ ({case})")
+            print(f"Case: {self.case}, {self.fertile_kgm3} kg/m³")
             print(f"")
             print(f"Dimensions (inboard, outboard):")
             print(f" XY face half-lengths c1, c2: {c_in:.6f}, {c_out:.6f} [cm]")
@@ -513,26 +507,9 @@ class Prism():
             print(f"")
             print(f"Per 1 cm³ of Pb-17Li, we have: {(biso_per_cc_br * BISO_VOLUME):.6f} cm³ of BISO")
             print(f"")
-            print(f"With respect to the whole BLANKET, we have these volume fractions:")
-            print(f"  vf_biso_bl =  {(vf_biso_bl*100):.6f} [vol%]")
-            print(f"  vf_pbli_bl =  {(vf_pbli_bl*100):.6f} [vol%]")
-            print(f"  vf_fs_bl   =  {(DCLL_VF_FS_NOM*100):.6f} [vol%]")
-            print(f"  vf_si_bl   =  {(DCLL_VF_SI_NOM*100):.6f} [vol%]")
-            print(f"  vf_he_bl   =  {(DCLL_VF_HE_NOM*100):.6f} [vol%]")
-            print(f"  checksum   =  {(checksum2*100):.6f} [vol%]")
-            print(f"  check that BISO + Pb-17Li adds up to the nominal Pb-17Li fraction")
-            print(f"  vf_biso_bl + vf_pbli_bl = {((vf_biso_bl+vf_pbli_bl))*100:.6f} [vol%] : DCLL_VF_LL_NOM = {DCLL_VF_LL_NOM*100:.6f} [vol%]")
-            print(f"")
 
             if self.case in ['B', 'C']:
-                print(f"In the self.blanket material (everything except the discrete BISO) we have these volume fractions:")
-                print(f"  vf_pbli_bl_c =  {(vf_pbli_bl_c*100):.6f} [vol%]")
-                print(f"  vf_fs_bl_c   =  {(vf_fs_bl_c*100):.6f} [vol%]")
-                print(f"  vf_si_bl_c   =  {(vf_si_bl_c*100):.6f} [vol%]")
-                print(f"  vf_he_bl_c   =  {(vf_he_bl_c*100):.6f} [vol%]")
-                print(f"  checksum3    =  {(checksum3*100):.6f} [vol%]")
-                print(f"")
-                print(f"The real BLANKET VOLUMES in the model are:")
+                print(f"The real volumes in the blanket are:")
                 print(f"  vol_biso =  {(vol_biso):.6f} [cm³]")
                 print(f"  vol_pbli =  {(vol_pbli):.6f} [cm³]")
                 print(f"  vol_fs   =  {(vol_fs):.6f} [cm³]")
@@ -541,12 +518,12 @@ class Prism():
                 print(f"  checksum =  {(checksum4):.6f} [cm³]")
                 print(f"     == Vt =  {Vt:.6f} [cm³]")
                 print(f"  vol_pbli / (Vt - vol_biso) = {(vol_pbli / (Vt - vol_biso)):.6f}")
-                print(f"  ==            vf_pbli_bl_c = {(vf_pbli_bl_c):.6f}")
+                print(f"  ==            vf_pbli_bl_c = {(vf_ll_bl_c):.6f}")
                 print(f"")
                 print(f"With respect to BISO DENSITIES:")
                 print(f"  Check these values equal:")
                 print(f"          target_total_biso = {target_total_biso}")
-                print(f"  biso_per_cc_br * vol_pbli = {(biso_per_cc_br * vol_pbli):.6f}")
+                print(f"  biso_per_cc_br * vol_pbli = {(biso_per_cc_br * DCLL_VF_LL_NOM * Vt):.6f}")
                 print(f"        biso_per_cc_bl * Vt = {(biso_per_cc_bl * Vt):.6f}")
                 print(f"")
 
@@ -571,19 +548,15 @@ class Prism():
         plane_C = -slope
         plane_D = c_in - (slope * z_in_end)
 
-        self.biso_per_cc_br = biso_per_cc_br
-        self.biso_per_cc_bl = biso_per_cc_bl
-        
+        self.biso_per_cc = biso_per_cc_br
+
         self.vf_biso_br = vf_biso_br
-        self.vf_biso_bl = vf_biso_bl
-
         self.vf_pbli_br = vf_pbli_br
-        self.vf_pbli_bl = vf_pbli_bl
 
-        self.vf_pbli_bl_c = vf_pbli_bl_c
-        self.vf_fs_bl_c   = vf_fs_bl_c
-        self.vf_si_bl_c   = vf_si_bl_c
-        self.vf_he_bl_c   = vf_he_bl_c
+        self.vf_ll_bl_c = vf_ll_bl_c
+        self.vf_fs_bl_c = vf_fs_bl_c
+        self.vf_si_bl_c = vf_si_bl_c
+        self.vf_he_bl_c = vf_he_bl_c
 
         self.geom = {'shape_in_per':shape_in_per, 'shape_out_per':shape_out_per, 'N_in':N_in, 'N_out':N_out, 'b_in':b_in, 'b_out':b_out, 'c_in':c_in, 'c_out':c_out, 'thickness_per':thickness_per, 'pC':plane_C, 'pD':plane_D}
 
@@ -616,14 +589,14 @@ if __name__ == '__main__':
 
     CASES    = ['C','A'] # 
     ISOTOPES = ['U238', 'Th232'] # 
-    FERTILE  = [0.10, 0.50, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 999.99] #  
+    FERTILE  = [0.0, 0.01, 0.10, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 1000, 2000, 3000, 4000]
     ENRICH   = [90.0]
 
     parser = argparse.ArgumentParser(description="Run Wedge OpenMC calculations")
 
-    parser.add_argument("-c", "--cases",
+    parser.add_argument("-t", "--types",
                         type=str, nargs="+", default=CASES,
-                        help=f"Specify cases, separated by space (default: {CASES})")
+                        help=f"Specify cases (t), separated by space (default: {CASES})")
 
     parser.add_argument("-i", "--isotopes",
                         type=str, nargs="+", default=ISOTOPES,
@@ -635,7 +608,15 @@ if __name__ == '__main__':
 
     parser.add_argument("-e", "--enrich",
                         type=float, nargs="+", default=ENRICH,
-                        help=f"Li-6 enrichment in at%% (default: {ENRICH})")
+                        help=f"Li-6 enrichment in at% (default: {ENRICH})")
+
+    parser.add_argument("-p", "--n_particles",
+                        type=lambda x: int(float(x)), default=N_PARTICLES,
+                        help=f"Specify number of particles in integer scientific notation, e.g. 1e6")
+
+    parser.add_argument("-c", "--n_cycles",
+                        type=lambda x: int(float(x)), default=N_CYCLES,
+                        help=f"Specify number of cycles in integers, e.g. 25")
 
     parser.add_argument("--no_debug", dest="debug", action="store_false")
     parser.add_argument("--no_write", dest="write", action="store_false")
@@ -644,17 +625,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    for enrich in args.enrich:
+    for breeder_enrich in args.enrich:
         for isotope in args.isotopes:
-            for case in args.cases:
+            for case in args.types:
                 for fertile_kgm3 in args.fertile:
-
-                    #### TEMP FIX ####
-                    if isotope == 'U':
-                        isotope_temp_fix = 'U238'
-                    else:
-                        isotope_temp_fix = isotope
-                    #### TEMP FIX ####
-
-                    current_run = Prism(case, fertile_kgm3, isotope=isotope, breeder_enrich=enrich)
+                    current_run = Prism(case, fertile_kgm3, fertile_isotope=isotope, breeder_enrich=breeder_enrich, n_particles=args.n_particles, n_cycles=args.n_cycles)
                     current_run.openmc(debug=args.debug, write=args.write, run=args.run)

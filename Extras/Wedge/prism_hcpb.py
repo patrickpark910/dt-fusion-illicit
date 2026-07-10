@@ -98,15 +98,14 @@ class Prism():
 
         if self.case == 'A':
 
-            biso = openmc.Material.mix_materials([self.kernel, self.sic], [KERNEL_VOLUME/BISO_VOLUME, (1-(KERNEL_VOLUME/BISO_VOLUME))], 'vo') 
+            biso = openmc.Material.mix_materials([self.kernel, self.sic], [BISO_KERNEL_VOL_FRAC, BISO_COAT_VOL_FRAC], 'vo')
 
-            breeder = openmc.Material.mix_materials([li4sio4, be, biso], [self.vf_li_br, self.vf_be_br, self.vf_biso_br], 'vo') 
-            
-            self.blanket = openmc.Material.mix_materials([breeder, self.eurofer, he], [(HCPB_VF_LI_NOM+HCPB_VF_BE_NOM), HCPB_VF_EU_NOM, HCPB_VF_HE_NOM], 'vo') 
-            
+            breeder = openmc.Material.mix_materials([biso, li4sio4, be], [self.vf_biso_br, self.vf_libe_br * HCPB_VF_LI_IN_BREEDER_NOM, self.vf_libe_br * HCPB_VF_BE_IN_BREEDER_NOM], 'vo')
+
+            self.blanket = openmc.Material.mix_materials([breeder, self.eurofer, he], [HCPB_VF_BREEDER_NOM, HCPB_VF_EU_NOM, HCPB_VF_HE_NOM], 'vo')
+
             self.blanket.name = (f"{self.fertile_str} kg/m3"
-                              f" | {self.biso_per_cc_br:.4f} spheres/cc = {(self.vf_biso_br*100):.4f} vol% in breeder"
-                              f" | {self.biso_per_cc_bl:.4f} spheres/cc = {(self.vf_biso_bl*100):.4f} vol% in blanket")
+                              f" | {self.biso_per_cc_br:.4f} spheres/cc = {(self.vf_biso_br*100):.4f} vol% of nominal breeder")
             
             self.blanket.temperature = TEMP_K
 
@@ -404,32 +403,15 @@ class Prism():
         below in terms of volume fractions.  --ppark
         '''
 
-        # Nominal volume fractions of Li4SiO4 vs. Be in the breeder volume
-        vf_li_br_nom = HCPB_VF_LI_NOM / (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
-        vf_be_br_nom = HCPB_VF_BE_NOM / (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
+        # BISO and breeder volume fractions relative to nominal breeder (Li4SiO4 + Be)
+        vf_biso_br, vf_libe_br, biso_per_cc_br = calc_biso_vol_fracs(self.fertile_kgm3, fertile_isotope=self.isotope)
+        checksum1 = vf_biso_br + vf_libe_br  # should equal 1
 
-        # Number of BISO spheres per cc of breeder volume
-        biso_per_cc_br = fertile_kgm3_to_biso_per_cc(self.fertile_kgm3)
-        vf_biso_libe   = biso_per_cc_br * BISO_VOLUME  # (number of biso / cm3 of LiBe) * (cm3 of one biso) = (total cm3 of all biso / cm3 of LiBe) = vol frac of biso in breeder
-
-        if vf_biso_libe > 1.0:
-            print(f"Fatal. Your fertile kg/m³ exceeds what can physically fit in the breeding volume!")
-            print(f"Fatal. That is, your volume of BISO per cm³ of breeding volume exceeds 1.")
-
-        # New volume ratios of everything w.r.t. breeders in the breeder volume
-        vf_biso_br   = vf_biso_libe / (vf_biso_libe + 1)
-        vf_libe_br   = 1 / (vf_biso_libe + 1)
-        vf_li_br     = vf_libe_br * vf_li_br_nom
-        vf_be_br     = vf_libe_br * vf_be_br_nom
-        checksum1    = vf_biso_br + vf_li_br + vf_be_br  # should equal 1
-
-        # New volume ratios of everyting w.r.t. everything else in the breeding region
-        vf_biso_bl = vf_biso_br * (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
-        vf_li_bl   = vf_li_br   * (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
-        vf_be_bl   = vf_be_br   * (HCPB_VF_LI_NOM + HCPB_VF_BE_NOM)
+        # Blanket-level volume fractions
+        vf_biso_bl = vf_biso_br * HCPB_VF_BREEDER_NOM
+        vf_li_bl   = vf_libe_br * HCPB_VF_LI_NOM
+        vf_be_bl   = vf_libe_br * HCPB_VF_BE_NOM
         vf_libe_bl = vf_li_bl + vf_be_bl
-        
-        # vol frac of Eurofer and He-4 doesn't change
         checksum2 = vf_biso_bl + vf_libe_bl + HCPB_VF_EU_NOM + HCPB_VF_HE_NOM  # should equal 1
 
         # Number of BISO spheres per cc of physicalblanket volume
@@ -561,13 +543,8 @@ class Prism():
         self.biso_per_cc_br = biso_per_cc_br
         self.biso_per_cc_bl = biso_per_cc_bl
         self.vf_biso_br = vf_biso_br
+        self.vf_libe_br = vf_libe_br
         self.vf_biso_bl = vf_biso_bl
-
-        self.vf_li_br = vf_li_br
-        self.vf_be_br = vf_be_br
-
-        self.vf_li_bl   = vf_li_bl
-        self.vf_be_bl   = vf_be_bl
         self.vf_libe_bl = vf_libe_bl
 
         self.vf_li_bl_c = vf_li_bl_c

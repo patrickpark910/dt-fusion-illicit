@@ -9,7 +9,7 @@ from Python.utilities import *
 
 # Scores subtracted from 'scatter' to derive inelastic scattering.
 # inelastic = scatter - elastic - (n,2n) - (n,3n) - (n,na) - (n,np)
-SUBTRACTION_SCORES = ['elastic', '(n,2n)', '(n,3n)', '(n,na)', '(n,np)']
+SUBTRACTION_SCORES = ['(n,elastic)', '(n,2n)', '(n,3n)', '(n,na)', '(n,np)']
 
 
 def _compute_inelastic(df):
@@ -223,13 +223,13 @@ class OutputMixin:
         U238_inel_Ebin  = sum_over_cells(raw['fertile_spec'], 'U238',  'inelastic')
         Th232_inel_Ebin = sum_over_cells(raw['fertile_spec'], 'Th232', 'inelastic')
 
-        U235_elas_Ebin  = sum_over_cells(raw['fertile_spec'], 'U235',  'elastic')
-        U238_elas_Ebin  = sum_over_cells(raw['fertile_spec'], 'U238',  'elastic')
-        Th232_elas_Ebin = sum_over_cells(raw['fertile_spec'], 'Th232', 'elastic')
-        Li6_elas_Ebin   = sum_over_cells(raw['Li_spec'], 'Li6', 'elastic')
-        Li7_elas_Ebin   = sum_over_cells(raw['Li_spec'], 'Li7', 'elastic')
-        Be9_elas_Ebin   = sum_over_cells(raw['Be_spec'], 'Be9', 'elastic') if raw['Be_spec'] is not None else None
-        Pb_elas_Ebin    = sum_over_cells(raw['Pb_spec'], ['Pb204','Pb206','Pb207','Pb208'], 'elastic') if raw['Pb_spec'] is not None else None
+        U235_elas_Ebin  = sum_over_cells(raw['fertile_spec'], 'U235',  '(n,elastic)')
+        U238_elas_Ebin  = sum_over_cells(raw['fertile_spec'], 'U238',  '(n,elastic)')
+        Th232_elas_Ebin = sum_over_cells(raw['fertile_spec'], 'Th232', '(n,elastic)')
+        Li6_elas_Ebin   = sum_over_cells(raw['Li_spec'], 'Li6', '(n,elastic)')
+        Li7_elas_Ebin   = sum_over_cells(raw['Li_spec'], 'Li7', '(n,elastic)')
+        Be9_elas_Ebin   = sum_over_cells(raw['Be_spec'], 'Be9', '(n,elastic)') if raw['Be_spec'] is not None else None
+        Pb_elas_Ebin    = sum_over_cells(raw['Pb_spec'], ['Pb204','Pb206','Pb207','Pb208'], '(n,elastic)') if raw['Pb_spec'] is not None else None
 
         rxns_df = U235_ng_Ebin[['energy low [eV]', 'energy high [eV]', 'energy mid [eV]']].copy()
 
@@ -303,7 +303,7 @@ class OutputMixin:
             Be = raw['Be']
             be9_n2n = Be[(Be['nuclide']=='Be9') & (Be['score']=='(n,2n)')][['cell','mean','std. dev.']]
             be9_list, be9_err = be9_n2n['mean'].tolist(), be9_n2n['std. dev.'].tolist()
-            be9_el = Be[(Be['nuclide']=='Be9') & (Be['score']=='elastic')][['cell','mean','std. dev.']]
+            be9_el = Be[(Be['nuclide']=='Be9') & (Be['score']=='(n,elastic)')][['cell','mean','std. dev.']]
             be9_list_el, be9_err_el = be9_el['mean'].tolist() if len(be9_el) else zeros, be9_el['std. dev.'].tolist() if len(be9_el) else zeros
             pb_list,  pb_err  = zeros, zeros
             pb_list_el, pb_err_el = zeros, zeros
@@ -311,7 +311,7 @@ class OutputMixin:
             Pb = raw['Pb']
             pb_n2n = sum_over_nuclides(Pb, '(n,2n)')
             pb_list,  pb_err  = pb_n2n['mean'].tolist(), pb_n2n['std. dev.'].tolist()
-            pb_el = sum_over_nuclides(Pb, 'elastic')
+            pb_el = sum_over_nuclides(Pb, '(n,elastic)')
             pb_list_el, pb_err_el = pb_el['mean'].tolist(), pb_el['std. dev.'].tolist()
             be9_list, be9_err = zeros, zeros
             be9_list_el, be9_err_el = zeros, zeros
@@ -333,11 +333,11 @@ class OutputMixin:
         th232_inel_err  = th232_inel['std. dev.'].tolist() if len(th232_inel) else zeros
 
         # Elastic scattering
-        u235_elas  = fertile[(fertile['nuclide']=='U235')  & (fertile['score']=='elastic')][['cell','mean','std. dev.']]
-        u238_elas  = fertile[(fertile['nuclide']=='U238')  & (fertile['score']=='elastic')][['cell','mean','std. dev.']]
-        th232_elas = fertile[(fertile['nuclide']=='Th232') & (fertile['score']=='elastic')][['cell','mean','std. dev.']]
-        li6_elas = Li[(Li['nuclide']=='Li6') & (Li['score']=='elastic')][['cell','mean','std. dev.']]
-        li7_elas = Li[(Li['nuclide']=='Li7') & (Li['score']=='elastic')][['cell','mean','std. dev.']]
+        u235_elas  = fertile[(fertile['nuclide']=='U235')  & (fertile['score']=='(n,elastic)')][['cell','mean','std. dev.']]
+        u238_elas  = fertile[(fertile['nuclide']=='U238')  & (fertile['score']=='(n,elastic)')][['cell','mean','std. dev.']]
+        th232_elas = fertile[(fertile['nuclide']=='Th232') & (fertile['score']=='(n,elastic)')][['cell','mean','std. dev.']]
+        li6_elas = Li[(Li['nuclide']=='Li6') & (Li['score']=='(n,elastic)')][['cell','mean','std. dev.']]
+        li7_elas = Li[(Li['nuclide']=='Li7') & (Li['score']=='(n,elastic)')][['cell','mean','std. dev.']]
 
         u235_elas_list  = u235_elas['mean'].tolist()       if len(u235_elas)  else zeros
         u235_elas_err   = u235_elas['std. dev.'].tolist()  if len(u235_elas)  else zeros
@@ -451,10 +451,13 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich, temp_k, vol_m3):
 
     for folder in tally_folders:
 
-        # Extract fertile loading from folder name
+        # Extract fertile loading and src-n from folder name
         part = folder.split("_")[-2]
         fertile = float(part.replace("kgm3", ""))
         mt = fertile * vol_m3 / 1e3
+        pc_part = folder.split("_")[-1]
+        p_str, c_str = pc_part.split("x")
+        src_n = int(float(p_str)) * int(c_str)
 
         # File paths (must match output.py exports)
         tally_summary = f"./OpenMC/{folder}/tallies_summary.csv"
@@ -481,6 +484,7 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich, temp_k, vol_m3):
 
         rows_all.append({
             'filename':        folder,
+            'src-n':           src_n,
             'fertile_kg/m3':   fertile,
             'fertile_mt':      mt,
             'Li6(n,t)':        tot['Li6(n,t)'].values[0],
@@ -537,6 +541,7 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich, temp_k, vol_m3):
         try:
             df_rxnsE = pd.read_csv(tally_rxnsE)
             df_rxnsE['filename']   = folder
+            df_rxnsE['src-n']      = src_n
             df_rxnsE['fertile_mt'] = mt
             df_rxnsE['br_vol_m3']  = vol_m3
             rxnsE_list.append(df_rxnsE)
@@ -553,6 +558,7 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich, temp_k, vol_m3):
                              'energy high [eV]': ('energy high [eV]', 'first'),
                              'mean':             ('mean', 'sum')}))
             fluxE['filename']      = folder
+            fluxE['src-n']         = src_n
             fluxE['fertile_kg/m3'] = fertile
             fluxE['fertile_mt']    = mt
             fluxE['br_vol_m3']     = vol_m3
@@ -564,6 +570,7 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich, temp_k, vol_m3):
         try:
             df_leakE = pd.read_csv(tally_leakE)
             df_leakE['filename']      = folder
+            df_leakE['src-n']         = src_n
             df_leakE['fertile_kg/m3'] = fertile
             df_leakE['fertile_mt']    = mt
             df_leakE['br_vol_m3']     = vol_m3
@@ -581,7 +588,7 @@ def collate_tallies(blanket, fertile_isotope, breeder_enrich, temp_k, vol_m3):
 
     if fluxE_list:
         df_fluxE_collated = pd.concat(fluxE_list, ignore_index=True)
-        df_fluxE_collated = df_fluxE_collated[['filename', 'fertile_kg/m3', 'fertile_mt', 'br_vol_m3',
+        df_fluxE_collated = df_fluxE_collated[['filename', 'src-n', 'fertile_kg/m3', 'fertile_mt', 'br_vol_m3',
                                                'energy mid [eV]', 'mean', 'energy low [eV]', 'energy high [eV]']]
         df_fluxE_collated.to_csv(f"{dst}_flux.csv", index=False)
 

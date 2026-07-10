@@ -772,7 +772,7 @@ def plot_psi_vs_ieff(cases, r2_min=R2_MIN, suffix=''):
     ax.set_yscale("log")
     ax.set_xlabel(r"$\psi_o$ [b]")
     ax.set_ylabel(r"$I_\mathrm{eff}$ [b]")
-    ax.set_xlim(10**(1 - 0.03*6), 10**(7 + 0.03*6))
+    ax.set_xlim(10**(1 - 0.03*7), 10**(8 + 0.03*7))
     if not suffix.endswith('_full'):
         ax.set_ylim(10**(-1 - 0.03*2), 10**(1 + 0.03*2))
 

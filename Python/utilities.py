@@ -485,27 +485,34 @@ def find_sp(sp_dir, n_cycles):
             sys.exit(2)
 
 
+def lattice_coords(lower_left, shape, pitch):
+    """
+    Calculates the center coordinates of all cells in a rectangular lattice
+    and returns them as a list of tuples.
+    
+    Args:
+        lower_left (iterable of float): (x, y, z) coordinates of the lower-left corner.
+        shape (iterable of int): number of cells (Nx, Ny, Nz).
+        pitch (iterable of float): width, height, and depth of each cell (Dx, Dy, Dz).
+        
+    Returns: 
+        coords (list of tuple): flat list containing (x, y, z) center coordinates.
+    """
+    nx, ny, nz = shape
+    dx, dy, dz = pitch
+    lx, ly, lz = lower_left
 
-if __name__ == "__main__":
-    """ Use this to test any of the functions """
-    # calc_biso_blanket_vol_fracs(fertile_kgm3, breeder_volume_m3, fertile_isotope='U238', fertile_enrich=0.71)
-    # print(calc_biso_blanket_vol_fracs(1000, LL_BR_VOL, fertile_isotope='Th232'))
-    # for 1000, LL_BR_VOL, 'U', 0.71: (0.7874738114760764, 0.21252618852392352)
-
-    A_FW_FLiBe  = miller_model(FLIBE_R0, FLIBE_A, FLIBE_KAPPA, FLIBE_DELTA, extrude=(FLIBE_FW_CM), calc='area', n=10000)
-    A_FW_DCLL   = miller_model(DCLL_R0, DCLL_A, DCLL_KAPPA, DCLL_DELTA,     extrude=(DCLL_FW_CM),  calc='area', n=10000)
-    A_FW_HCPB   = miller_model(HCPB_R0, HCPB_A, HCPB_KAPPA, HCPB_DELTA,     extrude=(HCPB_FW_CM),  calc='area', n=10000)
-
-    print(f"FW surface area for FLiBe: {(A_FW_FLiBe[2]/1e4):.2f} m²")   
-    print(f"FW surface area for DCLL:  {(A_FW_DCLL[2]/1e4):.2f}  m²")
-    print(f"FW surface area for HCPB:  {(A_FW_HCPB[2]/1e4):.2f}  m²")
-
-    P_NEUTRON_MW = P_FUS_MW * 14.06 / 17.6
-    print(P_NEUTRON_MW)
-
-    print(f"Neutron wall loading for FLiBe: {(P_NEUTRON_MW / (A_FW_FLiBe[2]/1e4))} MW/m²")   
-    print(f"Neutron wall loading for DCLL:  {(P_NEUTRON_MW / (A_FW_DCLL[2]/1e4))} MW/m²")
-    print(f"Neutron wall loading for HCPB:  {(P_NEUTRON_MW / (A_FW_HCPB[2]/1e4))} MW/m²")
+    coords = []
+    
+    for i in range(nx):
+        x = lx + (i + 0.5) * dx
+        for j in range(ny):
+            y = ly + (j + 0.5) * dy
+            for k in range(nz):
+                z = lz + (k + 0.5) * dz
+                coords.append((x, y, z))
+                
+    return coords
 
 
 def spectrum_stats(E, y, mode_weight=None, quantiles=(0.10, 0.25, 0.75, 0.90)):
@@ -602,3 +609,25 @@ def strip_latex(s):
              .replace('$^6$', '⁶').replace('$^7$', '⁷')
              .replace(r'$\gamma$', 'γ')
              .replace('$', ''))          # extend as more markup appears
+
+
+if __name__ == "__main__":
+    """ Use this to test any of the functions """
+    # calc_biso_blanket_vol_fracs(fertile_kgm3, breeder_volume_m3, fertile_isotope='U238', fertile_enrich=0.71)
+    # print(calc_biso_blanket_vol_fracs(1000, LL_BR_VOL, fertile_isotope='Th232'))
+    # for 1000, LL_BR_VOL, 'U', 0.71: (0.7874738114760764, 0.21252618852392352)
+
+    A_FW_FLiBe  = miller_model(FLIBE_R0, FLIBE_A, FLIBE_KAPPA, FLIBE_DELTA, extrude=(FLIBE_FW_CM), calc='area', n=10000)
+    A_FW_DCLL   = miller_model(DCLL_R0, DCLL_A, DCLL_KAPPA, DCLL_DELTA,     extrude=(DCLL_FW_CM),  calc='area', n=10000)
+    A_FW_HCPB   = miller_model(HCPB_R0, HCPB_A, HCPB_KAPPA, HCPB_DELTA,     extrude=(HCPB_FW_CM),  calc='area', n=10000)
+
+    print(f"FW surface area for FLiBe: {(A_FW_FLiBe[2]/1e4):.2f} m²")   
+    print(f"FW surface area for DCLL:  {(A_FW_DCLL[2]/1e4):.2f}  m²")
+    print(f"FW surface area for HCPB:  {(A_FW_HCPB[2]/1e4):.2f}  m²")
+
+    P_NEUTRON_MW = P_FUS_MW * 14.06 / 17.6
+    print(P_NEUTRON_MW)
+
+    print(f"Neutron wall loading for FLiBe: {(P_NEUTRON_MW / (A_FW_FLiBe[2]/1e4))} MW/m²")   
+    print(f"Neutron wall loading for DCLL:  {(P_NEUTRON_MW / (A_FW_DCLL[2]/1e4))} MW/m²")
+    print(f"Neutron wall loading for HCPB:  {(P_NEUTRON_MW / (A_FW_HCPB[2]/1e4))} MW/m²")
