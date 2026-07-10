@@ -11,6 +11,7 @@ def extract_rates(breeder, breeder_enrich, isotope):
     base_dir = "./OpenMC"
     results = []
     breeder = breeder.lower()
+    temp    = 900
     
     if not os.path.exists(base_dir):
         print(f"Directory {base_dir} not found. Run from Jupyter/Wedge")
@@ -18,7 +19,7 @@ def extract_rates(breeder, breeder_enrich, isotope):
 
     print(f"{breeder}_Li{breeder_enrich}_wedgeA")
 
-    folders = [f for f in os.listdir(base_dir) if f.startswith((f"{breeder}_Li{breeder_enrich}_wedgeA", f"{breeder}_Li{breeder_enrich}_wedgeC")) and isotope in f]
+    folders = [f for f in os.listdir(base_dir) if f.startswith((f"{breeder}_{temp}K_Li{breeder_enrich}_wedgeA", f"{breeder}_{temp}K_Li{breeder_enrich}_wedgeC")) and isotope in f]
     
     for folder in sorted(folders):
         
@@ -28,13 +29,13 @@ def extract_rates(breeder, breeder_enrich, isotope):
   
         parts = folder.split('_')
 
-        case = parts[2][-1] 
-        folder_iso = parts[3]
-        
+        case = parts[3][-1]
+        folder_iso = parts[4]
+
         if folder_iso != isotope:
             continue
-            
-        loading_str = parts[4].replace('kgm3', '')
+
+        loading_str = parts[5].replace('kgm3', '')
         try:
             loading = float(loading_str)
         except ValueError:
@@ -50,36 +51,25 @@ def extract_rates(breeder, breeder_enrich, isotope):
         try:
             sp = openmc.StatePoint(sp_path)
             
-            # Extract (n,Xt) / (n,t) — tritium production
-            # Try new tally names first, fall back to old names
-            try:
-                li_tally = sp.get_tally(name="Li rxn rates total")
-                li_df = li_tally.get_pandas_dataframe()
-                li_xt = li_df[li_df["score"] == "(n,Xt)"]
-                tbr_mean = li_xt["mean"].sum()
-                tbr_std  = np.sqrt((li_xt["std. dev."]**2).sum())
-            except LookupError:
-                li_tally = sp.get_tally(name="Total (n,t) rxn rate")
-                li_df = li_tally.get_pandas_dataframe()
-                tbr_mean = li_df["mean"].values[0]
-                tbr_std  = li_df["std. dev."].values[0]
-            
-            # Extract (n,gamma) for the fertile isotope
-            try:
-                fertile_tally = sp.get_tally(name="Fertile rxn rates total")
-            except LookupError:
-                fertile_tally = sp.get_tally(name="Total fertile rxn rate")
-            
+            # Extract (n,Xt) — tritium production (sum across cells and nuclides)
+            li_tally = sp.get_tally(name="Li rxn rates by cell")
+            li_df = li_tally.get_pandas_dataframe()
+            li_xt = li_df[li_df["score"] == "(n,Xt)"]
+            tbr_mean = li_xt["mean"].sum()
+            tbr_std  = np.sqrt((li_xt["std. dev."]**2).sum())
+
+            # Extract (n,gamma) for the fertile isotope (sum across cells)
+            fertile_tally = sp.get_tally(name="Fertile rxn rates by cell")
             fertile_slice = fertile_tally.get_slice(nuclides=[isotope], scores=['(n,gamma)'])
             f_df = fertile_slice.get_pandas_dataframe()
-            ng_mean = f_df["mean"].values[0]
-            ng_std  = f_df["std. dev."].values[0]
-            
-            # Extract fission rate for the fertile isotope
+            ng_mean = f_df["mean"].sum()
+            ng_std  = np.sqrt((f_df["std. dev."]**2).sum())
+
+            # Extract fission rate for the fertile isotope (sum across cells)
             fission_slice = fertile_tally.get_slice(nuclides=[isotope], scores=['fission'])
             fission_df = fission_slice.get_pandas_dataframe()
-            fission_mean = fission_df["mean"].values[0]
-            fission_std  = fission_df["std. dev."].values[0]
+            fission_mean = fission_df["mean"].sum()
+            fission_std  = np.sqrt((fission_df["std. dev."]**2).sum())
             
             results.append({
                 "folder": folder,

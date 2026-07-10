@@ -8,7 +8,6 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 DATA = ROOT / "Figures/Data"
 
-os.chdir(ROOT)
 sys.path.insert(0, str(ROOT))
 from Python.parameters import *
 from Python.utilities  import *
@@ -589,7 +588,7 @@ if __name__ == '__main__':
 
     CASES    = ['C','A'] # 
     ISOTOPES = ['U238', 'Th232'] # 
-    FERTILE  = [0.0, 0.01, 0.10, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 1000,]
+    FERTILE  = [0.01, 0.10, 1, 10, 25, 50, 75, 100, 150, 250, 500, 750, 1000,]
     ENRICH   = [90.0]
 
     parser = argparse.ArgumentParser(description="Run Wedge OpenMC calculations")
