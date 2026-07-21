@@ -424,7 +424,10 @@ class Prism():
         self.settings.run_mode  = 'fixed source'
         self.settings.particles = self.n_particles
         self.settings.batches   = self.n_batches
-        self.settings.output    = {'summary': False, 'tallies': False}
+
+        save_sp_every = 5
+        self.settings.statepoint = {'batches': range(save_sp_every, self.n_batches + 1, save_sp_every)}
+        self.settings.output     = {'summary': False, 'tallies': False}
 
         # note to self 2026-01-22: change to 20 or 50 batches
 
@@ -576,10 +579,33 @@ class Prism():
             self.model.export_to_model_xml(self.path)
 
         if run:
-            if has_statepoint(self.path):
-                print(f"Warning. File {self.path}/statepoint.h5 already exists, so this OpenMC run will be aborted...")
+            if has_statepoint(self.path, cycle=self.n_batches):
+                print(f"{C.YELLOW}Warning.{C.END} File {self.path}/statepoint.{str(self.n_batches).zfill(2)}.h5 already exists, so this OpenMC run will be skipped...")
             else:
-                self.model.run(cwd=self.path, tracks=False)
+                restart_file = None
+                sp_files = [f for f in os.listdir(self.path) if f.startswith('statepoint.') and f.endswith('.h5')]
+                if sp_files:
+                    try:
+                        highest = max(int(f.split('.')[1]) for f in sp_files)
+                        restart_file = os.path.join(self.path, f"statepoint.{str(highest).zfill(2)}.h5")
+                        print(f"{C.YELLOW}Comment.{C.END} Restarting from {restart_file}...")
+                    except ValueError:
+                        pass
+
+                if restart_file:
+                    self.model.run(cwd=self.path, restart_file=restart_file, tracks=False)
+                else:
+                    self.model.run(cwd=self.path, tracks=False)
+
+                for filename in os.listdir(self.path):
+                    if filename.startswith('statepoint.') and filename.endswith('.h5'):
+                        try:
+                            batch_num = int(filename.split('.')[1])
+                            if batch_num < self.n_batches:
+                                print(f"{C.YELLOW}Comment.{C.END} Removing intermediate statepoint.{batch_num}.h5 (< {self.n_batches} cycles)...")
+                                os.remove(os.path.join(self.path, filename))
+                        except ValueError:
+                            pass
 
 
 if __name__ == '__main__':
